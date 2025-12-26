@@ -1,20 +1,42 @@
 import { useState, useEffect } from 'react';
 import './App.css';
+import SettingsPanel from './components/SettingsPanel';
+import ActionLog from './components/ActionLog';
 import EmailMonitoringSection from './components/settings/EmailMonitoringSection';
 import { EmailAlertsPanel } from './components/EmailAlertsPanel';
 
 function App() {
   const [userId] = useState<number>(1);
-  const [currentTab, setCurrentTab] = useState<'settings' | 'alerts' | 'monitoring'>('monitoring');
+  const [currentTab, setCurrentTab] = useState<'settings' | 'search' | 'applications' | 'logs' | 'monitoring' | 'alerts'>('settings');
 
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>🚀 Job Application Automation</h1>
-        <p>Automate your job search and application process</p>
+        <div className="header-content">
+          <h1>🚀 Job Application Automation</h1>
+          <p>Automate your job search and application process</p>
+        </div>
       </header>
 
       <nav className="app-nav">
+        <button
+          className={`nav-button ${currentTab === 'settings' ? 'active' : ''}`}
+          onClick={() => setCurrentTab('settings')}
+        >
+          ⚙️ Settings & Configuration
+        </button>
+        <button
+          className={`nav-button ${currentTab === 'search' ? 'active' : ''}`}
+          onClick={() => setCurrentTab('search')}
+        >
+          🔍 Job Search
+        </button>
+        <button
+          className={`nav-button ${currentTab === 'applications' ? 'active' : ''}`}
+          onClick={() => setCurrentTab('applications')}
+        >
+          📋 Applications
+        </button>
         <button
           className={`nav-button ${currentTab === 'monitoring' ? 'active' : ''}`}
           onClick={() => setCurrentTab('monitoring')}
@@ -28,14 +50,45 @@ function App() {
           🔔 Alerts
         </button>
         <button
-          className={`nav-button ${currentTab === 'settings' ? 'active' : ''}`}
-          onClick={() => setCurrentTab('settings')}
+          className={`nav-button ${currentTab === 'logs' ? 'active' : ''}`}
+          onClick={() => setCurrentTab('logs')}
         >
-          ⚙️ Settings
+          📊 Activity Logs
         </button>
       </nav>
 
       <main className="app-main">
+        {currentTab === 'settings' && (
+          <div>
+            <h2>⚙️ Settings & Configuration</h2>
+            <SettingsPanel userId={userId} />
+          </div>
+        )}
+
+        {currentTab === 'search' && (
+          <div style={{ padding: '20px' }}>
+            <h2>🔍 Job Search</h2>
+            <div style={{ padding: '20px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
+              <p>Job search functionality coming soon...</p>
+              <p style={{ fontSize: '12px', color: '#666' }}>
+                Search across LinkedIn, Glassdoor, Xing, Indeed, and custom job boards.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {currentTab === 'applications' && (
+          <div style={{ padding: '20px' }}>
+            <h2>📋 Applications</h2>
+            <div style={{ padding: '20px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
+              <p>Application tracking coming soon...</p>
+              <p style={{ fontSize: '12px', color: '#666' }}>
+                Track all your job applications, CVs, motivation letters, and application status.
+              </p>
+            </div>
+          </div>
+        )}
+
         {currentTab === 'monitoring' && (
           <div>
             <h2>📧 Email Monitoring Setup</h2>
@@ -58,15 +111,10 @@ function App() {
           <EmailAlertsPanel userId={userId} />
         )}
 
-        {currentTab === 'settings' && (
-          <div style={{ padding: '20px' }}>
-            <h2>⚙️ Settings</h2>
-            <div style={{ padding: '20px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
-              <p>Settings panel coming soon...</p>
-              <p style={{ fontSize: '12px', color: '#666' }}>
-                Configure job preferences, AI models, email providers, and more.
-              </p>
-            </div>
+        {currentTab === 'logs' && (
+          <div>
+            <h2>📊 Activity Logs</h2>
+            <ActionLog userId={userId} />
           </div>
         )}
       </main>

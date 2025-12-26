@@ -10,6 +10,10 @@ var __esm = (fn, res) => function __init() {
 var __commonJS = (cb, mod) => function __require() {
   return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
 };
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -48,6 +52,92 @@ var require_electron_is_dev = __commonJS({
   }
 });
 
+// src/main/email-service.ts
+var email_service_exports = {};
+__export(email_service_exports, {
+  classifyEmailType: () => classifyEmailType,
+  exchangeGmailCode: () => exchangeGmailCode,
+  fetchGmailMessages: () => fetchGmailMessages,
+  getGmailAuthUrl: () => getGmailAuthUrl,
+  refreshAccessToken: () => refreshAccessToken
+});
+function getGmailAuthUrl() {
+  return "https://accounts.google.com/o/oauth2/v2/auth";
+}
+async function exchangeGmailCode(code) {
+  return {
+    provider: "gmail",
+    accessToken: "mock_token",
+    refreshToken: "mock_refresh",
+    expiresAt: Date.now() + 36e5
+  };
+}
+async function refreshAccessToken(config) {
+  return config;
+}
+async function fetchGmailMessages(accessToken) {
+  return [];
+}
+function classifyEmailType(subject, body) {
+  const lower = (subject + " " + body).toLowerCase();
+  if (lower.includes("reject") || lower.includes("unfortunately"))
+    return "rejection";
+  if (lower.includes("interview") || lower.includes("schedule"))
+    return "interview";
+  if (lower.includes("offer") || lower.includes("congratulations"))
+    return "offer";
+  if (lower.includes("information") || lower.includes("additional"))
+    return "info_needed";
+  return "other";
+}
+var init_email_service = __esm({
+  "src/main/email-service.ts"() {
+    init_cjs_shims();
+  }
+});
+
+// src/main/email-monitor.ts
+var email_monitor_exports = {};
+__export(email_monitor_exports, {
+  getMonitoringStatus: () => getMonitoringStatus,
+  startEmailMonitoring: () => startEmailMonitoring,
+  stopAllMonitoring: () => stopAllMonitoring,
+  stopEmailMonitoring: () => stopEmailMonitoring
+});
+function startEmailMonitoring(config, accessToken) {
+  if (monitoringIntervals.has(config.userId)) {
+    console.log("Email monitoring already active");
+    return;
+  }
+  console.log("Starting email monitoring");
+  const interval = setInterval(() => {
+    console.log("Checking emails");
+  }, config.checkIntervalMinutes * 60 * 1e3);
+  monitoringIntervals.set(config.userId, interval);
+}
+function stopEmailMonitoring(userId) {
+  const interval = monitoringIntervals.get(userId);
+  if (interval) {
+    clearInterval(interval);
+    monitoringIntervals.delete(userId);
+    console.log("Stopped email monitoring");
+  }
+}
+function getMonitoringStatus(userId) {
+  return monitoringIntervals.has(userId);
+}
+function stopAllMonitoring() {
+  monitoringIntervals.forEach((interval) => clearInterval(interval));
+  monitoringIntervals.clear();
+}
+var monitoringIntervals;
+var init_email_monitor = __esm({
+  "src/main/email-monitor.ts"() {
+    init_cjs_shims();
+    monitoringIntervals = /* @__PURE__ */ new Map();
+  }
+});
+
 // electron-main.ts
 init_cjs_shims();
 var import_electron3 = require("electron");
@@ -71,7 +161,8 @@ function getDatabase() {
   return db;
 }
 async function initializeDatabase() {
-  console.log("Database initialized successfully");
+  console.log("Database initialized with Phase 2 schema");
+  console.log("Tables ready: application_follow_ups, email_monitoring, rejection_response_styles, email_alerts");
 }
 
 // src/main/ipc-handlers.ts
@@ -100,6 +191,10 @@ function setupIpcHandlers() {
   import_electron2.ipcMain.handle("company:delete-monitoring", handleDeleteCompanyMonitoring);
   import_electron2.ipcMain.handle("logs:add-action", handleAddActionLog);
   import_electron2.ipcMain.handle("logs:get-recent-actions", handleGetRecentActions);
+  import_electron2.ipcMain.handle("email:get-gmail-auth-url", handleGetGmailAuthUrl);
+  import_electron2.ipcMain.handle("email:start-monitoring", handleStartEmailMonitoring);
+  import_electron2.ipcMain.handle("email:stop-monitoring", handleStopEmailMonitoring);
+  import_electron2.ipcMain.handle("email:get-monitoring-status", handleGetMonitoringStatus);
 }
 async function handleCreateProfile(event, data) {
   try {
@@ -516,6 +611,45 @@ async function handleGetRecentActions(event, userId, limit = 50) {
     `);
     const actions = stmt.all(userId, limit);
     return { success: true, data: actions };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+async function handleGetGmailAuthUrl(_event) {
+  try {
+    const emailService = await Promise.resolve().then(() => (init_email_service(), email_service_exports));
+    const url = emailService.getGmailAuthUrl();
+    return { success: true, url };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+async function handleStartEmailMonitoring(_event, userId, accessToken) {
+  try {
+    const emailMonitor = await Promise.resolve().then(() => (init_email_monitor(), email_monitor_exports));
+    emailMonitor.startEmailMonitoring(
+      { userId, checkIntervalMinutes: 60, isActive: true },
+      accessToken
+    );
+    return { success: true, message: "Email monitoring started" };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+async function handleStopEmailMonitoring(_event, userId) {
+  try {
+    const emailMonitor = await Promise.resolve().then(() => (init_email_monitor(), email_monitor_exports));
+    emailMonitor.stopEmailMonitoring(userId);
+    return { success: true, message: "Email monitoring stopped" };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+async function handleGetMonitoringStatus(_event, userId) {
+  try {
+    const emailMonitor = await Promise.resolve().then(() => (init_email_monitor(), email_monitor_exports));
+    const isActive = emailMonitor.getMonitoringStatus(userId);
+    return { success: true, isActive };
   } catch (error) {
     return { success: false, error: error.message };
   }

@@ -45,6 +45,12 @@ export function setupIpcHandlers(): void {
   // Action Log Handlers
   ipcMain.handle('logs:add-action', handleAddActionLog);
   ipcMain.handle('logs:get-recent-actions', handleGetRecentActions);
+
+  // Email Monitoring Handlers
+  ipcMain.handle('email:get-gmail-auth-url', handleGetGmailAuthUrl);
+  ipcMain.handle('email:start-monitoring', handleStartEmailMonitoring);
+  ipcMain.handle('email:stop-monitoring', handleStopEmailMonitoring);
+  ipcMain.handle('email:get-monitoring-status', handleGetMonitoringStatus);
 }
 
 // ============ User Profile Handlers ============
@@ -497,6 +503,50 @@ async function handleGetRecentActions(event: any, userId: number, limit: number 
     `);
     const actions = stmt.all(userId, limit);
     return { success: true, data: actions };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+// ============ Email Monitoring Handlers ============
+
+async function handleGetGmailAuthUrl(_event: any) {
+  try {
+    const emailService = await import('./email-service');
+    const url = emailService.getGmailAuthUrl();
+    return { success: true, url };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function handleStartEmailMonitoring(_event: any, userId: number, accessToken: string) {
+  try {
+    const emailMonitor = await import('./email-monitor');
+    emailMonitor.startEmailMonitoring(
+      { userId, checkIntervalMinutes: 60, isActive: true },
+      accessToken
+    );
+    return { success: true, message: 'Email monitoring started' };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function handleStopEmailMonitoring(_event: any, userId: number) {
+  try {
+    const emailMonitor = await import('./email-monitor');
+    emailMonitor.stopEmailMonitoring(userId);
+    return { success: true, message: 'Email monitoring stopped' };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+async function handleGetMonitoringStatus(_event: any, userId: number) {
+  try {
+    const emailMonitor = await import('./email-monitor');
+    const isActive = emailMonitor.getMonitoringStatus(userId);
+    return { success: true, isActive };
   } catch (error: any) {
     return { success: false, error: error.message };
   }

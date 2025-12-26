@@ -1,4 +1,20 @@
+var __defProp = Object.defineProperty;
+var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropNames = Object.getOwnPropertyNames;
+var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __copyProps = (to, from, except, desc) => {
+  if (from && typeof from === "object" || typeof from === "function") {
+    for (let key of __getOwnPropNames(from))
+      if (!__hasOwnProp.call(to, key) && key !== except)
+        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
+  }
+  return to;
+};
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
 // preload.ts
+var preload_exports = {};
+module.exports = __toCommonJS(preload_exports);
 var import_electron = require("electron");
 import_electron.contextBridge.exposeInMainWorld("electron", {
   // User Profile
@@ -29,5 +45,12 @@ import_electron.contextBridge.exposeInMainWorld("electron", {
   deleteCompanyMonitoring: (companyId) => import_electron.ipcRenderer.invoke("company:delete-monitoring", companyId),
   // Action Logs
   addActionLog: (data) => import_electron.ipcRenderer.invoke("logs:add-action", data),
-  getRecentActions: (userId, limit) => import_electron.ipcRenderer.invoke("logs:get-recent-actions", userId, limit)
+  getRecentActions: (userId, limit) => import_electron.ipcRenderer.invoke("logs:get-recent-actions", userId, limit),
+  // Email Monitoring (NEW)
+  getGmailAuthUrl: () => import_electron.ipcRenderer.invoke("email:get-gmail-auth-url"),
+  startEmailMonitoring: (userId, accessToken) => import_electron.ipcRenderer.invoke("email:start-monitoring", userId, accessToken),
+  stopEmailMonitoring: (userId) => import_electron.ipcRenderer.invoke("email:stop-monitoring", userId),
+  getMonitoringStatus: (userId) => import_electron.ipcRenderer.invoke("email:get-monitoring-status", userId),
+  getEmailAlerts: (userId) => import_electron.ipcRenderer.invoke("email:get-alerts", userId),
+  markAlertAsRead: (alertId) => import_electron.ipcRenderer.invoke("email:mark-alert-read", alertId)
 });

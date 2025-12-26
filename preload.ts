@@ -42,6 +42,14 @@ contextBridge.exposeInMainWorld('electron', {
   // Action Logs
   addActionLog: (data: any) => ipcRenderer.invoke('logs:add-action', data),
   getRecentActions: (userId: number, limit?: number) => ipcRenderer.invoke('logs:get-recent-actions', userId, limit),
+
+  // Email Monitoring (NEW)
+  getGmailAuthUrl: () => ipcRenderer.invoke('email:get-gmail-auth-url'),
+  startEmailMonitoring: (userId: number, accessToken: string) => ipcRenderer.invoke('email:start-monitoring', userId, accessToken),
+  stopEmailMonitoring: (userId: number) => ipcRenderer.invoke('email:stop-monitoring', userId),
+  getMonitoringStatus: (userId: number) => ipcRenderer.invoke('email:get-monitoring-status', userId),
+  getEmailAlerts: (userId: number) => ipcRenderer.invoke('email:get-alerts', userId),
+  markAlertAsRead: (alertId: number) => ipcRenderer.invoke('email:mark-alert-read', alertId),
 });
 
 // Type definitions for TypeScript
@@ -70,6 +78,15 @@ declare global {
       deleteCompanyMonitoring: (companyId: number) => Promise<any>;
       addActionLog: (data: any) => Promise<any>;
       getRecentActions: (userId: number, limit?: number) => Promise<any>;
+      // Email Monitoring (NEW)
+      getGmailAuthUrl: () => Promise<any>;
+      startEmailMonitoring: (userId: number, accessToken: string) => Promise<any>;
+      stopEmailMonitoring: (userId: number) => Promise<any>;
+      getMonitoringStatus: (userId: number) => Promise<any>;
+      getEmailAlerts: (userId: number) => Promise<any>;
+      markAlertAsRead: (alertId: number) => Promise<any>;
     };
   }
 }
+
+export {};

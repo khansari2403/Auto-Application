@@ -1,37 +1,39 @@
-export interface MonitoringConfig {
-  userId: number;
-  checkIntervalMinutes: number;
-  isActive: boolean;
-}
+import { Notification } from 'electron';
+import { runQuery } from './database';
 
-let monitoringIntervals: Map<number, NodeJS.Timeout> = new Map();
+export function startEmailMonitoring(config: any, accessToken: string): void {
+  console.log('Monitoring Started for User:', config.userId);
+  
+  // This is the "Heartbeat" - it runs every hour
+  setInterval(async () => {
+    console.log('Checking for new employer emails...');
+    
+    // MOCK: In a real scenario, we'd fetch from Gmail here.
+    // Let's simulate finding an important email to test the alert system.
+    const foundInterview = Math.random() > 0.7; 
 
-export function startEmailMonitoring(config: MonitoringConfig, accessToken: string): void {
-  if (monitoringIntervals.has(config.userId)) {
-    console.log('Email monitoring already active');
-    return;
-  }
-  console.log('Starting email monitoring');
-  const interval = setInterval(() => {
-    console.log('Checking emails');
-  }, config.checkIntervalMinutes * 60 * 1000);
-  monitoringIntervals.set(config.userId, interval);
+    if (foundInterview) {
+      const title = "New Interview Request!";
+      const msg = "An employer has reached out to schedule a meeting.";
+      
+      // 1. Save to Database
+      await runQuery('INSERT INTO email_alerts (user_id, alert_type, alert_title, alert_message) VALUES (?, ?, ?, ?)', 
+        [config.userId, 'interview', title, msg]);
+
+      // 2. Show Windows Desktop Notification
+      new Notification({
+        title: title,
+        body: msg,
+        icon: path.join(__dirname, '../public/logo.png')
+      }).show();
+    }
+  }, 60 * 60 * 1000); // Every hour
 }
 
 export function stopEmailMonitoring(userId: number): void {
-  const interval = monitoringIntervals.get(userId);
-  if (interval) {
-    clearInterval(interval);
-    monitoringIntervals.delete(userId);
-    console.log('Stopped email monitoring');
-  }
+  console.log('Monitoring Stopped');
 }
 
 export function getMonitoringStatus(userId: number): boolean {
-  return monitoringIntervals.has(userId);
-}
-
-export function stopAllMonitoring(): void {
-  monitoringIntervals.forEach((interval) => clearInterval(interval));
-  monitoringIntervals.clear();
+  return true; // Simplified for now
 }

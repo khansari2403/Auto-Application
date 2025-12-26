@@ -49,7 +49,7 @@ contextBridge.exposeInMainWorld('electron', {
   stopEmailMonitoring: (userId: number) => ipcRenderer.invoke('email:stop-monitoring', userId),
   getMonitoringStatus: (userId: number) => ipcRenderer.invoke('email:get-monitoring-status', userId),
   getEmailAlerts: (userId: number) => ipcRenderer.invoke('email:get-alerts', userId),
-  markAlertAsRead: (alertId: number) => ipcRenderer.invoke('email:mark-alert-read', alertId),
+  markAlertAsRead: (alertId: number) => ipcRenderer.invoke('email:mark-alert-read', alertId),exchangeGmailCode: (code: string) => ipcRenderer.invoke('email:exchange-code', code),
 });
 
 // Type definitions for TypeScript
@@ -84,7 +84,7 @@ declare global {
       stopEmailMonitoring: (userId: number) => Promise<any>;
       getMonitoringStatus: (userId: number) => Promise<any>;
       getEmailAlerts: (userId: number) => Promise<any>;
-      markAlertAsRead: (alertId: number) => Promise<any>;
+      markAlertAsRead: (alertId: number) => Promise<any>;exchangeGmailCode: (code: string) => Promise<any>;
     };
   }
 }

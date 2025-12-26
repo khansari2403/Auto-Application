@@ -1,3 +1,4 @@
+import { runQuery, getAllQuery, getQuery } from './database';
 /**
  * IPC Handlers
  * Handles communication between renderer (React UI) and main process
@@ -290,33 +291,16 @@ async function handleUpdateAIModel(event: any, data: any) {
 
 // ============ Email Configuration Handlers ============
 
-async function handleSaveEmailConfig(event: any, data: any) {
+async function handleSaveEmailConfig(_event: any, data: any) {
   try {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      INSERT INTO email_config (
-        user_id, email_provider, email_address, auth_type, oauth_token,
-        smtp_host, smtp_port, smtp_username, smtp_password, auto_send
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const result = stmt.run(
-      data.userId,
-      data.emailProvider,
-      data.emailAddress,
-      data.authType,
-      data.oauthToken,
-      data.smtpHost,
-      data.smtpPort,
-      data.smtpUsername,
-      data.smtpPassword,
-      data.autoSend ?? false
-    );
-    return { success: true, id: result.lastInsertRowid };
+    // We pass the whole 'data' object to runQuery
+    const result = await runQuery('INSERT INTO email_config', [data]);
+    return { success: true, id: result.id };
   } catch (error: any) {
+    console.error('Error saving email config:', error);
     return { success: false, error: error.message };
   }
 }
-
 async function handleGetEmailConfig(event: any, userId: number) {
   try {
     const db = getDatabase();
@@ -328,34 +312,15 @@ async function handleGetEmailConfig(event: any, userId: number) {
   }
 }
 
-async function handleUpdateEmailConfig(event: any, data: any) {
+async function handleUpdateEmailConfig(_event: any, data: any) {
   try {
-    const db = getDatabase();
-    const stmt = db.prepare(`
-      UPDATE email_config 
-      SET email_provider = ?, email_address = ?, auth_type = ?, oauth_token = ?,
-          smtp_host = ?, smtp_port = ?, smtp_username = ?, smtp_password = ?,
-          auto_send = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-    stmt.run(
-      data.emailProvider,
-      data.emailAddress,
-      data.authType,
-      data.oauthToken,
-      data.smtpHost,
-      data.smtpPort,
-      data.smtpUsername,
-      data.smtpPassword,
-      data.autoSend,
-      data.id
-    );
+    await runQuery('UPDATE email_config', [data]);
     return { success: true };
   } catch (error: any) {
+    console.error('Error updating email config:', error);
     return { success: false, error: error.message };
   }
 }
-
 // ============ Job Websites Handlers ============
 
 async function handleAddWebsite(event: any, data: any) {
@@ -548,6 +513,24 @@ async function handleGetMonitoringStatus(_event: any, userId: number) {
     const isActive = emailMonitor.getMonitoringStatus(userId);
     return { success: true, isActive };
   } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+async function handleExchangeCode(_event: any, userId: number, code: string) {
+  try {
+    const emailService = await import('./email-service');
+    const tokenConfig = await emailService.exchangeGmailCode(userId, code);
+    
+    // NEW: Save the tokens to the database immediately
+    await runQuery('UPDATE email_config', [{
+      access_token: tokenConfig.accessToken,
+      refresh_token: tokenConfig.refreshToken,
+      expires_at: tokenConfig.expiresAt
+    }]);
+
+    return { success: true, data: tokenConfig };
+  } catch (error: any) {
+    console.error('Error exchanging code:', error);
     return { success: false, error: error.message };
   }
 }

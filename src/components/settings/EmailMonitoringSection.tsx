@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface EmailMonitoringSectionProps {
   userId: number;
@@ -6,15 +6,62 @@ interface EmailMonitoringSectionProps {
 
 export function EmailMonitoringSection({ userId }: EmailMonitoringSectionProps) {
   const [isMonitoring, setIsMonitoring] = useState(false);
+  const [googleClientId, setGoogleClientId] = useState('');
+  const [googleClientSecret, setGoogleClientSecret] = useState('');
   const [authUrl, setAuthUrl] = useState('');
   const [accessToken, setAccessToken] = useState('');
   const [showAuthUrl, setShowAuthUrl] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // NEW: Load saved data when the component opens
+  useEffect(() => {
+    loadConfig();
+  }, [userId]);
+
+  const loadConfig = async () => {
+    try {
+      const result = await (window as any).electron.getEmailConfig(userId);
+      if (result?.success && result.data) {
+        setGoogleClientId(result.data.google_client_id || '');
+        setGoogleClientSecret(result.data.google_client_secret || '');
+        if (result.data.access_token) {
+          setAccessToken(result.data.access_token);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load email config:', error);
+    }
+  };
+
+  const handleSaveCredentials = async () => {
+    setIsSaving(true);
+    try {
+      const result = await (window as any).electron.saveEmailConfig({
+        userId,
+        emailProvider: 'gmail',
+        googleClientId,
+        googleClientSecret
+      });
+      if (result?.success) {
+        alert('Credentials saved successfully!');
+      } else {
+        alert('Failed to save: ' + result?.error);
+      }
+    } catch (error) {
+      alert('Error saving credentials');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const handleConnectGmail = async () => {
+    if (!googleClientId || !googleClientSecret) {
+      alert('Please enter and save your Google Client ID and Secret first');
+      return;
+    }
     try {
-      // Get Gmail auth URL from IPC
-      const result = await (window as any).electron.getGmailAuthUrl?.();
-      if (result?.url) {
+      const result = await (window as any).electron.getGmailAuthUrl(userId);
+      if (result?.success && result.url) {
         setAuthUrl(result.url);
         setShowAuthUrl(true);
       }
@@ -23,16 +70,33 @@ export function EmailMonitoringSection({ userId }: EmailMonitoringSectionProps) 
     }
   };
 
-  const handleStartMonitoring = async () => {
-    if (!accessToken) {
-      alert('Please connect Gmail first');
+  const handleVerifyCode = async () => {
+    const codeInput = document.getElementById('authCodeInput') as HTMLInputElement;
+    const code = codeInput?.value;
+    if (!code) {
+      alert('Please paste the code from Google');
       return;
     }
     try {
-      const result = await (window as any).electron.startEmailMonitoring?.(userId, accessToken);
+      const result = await (window as any).electron.exchangeCode(userId, code);
+      if (result?.success) {
+        setAccessToken(result.data.accessToken);
+        setShowAuthUrl(false);
+        alert('Successfully connected to Gmail!');
+      } else {
+        alert('Failed to verify code: ' + result?.error);
+      }
+    } catch (error) {
+      console.error('Failed to exchange code:', error);
+    }
+  };
+
+  const handleStartMonitoring = async () => {
+    try {
+      const result = await (window as any).electron.startEmailMonitoring(userId, accessToken);
       if (result?.success) {
         setIsMonitoring(true);
-        alert('Email monitoring started! Checking every hour.');
+        alert('Email monitoring started!');
       }
     } catch (error) {
       console.error('Failed to start monitoring:', error);
@@ -41,7 +105,7 @@ export function EmailMonitoringSection({ userId }: EmailMonitoringSectionProps) 
 
   const handleStopMonitoring = async () => {
     try {
-      const result = await (window as any).electron.stopEmailMonitoring?.(userId);
+      const result = await (window as any).electron.stopEmailMonitoring(userId);
       if (result?.success) {
         setIsMonitoring(false);
         alert('Email monitoring stopped');
@@ -53,70 +117,76 @@ export function EmailMonitoringSection({ userId }: EmailMonitoringSectionProps) 
 
   return (
     <div style={{ padding: '20px', border: '1px solid #ddd', borderRadius: '8px', marginBottom: '20px' }}>
-      <h3>📧 Email Monitoring</h3>
+      <h3>📧 Email Monitoring Setup</h3>
       
-      <div style={{ marginBottom: '15px' }}>
-        <p><strong>Status:</strong> {isMonitoring ? '✅ Active' : '⏸️ Inactive'}</p>
+      {/* SECTION 1: CREDENTIALS */}
+      <div style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '8px' }}>
+        <h4>1. Google API Credentials</h4>
+        <div style={{ marginBottom: '10px' }}>
+          <label style={{ display: 'block', fontSize: '14px' }}>Client ID:</label>
+          <input 
+            type="text" 
+            value={googleClientId}
+            onChange={(e) => setGoogleClientId(e.target.value)}
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          />
+        </div>
+        <div style={{ marginBottom: '15px' }}>
+          <label style={{ display: 'block', fontSize: '14px' }}>Client Secret:</label>
+          <input 
+            type="password" 
+            value={googleClientSecret}
+            onChange={(e) => setGoogleClientSecret(e.target.value)}
+            style={{ width: '100%', padding: '8px', marginTop: '5px' }}
+          />
+        </div>
+        <button 
+          onClick={handleSaveCredentials}
+          disabled={isSaving}
+          style={{ padding: '8px 16px', backgroundColor: '#673ab7', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        >
+          {isSaving ? 'Saving...' : '💾 Save Credentials'}
+        </button>
+      </div>
+
+      {/* SECTION 2: CONNECTION */}
+      <div style={{ marginBottom: '20px' }}>
+        <h4>2. Connection Status</h4>
+        <p><strong>Monitoring:</strong> {isMonitoring ? '✅ Active' : '⏸️ Inactive'}</p>
+        <p><strong>Gmail:</strong> {accessToken ? '✅ Connected' : '❌ Not Connected'}</p>
       </div>
 
       {!accessToken && (
-        <div style={{ marginBottom: '15px' }}>
-          <button 
-            onClick={handleConnectGmail}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#4285F4',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              marginRight: '10px'
-            }}
-          >
-            🔗 Connect Gmail
-          </button>
-        </div>
+        <button 
+          onClick={handleConnectGmail}
+          style={{ padding: '10px 20px', backgroundColor: '#4285F4', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        >
+          🔗 Connect Gmail Account
+        </button>
       )}
 
       {showAuthUrl && (
-        <div style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
-          <p><strong>Gmail Authorization URL:</strong></p>
-          <p style={{ wordBreak: 'break-all', fontSize: '12px' }}>{authUrl}</p>
-          <p style={{ fontSize: '12px', color: '#666' }}>
-            Copy this URL to your browser, authorize the app, and paste the code below.
-          </p>
-          <input 
-            type="text" 
-            placeholder="Paste authorization code here"
-            onChange={(e) => setAccessToken(e.target.value)}
-            style={{ width: '100%', padding: '8px', marginTop: '10px' }}
-          />
+        <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#fff3e0', borderRadius: '8px', border: '1px solid #ffe0b2' }}>
+          <p><strong>Step 1:</strong> Copy this URL to your browser:</p>
+          <p style={{ wordBreak: 'break-all', fontSize: '11px', color: '#e65100' }}>{authUrl}</p>
+          <p style={{ marginTop: '10px' }}><strong>Step 2:</strong> Paste the code from Google here:</p>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input type="text" id="authCodeInput" style={{ flex: 1, padding: '8px' }} />
+            <button onClick={handleVerifyCode} style={{ padding: '8px 16px', backgroundColor: '#ff9800', color: 'white', border: 'none', borderRadius: '4px' }}>
+              Verify Code
+            </button>
+          </div>
         </div>
       )}
 
       {accessToken && (
-        <div style={{ marginBottom: '15px' }}>
-          <button 
-            onClick={isMonitoring ? handleStopMonitoring : handleStartMonitoring}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: isMonitoring ? '#d32f2f' : '#4CAF50',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
-            {isMonitoring ? '⏹️ Stop Monitoring' : '▶️ Start Monitoring'}
-          </button>
-        </div>
+        <button 
+          onClick={isMonitoring ? handleStopMonitoring : handleStartMonitoring}
+          style={{ padding: '10px 20px', backgroundColor: isMonitoring ? '#d32f2f' : '#4CAF50', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        >
+          {isMonitoring ? '⏹️ Stop Monitoring' : '▶️ Start Monitoring'}
+        </button>
       )}
-
-      <div style={{ marginTop: '15px', padding: '10px', backgroundColor: '#e3f2fd', borderRadius: '4px' }}>
-        <p style={{ fontSize: '12px', margin: '0' }}>
-          <strong>ℹ️ Info:</strong> Email monitoring checks for new emails every hour and alerts you to important messages from employers.
-        </p>
-      </div>
     </div>
   );
 }

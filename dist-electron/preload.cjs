@@ -52,5 +52,6 @@ import_electron.contextBridge.exposeInMainWorld("electron", {
   stopEmailMonitoring: (userId) => import_electron.ipcRenderer.invoke("email:stop-monitoring", userId),
   getMonitoringStatus: (userId) => import_electron.ipcRenderer.invoke("email:get-monitoring-status", userId),
   getEmailAlerts: (userId) => import_electron.ipcRenderer.invoke("email:get-alerts", userId),
-  markAlertAsRead: (alertId) => import_electron.ipcRenderer.invoke("email:mark-alert-read", alertId)
+  markAlertAsRead: (alertId) => import_electron.ipcRenderer.invoke("email:mark-alert-read", alertId),
+  exchangeGmailCode: (code) => import_electron.ipcRenderer.invoke("email:exchange-code", code)
 });

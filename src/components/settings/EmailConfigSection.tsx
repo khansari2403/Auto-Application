@@ -32,12 +32,10 @@ function EmailConfigSection({ userId }: EmailConfigSectionProps) {
       const result = await window.electron.getEmailConfig(userId);
       if (result.success && result.data) {
         setEmailProvider(result.data.email_provider || 'gmail');
-        setEmailAddress(result.data.email_address || '');
+        // Check both naming styles just in case
+        setEmailAddress(result.data.email_address || result.data.emailAddress || '');
         setAuthType(result.data.auth_type || 'oauth');
         setAutoSend(result.data.auto_send || false);
-        setSmtpHost(result.data.smtp_host || '');
-        setSmtpPort(result.data.smtp_port || '587');
-        setSmtpUsername(result.data.smtp_username || '');
       }
     } catch (error) {
       console.error('Failed to load email config:', error);

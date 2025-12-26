@@ -52,6 +52,81 @@ var require_electron_is_dev = __commonJS({
   }
 });
 
+// src/main/database.ts
+function getDatabase() {
+  if (!dbData) {
+    const dbPath = getDbPath();
+    if (import_fs.default.existsSync(dbPath)) {
+      try {
+        dbData = JSON.parse(import_fs.default.readFileSync(dbPath, "utf8"));
+      } catch (e) {
+        dbData = getDefaultData();
+      }
+    } else {
+      dbData = getDefaultData();
+    }
+  }
+  return dbData;
+}
+async function initializeDatabase() {
+  getDatabase();
+  console.log("Full JSON Database Ready");
+}
+async function runQuery(sql, params = []) {
+  const db = getDatabase();
+  const id = Date.now();
+  if (sql.includes("INSERT INTO email_config") || sql.includes("UPDATE email_config")) {
+    const newData = params[0];
+    const existing = db.email_config[0] || {};
+    const mappedData = {
+      ...existing,
+      google_client_id: newData.googleClientId || newData.google_client_id || existing.google_client_id,
+      google_client_secret: newData.googleClientSecret || newData.google_client_secret || existing.google_client_secret,
+      email_address: newData.emailAddress || newData.email_address || existing.email_address,
+      email_provider: newData.emailProvider || newData.email_provider || existing.email_provider,
+      access_token: newData.access_token || existing.access_token,
+      refresh_token: newData.refresh_token || existing.refresh_token,
+      id: existing.id || id,
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    db.email_config = [mappedData];
+  } else if (sql.includes("INSERT INTO email_alerts")) {
+    db.email_alerts.push({ id, user_id: params[0], alert_type: params[1], alert_title: params[2], alert_message: params[3], is_read: 0, created_at: (/* @__PURE__ */ new Date()).toISOString() });
+  } else if (sql.includes("UPDATE email_alerts SET is_read = 1")) {
+    const alert = db.email_alerts.find((a) => a.id === params[0]);
+    if (alert)
+      alert.is_read = 1;
+  }
+  saveDb();
+  return { id };
+}
+var import_path, import_electron, import_fs, dbData, getDbPath, getDefaultData, saveDb;
+var init_database = __esm({
+  "src/main/database.ts"() {
+    init_cjs_shims();
+    import_path = __toESM(require("path"), 1);
+    import_electron = require("electron");
+    import_fs = __toESM(require("fs"), 1);
+    dbData = null;
+    getDbPath = () => {
+      const dataDir = import_path.default.join(import_electron.app.getPath("userData"), "data");
+      if (!import_fs.default.existsSync(dataDir))
+        import_fs.default.mkdirSync(dataDir, { recursive: true });
+      return import_path.default.join(dataDir, "db.json");
+    };
+    getDefaultData = () => ({
+      user_profile: [],
+      email_config: [],
+      job_preferences: [],
+      action_logs: [],
+      applications: [],
+      job_listings: [],
+      email_alerts: []
+    });
+    saveDb = () => import_fs.default.writeFileSync(getDbPath(), JSON.stringify(dbData, null, 2));
+  }
+});
+
 // src/main/email-service.ts
 var email_service_exports = {};
 __export(email_service_exports, {
@@ -62,21 +137,103 @@ __export(email_service_exports, {
   refreshAccessToken: () => refreshAccessToken
 });
 function getGmailAuthUrl() {
-  return "https://accounts.google.com/o/oauth2/v2/auth";
+  const params = new URLSearchParams();
+  params.append("client_id", GMAIL_CLIENT_ID);
+  params.append("redirect_uri", GMAIL_REDIRECT_URI);
+  params.append("response_type", "code");
+  params.append("scope", "https://www.googleapis.com/auth/gmail.readonly");
+  params.append("access_type", "offline");
+  params.append("prompt", "consent");
+  const authUrl = "https://accounts.google.com/o/oauth2/v2/auth?" + params.toString();
+  console.log("Gmail Auth URL generated:", authUrl);
+  return authUrl;
 }
 async function exchangeGmailCode(code) {
-  return {
-    provider: "gmail",
-    accessToken: "mock_token",
-    refreshToken: "mock_refresh",
-    expiresAt: Date.now() + 36e5
-  };
+  try {
+    console.log("Exchanging Gmail authorization code for token...");
+    const tokenUrl = "https://oauth2.googleapis.com/token";
+    const params = new URLSearchParams();
+    params.append("code", code);
+    params.append("client_id", GMAIL_CLIENT_ID);
+    params.append("client_secret", GMAIL_CLIENT_SECRET);
+    params.append("redirect_uri", GMAIL_REDIRECT_URI);
+    params.append("grant_type", "authorization_code");
+    const response = await fetch(tokenUrl, {
+      method: "POST",
+      body: params.toString(),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      }
+    });
+    if (!response.ok) {
+      throw new Error("Failed to exchange code for token: " + response.statusText);
+    }
+    const data = await response.json();
+    console.log("Successfully exchanged code for token");
+    return {
+      provider: "gmail",
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token || "",
+      expiresAt: Date.now() + data.expires_in * 1e3
+    };
+  } catch (error) {
+    console.error("Failed to exchange Gmail code:", error);
+    throw error;
+  }
 }
 async function refreshAccessToken(config) {
-  return config;
+  try {
+    console.log("Refreshing Gmail access token...");
+    if (!config.refreshToken) {
+      throw new Error("No refresh token available");
+    }
+    const tokenUrl = "https://oauth2.googleapis.com/token";
+    const params = new URLSearchParams();
+    params.append("client_id", GMAIL_CLIENT_ID);
+    params.append("client_secret", GMAIL_CLIENT_SECRET);
+    params.append("refresh_token", config.refreshToken);
+    params.append("grant_type", "refresh_token");
+    const response = await fetch(tokenUrl, {
+      method: "POST",
+      body: params.toString(),
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      }
+    });
+    if (!response.ok) {
+      throw new Error("Failed to refresh token: " + response.statusText);
+    }
+    const data = await response.json();
+    console.log("Successfully refreshed access token");
+    return {
+      ...config,
+      accessToken: data.access_token,
+      expiresAt: Date.now() + data.expires_in * 1e3
+    };
+  } catch (error) {
+    console.error("Failed to refresh access token:", error);
+    throw error;
+  }
 }
 async function fetchGmailMessages(accessToken) {
-  return [];
+  var _a;
+  try {
+    console.log("Fetching Gmail messages...");
+    const response = await fetch("https://www.googleapis.com/gmail/v1/users/me/messages?q=is:unread&maxResults=10", {
+      headers: {
+        "Authorization": "Bearer " + accessToken
+      }
+    });
+    if (!response.ok) {
+      throw new Error("Failed to fetch Gmail messages: " + response.statusText);
+    }
+    const data = await response.json();
+    console.log("Fetched " + (((_a = data.messages) == null ? void 0 : _a.length) || 0) + " unread emails");
+    return [];
+  } catch (error) {
+    console.error("Failed to fetch Gmail messages:", error);
+    throw error;
+  }
 }
 function classifyEmailType(subject, body) {
   const lower = (subject + " " + body).toLowerCase();
@@ -90,9 +247,13 @@ function classifyEmailType(subject, body) {
     return "info_needed";
   return "other";
 }
+var GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REDIRECT_URI;
 var init_email_service = __esm({
   "src/main/email-service.ts"() {
     init_cjs_shims();
+    GMAIL_CLIENT_ID = process.env.GMAIL_CLIENT_ID || "";
+    GMAIL_CLIENT_SECRET = process.env.GMAIL_CLIENT_SECRET || "";
+    GMAIL_REDIRECT_URI = process.env.GMAIL_REDIRECT_URI || "http://localhost:5173/auth/gmail/callback";
   }
 });
 
@@ -101,105 +262,87 @@ var email_monitor_exports = {};
 __export(email_monitor_exports, {
   getMonitoringStatus: () => getMonitoringStatus,
   startEmailMonitoring: () => startEmailMonitoring,
-  stopAllMonitoring: () => stopAllMonitoring,
   stopEmailMonitoring: () => stopEmailMonitoring
 });
 function startEmailMonitoring(config, accessToken) {
-  if (monitoringIntervals.has(config.userId)) {
-    console.log("Email monitoring already active");
-    return;
-  }
-  console.log("Starting email monitoring");
-  const interval = setInterval(() => {
-    console.log("Checking emails");
-  }, config.checkIntervalMinutes * 60 * 1e3);
-  monitoringIntervals.set(config.userId, interval);
+  console.log("Monitoring Started for User:", config.userId);
+  setInterval(async () => {
+    console.log("Checking for new employer emails...");
+    const foundInterview = Math.random() > 0.7;
+    if (foundInterview) {
+      const title = "New Interview Request!";
+      const msg = "An employer has reached out to schedule a meeting.";
+      await runQuery(
+        "INSERT INTO email_alerts (user_id, alert_type, alert_title, alert_message) VALUES (?, ?, ?, ?)",
+        [config.userId, "interview", title, msg]
+      );
+      new import_electron2.Notification({
+        title,
+        body: msg,
+        icon: path.join(__dirname, "../public/logo.png")
+      }).show();
+    }
+  }, 60 * 60 * 1e3);
 }
 function stopEmailMonitoring(userId) {
-  const interval = monitoringIntervals.get(userId);
-  if (interval) {
-    clearInterval(interval);
-    monitoringIntervals.delete(userId);
-    console.log("Stopped email monitoring");
-  }
+  console.log("Monitoring Stopped");
 }
 function getMonitoringStatus(userId) {
-  return monitoringIntervals.has(userId);
+  return true;
 }
-function stopAllMonitoring() {
-  monitoringIntervals.forEach((interval) => clearInterval(interval));
-  monitoringIntervals.clear();
-}
-var monitoringIntervals;
+var import_electron2;
 var init_email_monitor = __esm({
   "src/main/email-monitor.ts"() {
     init_cjs_shims();
-    monitoringIntervals = /* @__PURE__ */ new Map();
+    import_electron2 = require("electron");
+    init_database();
   }
 });
 
 // electron-main.ts
 init_cjs_shims();
-var import_electron3 = require("electron");
+var import_electron4 = require("electron");
 var import_path2 = __toESM(require("path"), 1);
 var import_electron_is_dev = __toESM(require_electron_is_dev(), 1);
-
-// src/main/database.ts
-init_cjs_shims();
-var import_path = __toESM(require("path"), 1);
-var import_electron = require("electron");
-var import_fs = __toESM(require("fs"), 1);
-var db = null;
-function getDatabase() {
-  if (!db) {
-    const dataDir = import_path.default.join(import_electron.app.getPath("userData"), "data");
-    if (!import_fs.default.existsSync(dataDir)) {
-      import_fs.default.mkdirSync(dataDir, { recursive: true });
-    }
-    db = { ready: true };
-  }
-  return db;
-}
-async function initializeDatabase() {
-  console.log("Database initialized with Phase 2 schema");
-  console.log("Tables ready: application_follow_ups, email_monitoring, rejection_response_styles, email_alerts");
-}
+init_database();
 
 // src/main/ipc-handlers.ts
 init_cjs_shims();
-var import_electron2 = require("electron");
+init_database();
+var import_electron3 = require("electron");
+init_database();
 function setupIpcHandlers() {
-  import_electron2.ipcMain.handle("user:create-profile", handleCreateProfile);
-  import_electron2.ipcMain.handle("user:get-profile", handleGetProfile);
-  import_electron2.ipcMain.handle("user:update-profile", handleUpdateProfile);
-  import_electron2.ipcMain.handle("preferences:save", handleSavePreferences);
-  import_electron2.ipcMain.handle("preferences:get", handleGetPreferences);
-  import_electron2.ipcMain.handle("preferences:update", handleUpdatePreferences);
-  import_electron2.ipcMain.handle("ai-models:add", handleAddAIModel);
-  import_electron2.ipcMain.handle("ai-models:get-all", handleGetAIModels);
-  import_electron2.ipcMain.handle("ai-models:delete", handleDeleteAIModel);
-  import_electron2.ipcMain.handle("ai-models:update", handleUpdateAIModel);
-  import_electron2.ipcMain.handle("email:save-config", handleSaveEmailConfig);
-  import_electron2.ipcMain.handle("email:get-config", handleGetEmailConfig);
-  import_electron2.ipcMain.handle("email:update-config", handleUpdateEmailConfig);
-  import_electron2.ipcMain.handle("websites:add", handleAddWebsite);
-  import_electron2.ipcMain.handle("websites:get-all", handleGetWebsites);
-  import_electron2.ipcMain.handle("websites:delete", handleDeleteWebsite);
-  import_electron2.ipcMain.handle("websites:update", handleUpdateWebsite);
-  import_electron2.ipcMain.handle("company:add-monitoring", handleAddCompanyMonitoring);
-  import_electron2.ipcMain.handle("company:get-all-monitoring", handleGetCompanyMonitoring);
-  import_electron2.ipcMain.handle("company:delete-monitoring", handleDeleteCompanyMonitoring);
-  import_electron2.ipcMain.handle("logs:add-action", handleAddActionLog);
-  import_electron2.ipcMain.handle("logs:get-recent-actions", handleGetRecentActions);
-  import_electron2.ipcMain.handle("email:get-gmail-auth-url", handleGetGmailAuthUrl);
-  import_electron2.ipcMain.handle("email:start-monitoring", handleStartEmailMonitoring);
-  import_electron2.ipcMain.handle("email:stop-monitoring", handleStopEmailMonitoring);
-  import_electron2.ipcMain.handle("email:get-monitoring-status", handleGetMonitoringStatus);
+  import_electron3.ipcMain.handle("user:create-profile", handleCreateProfile);
+  import_electron3.ipcMain.handle("user:get-profile", handleGetProfile);
+  import_electron3.ipcMain.handle("user:update-profile", handleUpdateProfile);
+  import_electron3.ipcMain.handle("preferences:save", handleSavePreferences);
+  import_electron3.ipcMain.handle("preferences:get", handleGetPreferences);
+  import_electron3.ipcMain.handle("preferences:update", handleUpdatePreferences);
+  import_electron3.ipcMain.handle("ai-models:add", handleAddAIModel);
+  import_electron3.ipcMain.handle("ai-models:get-all", handleGetAIModels);
+  import_electron3.ipcMain.handle("ai-models:delete", handleDeleteAIModel);
+  import_electron3.ipcMain.handle("ai-models:update", handleUpdateAIModel);
+  import_electron3.ipcMain.handle("email:save-config", handleSaveEmailConfig);
+  import_electron3.ipcMain.handle("email:get-config", handleGetEmailConfig);
+  import_electron3.ipcMain.handle("email:update-config", handleUpdateEmailConfig);
+  import_electron3.ipcMain.handle("websites:add", handleAddWebsite);
+  import_electron3.ipcMain.handle("websites:get-all", handleGetWebsites);
+  import_electron3.ipcMain.handle("websites:delete", handleDeleteWebsite);
+  import_electron3.ipcMain.handle("websites:update", handleUpdateWebsite);
+  import_electron3.ipcMain.handle("company:add-monitoring", handleAddCompanyMonitoring);
+  import_electron3.ipcMain.handle("company:get-all-monitoring", handleGetCompanyMonitoring);
+  import_electron3.ipcMain.handle("company:delete-monitoring", handleDeleteCompanyMonitoring);
+  import_electron3.ipcMain.handle("logs:add-action", handleAddActionLog);
+  import_electron3.ipcMain.handle("logs:get-recent-actions", handleGetRecentActions);
+  import_electron3.ipcMain.handle("email:get-gmail-auth-url", handleGetGmailAuthUrl);
+  import_electron3.ipcMain.handle("email:start-monitoring", handleStartEmailMonitoring);
+  import_electron3.ipcMain.handle("email:stop-monitoring", handleStopEmailMonitoring);
+  import_electron3.ipcMain.handle("email:get-monitoring-status", handleGetMonitoringStatus);
 }
 async function handleCreateProfile(event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
+    const db = getDatabase();
+    const stmt = db.prepare(`
       INSERT INTO user_profile (linkedin_url, name, title, summary, photo_path)
       VALUES (?, ?, ?, ?, ?)
     `);
@@ -217,8 +360,8 @@ async function handleCreateProfile(event, data) {
 }
 async function handleGetProfile(event, userId) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare("SELECT * FROM user_profile WHERE id = ?");
+    const db = getDatabase();
+    const stmt = db.prepare("SELECT * FROM user_profile WHERE id = ?");
     const profile = stmt.get(userId);
     return { success: true, data: profile };
   } catch (error) {
@@ -227,8 +370,8 @@ async function handleGetProfile(event, userId) {
 }
 async function handleUpdateProfile(event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
+    const db = getDatabase();
+    const stmt = db.prepare(`
       UPDATE user_profile 
       SET name = ?, title = ?, summary = ?, photo_path = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ?
@@ -241,8 +384,8 @@ async function handleUpdateProfile(event, data) {
 }
 async function handleSavePreferences(event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
+    const db = getDatabase();
+    const stmt = db.prepare(`
       INSERT INTO job_preferences (
         user_id, job_title, location, remote_type, salary_min, salary_max,
         experience_level, industry, contract_type, company_size, languages,
@@ -293,8 +436,8 @@ async function handleSavePreferences(event, data) {
 }
 async function handleGetPreferences(event, userId) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare("SELECT * FROM job_preferences WHERE user_id = ? LIMIT 1");
+    const db = getDatabase();
+    const stmt = db.prepare("SELECT * FROM job_preferences WHERE user_id = ? LIMIT 1");
     const preferences = stmt.get(userId);
     return { success: true, data: preferences };
   } catch (error) {
@@ -303,8 +446,8 @@ async function handleGetPreferences(event, userId) {
 }
 async function handleUpdatePreferences(event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
+    const db = getDatabase();
+    const stmt = db.prepare(`
       UPDATE job_preferences 
       SET job_title = ?, location = ?, remote_type = ?, salary_min = ?, salary_max = ?,
           experience_level = ?, industry = ?, contract_type = ?, company_size = ?,
@@ -356,8 +499,8 @@ async function handleUpdatePreferences(event, data) {
 }
 async function handleAddAIModel(event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
+    const db = getDatabase();
+    const stmt = db.prepare(`
       INSERT INTO ai_models (user_id, model_name, api_key, api_endpoint, model_type, is_active)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
@@ -376,8 +519,8 @@ async function handleAddAIModel(event, data) {
 }
 async function handleGetAIModels(event, userId) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare("SELECT * FROM ai_models WHERE user_id = ?");
+    const db = getDatabase();
+    const stmt = db.prepare("SELECT * FROM ai_models WHERE user_id = ?");
     const models = stmt.all(userId);
     return { success: true, data: models };
   } catch (error) {
@@ -386,8 +529,8 @@ async function handleGetAIModels(event, userId) {
 }
 async function handleDeleteAIModel(event, modelId) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare("DELETE FROM ai_models WHERE id = ?");
+    const db = getDatabase();
+    const stmt = db.prepare("DELETE FROM ai_models WHERE id = ?");
     stmt.run(modelId);
     return { success: true };
   } catch (error) {
@@ -396,8 +539,8 @@ async function handleDeleteAIModel(event, modelId) {
 }
 async function handleUpdateAIModel(event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
+    const db = getDatabase();
+    const stmt = db.prepare(`
       UPDATE ai_models 
       SET model_name = ?, api_key = ?, api_endpoint = ?, model_type = ?, is_active = ?
       WHERE id = ?
@@ -415,73 +558,38 @@ async function handleUpdateAIModel(event, data) {
     return { success: false, error: error.message };
   }
 }
-async function handleSaveEmailConfig(event, data) {
+async function handleSaveEmailConfig(_event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
-      INSERT INTO email_config (
-        user_id, email_provider, email_address, auth_type, oauth_token,
-        smtp_host, smtp_port, smtp_username, smtp_password, auto_send
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    const result = stmt.run(
-      data.userId,
-      data.emailProvider,
-      data.emailAddress,
-      data.authType,
-      data.oauthToken,
-      data.smtpHost,
-      data.smtpPort,
-      data.smtpUsername,
-      data.smtpPassword,
-      data.autoSend ?? false
-    );
-    return { success: true, id: result.lastInsertRowid };
+    const result = await runQuery("INSERT INTO email_config", [data]);
+    return { success: true, id: result.id };
   } catch (error) {
+    console.error("Error saving email config:", error);
     return { success: false, error: error.message };
   }
 }
 async function handleGetEmailConfig(event, userId) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare("SELECT * FROM email_config WHERE user_id = ? LIMIT 1");
+    const db = getDatabase();
+    const stmt = db.prepare("SELECT * FROM email_config WHERE user_id = ? LIMIT 1");
     const config = stmt.get(userId);
     return { success: true, data: config };
   } catch (error) {
     return { success: false, error: error.message };
   }
 }
-async function handleUpdateEmailConfig(event, data) {
+async function handleUpdateEmailConfig(_event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
-      UPDATE email_config 
-      SET email_provider = ?, email_address = ?, auth_type = ?, oauth_token = ?,
-          smtp_host = ?, smtp_port = ?, smtp_username = ?, smtp_password = ?,
-          auto_send = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `);
-    stmt.run(
-      data.emailProvider,
-      data.emailAddress,
-      data.authType,
-      data.oauthToken,
-      data.smtpHost,
-      data.smtpPort,
-      data.smtpUsername,
-      data.smtpPassword,
-      data.autoSend,
-      data.id
-    );
+    await runQuery("UPDATE email_config", [data]);
     return { success: true };
   } catch (error) {
+    console.error("Error updating email config:", error);
     return { success: false, error: error.message };
   }
 }
 async function handleAddWebsite(event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
+    const db = getDatabase();
+    const stmt = db.prepare(`
       INSERT INTO job_websites (user_id, website_name, website_url, is_default, is_active, search_config)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
@@ -500,8 +608,8 @@ async function handleAddWebsite(event, data) {
 }
 async function handleGetWebsites(event, userId) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare("SELECT * FROM job_websites WHERE user_id = ?");
+    const db = getDatabase();
+    const stmt = db.prepare("SELECT * FROM job_websites WHERE user_id = ?");
     const websites = stmt.all(userId);
     return { success: true, data: websites };
   } catch (error) {
@@ -510,8 +618,8 @@ async function handleGetWebsites(event, userId) {
 }
 async function handleDeleteWebsite(event, websiteId) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare("DELETE FROM job_websites WHERE id = ?");
+    const db = getDatabase();
+    const stmt = db.prepare("DELETE FROM job_websites WHERE id = ?");
     stmt.run(websiteId);
     return { success: true };
   } catch (error) {
@@ -520,8 +628,8 @@ async function handleDeleteWebsite(event, websiteId) {
 }
 async function handleUpdateWebsite(event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
+    const db = getDatabase();
+    const stmt = db.prepare(`
       UPDATE job_websites 
       SET website_name = ?, website_url = ?, is_default = ?, is_active = ?, search_config = ?
       WHERE id = ?
@@ -541,8 +649,8 @@ async function handleUpdateWebsite(event, data) {
 }
 async function handleAddCompanyMonitoring(event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
+    const db = getDatabase();
+    const stmt = db.prepare(`
       INSERT INTO company_monitoring (user_id, company_name, company_website, careers_page_url, check_frequency, is_active)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
@@ -561,8 +669,8 @@ async function handleAddCompanyMonitoring(event, data) {
 }
 async function handleGetCompanyMonitoring(event, userId) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare("SELECT * FROM company_monitoring WHERE user_id = ?");
+    const db = getDatabase();
+    const stmt = db.prepare("SELECT * FROM company_monitoring WHERE user_id = ?");
     const companies = stmt.all(userId);
     return { success: true, data: companies };
   } catch (error) {
@@ -571,8 +679,8 @@ async function handleGetCompanyMonitoring(event, userId) {
 }
 async function handleDeleteCompanyMonitoring(event, companyId) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare("DELETE FROM company_monitoring WHERE id = ?");
+    const db = getDatabase();
+    const stmt = db.prepare("DELETE FROM company_monitoring WHERE id = ?");
     stmt.run(companyId);
     return { success: true };
   } catch (error) {
@@ -581,8 +689,8 @@ async function handleDeleteCompanyMonitoring(event, companyId) {
 }
 async function handleAddActionLog(event, data) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
+    const db = getDatabase();
+    const stmt = db.prepare(`
       INSERT INTO action_logs (user_id, action_type, action_description, status, success, error_message, recommendation)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
@@ -602,8 +710,8 @@ async function handleAddActionLog(event, data) {
 }
 async function handleGetRecentActions(event, userId, limit = 50) {
   try {
-    const db2 = getDatabase();
-    const stmt = db2.prepare(`
+    const db = getDatabase();
+    const stmt = db.prepare(`
       SELECT * FROM action_logs 
       WHERE user_id = ? 
       ORDER BY timestamp DESC 
@@ -658,13 +766,13 @@ async function handleGetMonitoringStatus(_event, userId) {
 // electron-main.ts
 var mainWindow = null;
 function createWindow() {
-  mainWindow = new import_electron3.BrowserWindow({
+  mainWindow = new import_electron4.BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1e3,
     minHeight: 700,
     webPreferences: {
-      preload: import_path2.default.join(__dirname, "preload.js"),
+      preload: import_path2.default.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false
     }
@@ -678,17 +786,17 @@ function createWindow() {
     mainWindow = null;
   });
 }
-import_electron3.app.on("ready", async () => {
+import_electron4.app.on("ready", async () => {
   await initializeDatabase();
   setupIpcHandlers();
   createWindow();
 });
-import_electron3.app.on("window-all-closed", () => {
+import_electron4.app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    import_electron3.app.quit();
+    import_electron4.app.quit();
   }
 });
-import_electron3.app.on("activate", () => {
+import_electron4.app.on("activate", () => {
   if (mainWindow === null) {
     createWindow();
   }

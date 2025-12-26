@@ -5,6 +5,6 @@ export default defineConfig({
   format: ['cjs'],
   platform: 'node',
   outDir: 'dist-electron',
-  external: ['sqlite3', 'electron'],
+  external: ['electron'],
   shims: true,
 });

@@ -6,7 +6,6 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import path from 'path';
 import isDev from 'electron-is-dev';
-import sqlite3 from 'sqlite3';
 import { initializeDatabase } from './src/main/database';
 import { setupIpcHandlers } from './src/main/ipc-handlers';
 
@@ -22,10 +21,11 @@ function createWindow() {
     minWidth: 1000,
     minHeight: 700,
     webPreferences: {
-  preload: path.join(__dirname, "preload.js"),
-  contextIsolation: true,
-  nodeIntegration: false
-},
+      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false,
+    },
   });
 
   // Load the app

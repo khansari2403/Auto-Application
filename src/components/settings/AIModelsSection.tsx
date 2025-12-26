@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import '../../styles/settings.css';
 
-interface AIModelsSection Props {
+interface AIModelsSectionProps {
   userId: number;
 }
 

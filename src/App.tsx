@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import './App.css';
 import SettingsPanel from './components/SettingsPanel';
 import ActionLog from './components/ActionLog';
 import EmailMonitoringSection from './components/settings/EmailMonitoringSection';
-import { EmailAlertsPanel } from './components/EmailAlertsPanel';
+import EmailAlertsPanel from './components/EmailAlertsPanel';
+import ApplicationsPanel from './components/ApplicationsPanel'; // NEW: Import our tracker
 
 function App() {
   const [userId] = useState<number>(1);
@@ -77,16 +78,9 @@ function App() {
           </div>
         )}
 
+        {/* UPDATED: This now shows the real Applications Tracker instead of a placeholder */}
         {currentTab === 'applications' && (
-          <div style={{ padding: '20px' }}>
-            <h2>📋 Applications</h2>
-            <div style={{ padding: '20px', backgroundColor: '#f0f0f0', borderRadius: '8px' }}>
-              <p>Application tracking coming soon...</p>
-              <p style={{ fontSize: '12px', color: '#666' }}>
-                Track all your job applications, CVs, motivation letters, and application status.
-              </p>
-            </div>
-          </div>
+          <ApplicationsPanel userId={userId} />
         )}
 
         {currentTab === 'monitoring' && (
@@ -100,7 +94,7 @@ function App() {
                 <li>✅ Email monitoring (checks every hour)</li>
                 <li>✅ Email classification (rejection, interview, offer, info needed)</li>
                 <li>✅ Real-time alerts</li>
-                <li>🔄 Coming soon: Follow-up scheduling</li>
+                <li>✅ Follow-up scheduling (Active)</li>
                 <li>🔄 Coming soon: Rejection response generation</li>
               </ul>
             </div>

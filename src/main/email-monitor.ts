@@ -1,39 +1,37 @@
 import { Notification } from 'electron';
-import { runQuery } from './database';
+import { runQuery, getQuery, getAllQuery } from './database';
+import * as emailService from './email-service';
 
-export function startEmailMonitoring(config: any, accessToken: string): void {
-  console.log('Monitoring Started for User:', config.userId);
+let monitoringInterval: NodeJS.Timeout | null = null;
+
+export async function startEmailMonitoring(config: any, accessToken: string): Promise<void> {
+  if (monitoringInterval) return;
   
-  // This is the "Heartbeat" - it runs every hour
-  setInterval(async () => {
-    console.log('Checking for new employer emails...');
-    
-    // MOCK: In a real scenario, we'd fetch from Gmail here.
-    // Let's simulate finding an important email to test the alert system.
-    const foundInterview = Math.random() > 0.7; 
-
-    if (foundInterview) {
-      const title = "New Interview Request!";
-      const msg = "An employer has reached out to schedule a meeting.";
-      
-      // 1. Save to Database
-      await runQuery('INSERT INTO email_alerts (user_id, alert_type, alert_title, alert_message) VALUES (?, ?, ?, ?)', 
-        [config.userId, 'interview', title, msg]);
-
-      // 2. Show Windows Desktop Notification
-      new Notification({
-        title: title,
-        body: msg,
-        icon: path.join(__dirname, '../public/logo.png')
-      }).show();
-    }
+  monitoringInterval = setInterval(async () => {
+    await checkEmails(config.userId, accessToken);
+    await checkFollowUps(config.userId);
   }, 60 * 60 * 1000); // Every hour
 }
 
-export function stopEmailMonitoring(userId: number): void {
-  console.log('Monitoring Stopped');
+async function checkEmails(userId: number, accessToken: string) {
+  const messages = await emailService.fetchGmailMessages(accessToken);
+  for (const msg of messages) {
+    const type = emailService.classifyEmailType(msg.subject, msg.body);
+    if (type !== 'other') {
+      await runQuery('INSERT INTO email_alerts', { user_id: userId, alert_type: type, alert_title: `New ${type}`, alert_message: msg.subject });
+      new Notification({ title: `New ${type}`, body: msg.subject }).show();
+    }
+  }
 }
 
-export function getMonitoringStatus(userId: number): boolean {
-  return true; // Simplified for now
+async function checkFollowUps(userId: number) {
+  const config = await getQuery('SELECT * FROM email_config');
+  const windowDays = config?.follow_up_days || 3; // This is your configurable window
+  
+  // Logic to find old applications would go here
+  console.log(`Checking for applications older than ${windowDays} days...`);
+}
+
+export function stopEmailMonitoring(userId: number): void {
+  if (monitoringInterval) { clearInterval(monitoringInterval); monitoringInterval = null; }
 }

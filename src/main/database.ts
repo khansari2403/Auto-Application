@@ -2,7 +2,8 @@ import path from 'path';
 import { app } from 'electron';
 import fs from 'fs';
 
-let dbData: any = null;
+// We use a global variable to ensure the database is shared across all files
+let dbData: any = (global as any).dbData || null;
 
 const getDbPath = () => {
   const dataDir = path.join(app.getPath('userData'), 'data');
@@ -17,20 +18,17 @@ export function getDatabase(): any {
       try { dbData = JSON.parse(fs.readFileSync(dbPath, 'utf8')); } 
       catch (e) { dbData = getDefaultData(); }
     } else { dbData = getDefaultData(); }
+    (global as any).dbData = dbData; // Save to global
   }
   const tables = ['user_profile', 'email_config', 'job_preferences', 'ai_models', 'job_websites', 'company_monitoring', 'job_listings', 'applications', 'action_logs', 'email_alerts', 'documents', 'search_profiles', 'settings'];
   tables.forEach(t => { if (!dbData[t]) dbData[t] = []; });
   
-  // Ensure default Speculative Profile exists
   if (!dbData.search_profiles.find((p: any) => p.is_speculative === 1)) {
     dbData.search_profiles.push({ id: 999, profile_name: "Speculative Application", is_active: 0, is_speculative: 1, location: 'Any', industry: 'Any' });
   }
-  
-  // Ensure default settings exist
   if (dbData.settings.length === 0) {
-    dbData.settings = [{ id: 1, auto_apply: 0, language: 'en', layout: 'ltr' }];
+    dbData.settings = [{ id: 1, auto_apply: 0, language: 'en', layout: 'ltr', storage_path: app.getPath('documents') }];
   }
-
   return dbData;
 }
 
@@ -38,7 +36,7 @@ const getDefaultData = () => ({
   user_profile: [], email_config: [], job_preferences: [], ai_models: [],
   job_websites: [], company_monitoring: [], job_listings: [],
   applications: [], action_logs: [], email_alerts: [],
-  documents: [], search_profiles: [], settings: [{ id: 1, auto_apply: 0, language: 'en', layout: 'ltr' }]
+  documents: [], search_profiles: [], settings: [{ id: 1, auto_apply: 0, language: 'en', layout: 'ltr', storage_path: '' }]
 });
 
 const saveDb = () => fs.writeFileSync(getDbPath(), JSON.stringify(dbData, null, 2));
@@ -66,20 +64,18 @@ export async function runQuery(sql: string, params: any = []): Promise<any> {
       if (existing) {
         existing.seen_count = (existing.seen_count || 1) + 1;
         existing.last_seen = new Date().toISOString();
-        if (!existing.history) existing.history = [];
-        existing.history.push({ url: mapped.url, date: new Date().toISOString() });
-        saveDb();
-        return { id: existing.id };
+        saveDb(); return { id: existing.id };
       }
-      mapped.seen_count = 1;
-      mapped.first_seen = new Date().toISOString();
-      mapped.last_seen = new Date().toISOString();
-      mapped.sources = [mapped.source || 'Manual'];
-      mapped.history = [{ url: mapped.url, date: new Date().toISOString() }];
+      mapped.seen_count = 1; mapped.first_seen = new Date().toISOString(); mapped.last_seen = new Date().toISOString(); mapped.sources = [mapped.source || 'Manual'];
     }
-    const entry = { ...mapped, id, timestamp: new Date().toISOString(), created_at: new Date().toISOString() };
-    if (['email_config', 'user_profile', 'settings'].includes(table)) db[table] = [entry];
-    else db[table].push(entry);
+    const entry = { 
+      ...mapped, 
+      id, 
+      status: table === 'ai_models' ? 'active' : undefined,
+      timestamp: new Date().toISOString(), 
+      created_at: new Date().toISOString() 
+    };
+    db[table].push(entry);
   } else if (sql.includes('UPDATE')) {
     const index = db[table].findIndex((item: any) => item.id === newData.id || ['user_profile', 'email_config', 'settings'].includes(table));
     if (index !== -1) db[table][index] = { ...db[table][index], ...mapToSnakeCase(newData), updated_at: new Date().toISOString() };

@@ -7,7 +7,7 @@ import EmailAlertsPanel from './components/EmailAlertsPanel';
 import ApplicationsPanel from './components/ApplicationsPanel';
 import { DocumentRepository } from './components/DocumentRepository';
 import { SearchProfiles } from './components/SearchProfiles';
-import { JobSearch } from './components/JobSearch'; // NEW
+import { JobSearch } from './components/JobSearch';
 
 function App() {
   const [userId] = useState<number>(1);

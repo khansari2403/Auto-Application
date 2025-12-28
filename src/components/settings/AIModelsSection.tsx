@@ -1,251 +1,170 @@
-/**
- * AI Models Section Component
- * Allows users to add, edit, and manage AI model configurations
- */
-
 import { useState, useEffect } from 'react';
-import '../../styles/settings.css';
 
-interface AIModelsSectionProps {
-  userId: number;
-}
-
-interface AIModel {
-  id: number;
-  model_name: string;
-  api_key: string;
-  api_endpoint?: string;
-  model_type: string;
-  is_active: boolean;
-}
-
-function AIModelsSection({ userId }: AIModelsSectionProps) {
-  const [models, setModels] = useState<AIModel[]>([]);
+function AIModelsSection({ userId }: { userId: number }) {
+  const [models, setModels] = useState<any[]>([]);
+  const [docs, setDocs] = useState<any[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({
-    modelName: '',
-    apiKey: '',
-    apiEndpoint: '',
-    modelType: 'text-generation',
+  const [showGuide, setShowGuide] = useState(true);
+  const [formData, setFormData] = useState({ 
+    modelName: '', apiKey: '', role: 'Hunter',
+    writingStyle: 'Formal', wordLimit: '300', strictness: 'Balanced',
+    functionalPrompt: '', cvStylePersona: 'Classic', referenceCvId: ''
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
 
-  // Load models on mount
-  useEffect(() => {
-    loadModels();
-  }, [userId]);
-
-  /**
-   * Load AI models from database
-   */
-  const loadModels = async () => {
-    try {
-      const result = await window.electron.getAIModels(userId);
-      if (result.success) {
-        setModels(result.data || []);
-      }
-    } catch (error) {
-      console.error('Failed to load AI models:', error);
-    }
+  const loadData = async () => {
+    const modelRes = await (window as any).electron.invoke('ai-models:get-all', userId);
+    if (modelRes?.success) setModels(modelRes.data);
+    const docRes = await (window as any).electron.invoke('docs:get-all', userId);
+    if (docRes?.success) setDocs(docRes.data.filter((d: any) => d.category === 'CV'));
   };
 
-  /**
-   * Handle adding new AI model
-   */
-  const handleAddModel = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => { loadData(); }, [userId]);
 
-    if (!formData.modelName || !formData.apiKey) {
-      setMessage('Please fill in all required fields');
-      setMessageType('error');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const result = await window.electron.addAIModel({
-        userId,
-        modelName: formData.modelName,
-        apiKey: formData.apiKey,
-        apiEndpoint: formData.apiEndpoint,
-        modelType: formData.modelType,
-        isActive: true,
-      });
-
-      if (result.success) {
-        setMessage('AI model added successfully!');
-        setMessageType('success');
-        setFormData({ modelName: '', apiKey: '', apiEndpoint: '', modelType: 'text-generation' });
-        setShowForm(false);
-        await loadModels();
-
-        // Log action
-        await window.electron.addActionLog({
-          userId,
-          actionType: 'ai_model_added',
-          actionDescription: `AI model added: ${formData.modelName}`,
-          status: 'completed',
-          success: true,
-        });
-      }
-    } catch (error: any) {
-      setMessage(`Error: ${error.message}`);
-      setMessageType('error');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  /**
-   * Handle deleting AI model
-   */
-  const handleDeleteModel = async (modelId: number) => {
-    if (!confirm('Are you sure you want to delete this AI model?')) return;
-
-    try {
-      const result = await window.electron.deleteAIModel(modelId);
-      if (result.success) {
-        setMessage('AI model deleted successfully!');
-        setMessageType('success');
-        await loadModels();
-
-        await window.electron.addActionLog({
-          userId,
-          actionType: 'ai_model_deleted',
-          actionDescription: `AI model deleted`,
-          status: 'completed',
-          success: true,
-        });
-      }
-    } catch (error: any) {
-      setMessage(`Error: ${error.message}`);
-      setMessageType('error');
-    }
+  const handleAdd = async () => {
+    if (!formData.modelName || !formData.apiKey) return alert("Please fill in Name and API Key");
+    await (window as any).electron.invoke('ai-models:add', { ...formData, userId });
+    setShowForm(false);
+    setFormData({ 
+      modelName: '', apiKey: '', role: 'Hunter', writingStyle: 'Formal', 
+      wordLimit: '300', strictness: 'Balanced', functionalPrompt: '',
+      cvStylePersona: 'Classic', referenceCvId: ''
+    });
+    loadData();
   };
 
   return (
-    <div className="settings-section">
-      <div className="section-header">
-        <h3>🤖 AI Models Configuration</h3>
-        <p>Add and manage AI models for CV generation, motivation letters, and company research</p>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+      {/* FULL STRATEGY GUIDE */}
+      <div style={{ marginBottom: '30px' }}>
+        <button onClick={() => setShowGuide(!showGuide)} style={{ width: '100%', padding: '15px', background: '#f0f7ff', border: '1px solid #0077b5', borderRadius: '10px', textAlign: 'left', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
+          <strong style={{ color: '#0077b5', fontSize: '16px' }}>📘 AI Team Strategy & Model Selection Guide</strong>
+          <span>{showGuide ? '▲ Close Guide' : '▼ Open Detailed Guide'}</span>
+        </button>
+        {showGuide && (
+          <div style={{ background: '#fff', padding: '25px', border: '1px solid #ddd', borderTop: 'none', borderRadius: '0 0 10px 10px', fontSize: '13px', lineHeight: '1.6', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
+              <div>
+                <strong style={{ color: '#0077b5', fontSize: '15px' }}>🚀 The Hunter (Search & Apply)</strong><br/>
+                <p><em>Goal:</em> Scans job boards and fills initial forms. Needs speed and internet access.</p>
+                <strong>Paid:</strong> GPT-4o-mini, Gemini 1.5 Flash (Ultra cheap/fast).<br/>
+                <strong>Free:</strong> Llama 3.1 (via Groq API - extremely fast).<br/>
+                <strong>Strategy:</strong> Add 2-3 Hunters to scan different sites (LinkedIn, Indeed) at the same time.
+              </div>
+              <div>
+                <strong style={{ color: '#0077b5', fontSize: '15px' }}>🧠 The Thinker (Adam)</strong><br/>
+                <p><em>Goal:</em> Researches company news and writes tailored CVs. Needs high reasoning.</p>
+                <strong>Paid:</strong> GPT-4o, Claude 3.5 Sonnet (Best for "human" writing).<br/>
+                <strong>Free:</strong> Llama 3.1 70B (via Groq).<br/>
+                <strong>Strategy:</strong> Use the "Mimic My Style" option to give the Thinker a blueprint of your voice.
+              </div>
+              <div>
+                <strong style={{ color: '#0077b5', fontSize: '15px' }}>🧐 The Auditor (Eve)</strong><br/>
+                <p><em>Goal:</em> Meticulously checks work for accuracy. Needs zero hallucinations.</p>
+                <strong>Paid:</strong> GPT-4o, Claude 3.5 Opus (The most "intelligent" models).<br/>
+                <strong>Free:</strong> Llama 3.1 405B (via OpenRouter).<br/>
+                <strong>Strategy:</strong> Set strictness to "Meticulous" for high-stakes corporate applications.
+              </div>
+              <div>
+                <strong style={{ color: '#0077b5', fontSize: '15px' }}>📧 The Secretary</strong><br/>
+                <p><em>Goal:</em> Monitors Gmail and drafts follow-ups. Needs to be concise.</p>
+                <strong>Paid:</strong> GPT-4o-mini (Perfect for small tasks).<br/>
+                <strong>Free:</strong> Mistral Nemo, Llama 3.2 3B.<br/>
+                <strong>Strategy:</strong> Set a low word limit (e.g., 150 words) to keep follow-ups punchy.
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {message && (
-        <div className={`message message-${messageType}`}>
-          {messageType === 'success' && '✓ '}
-          {messageType === 'error' && '✗ '}
-          {message}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h3 style={{ margin: 0 }}>🤖 Your Active AI Team</h3>
+        <button onClick={() => setShowForm(true)} style={{ padding: '12px 25px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Recruit New Member</button>
+      </div>
+
+      {showForm && (
+        <div style={{ background: '#f9f9f9', padding: '25px', borderRadius: '12px', marginBottom: '25px', border: '1px solid #ddd' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Model Name (e.g. Adam)</label>
+              <input style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc' }} value={formData.modelName} onChange={(e) => setFormData({...formData, modelName: e.target.value})} />
+              
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Assign Role</label>
+              <select style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc' }} value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
+                <option value="Hunter">🚀 The Hunter</option>
+                <option value="Thinker">🧠 The Thinker</option>
+                <option value="Auditor">🧐 The Auditor</option>
+                <option value="Librarian">📚 The Librarian</option>
+                <option value="Secretary">📧 The Secretary</option>
+              </select>
+
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Functional Prompt</label>
+              <textarea style={{ width: '100%', height: '80px', padding: '10px', borderRadius: '6px', border: '1px solid #ccc' }} value={formData.functionalPrompt} onChange={(e) => setFormData({...formData, functionalPrompt: e.target.value})} placeholder="Direct instructions..." />
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>API Key</label>
+              <input type="password" style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc' }} value={formData.apiKey} onChange={(e) => setFormData({...formData, apiKey: e.target.value})} />
+
+              {formData.role === 'Thinker' && (
+                <div style={{ background: '#fff', padding: '15px', borderRadius: '8px', border: '1px solid #eee' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>CV Style Persona</label>
+                  <select style={{ width: '100%', padding: '8px', marginBottom: '10px' }} value={formData.cvStylePersona} onChange={e => setFormData({...formData, cvStylePersona: e.target.value})}>
+                    <option value="Classic">The Classic</option>
+                    <option value="Modern">The Modern</option>
+                    <option value="Academic">The Academic</option>
+                    <option value="Minimalist">The Minimalist</option>
+                  </select>
+                </div>
+              )}
+
+              {(formData.role === 'Thinker' || formData.role === 'Secretary') && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Writing Style</label>
+                    <select style={{ width: '100%', padding: '10px', borderRadius: '6px' }} value={formData.writingStyle} onChange={(e) => setFormData({...formData, writingStyle: e.target.value})}>
+                      <option value="Formal">Formal</option>
+                      <option value="Informal">Informal</option>
+                      <option value="Creative">Creative</option>
+                      <option value="Concise">Concise</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Word Limit</label>
+                    <input type="number" style={{ width: '100%', padding: '10px', borderRadius: '6px' }} value={formData.wordLimit} onChange={(e) => setFormData({...formData, wordLimit: e.target.value})} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          <button onClick={handleAdd} style={{ padding: '12px 30px', background: '#4CAF50', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', marginTop: '15px' }}>Add to Team</button>
+          <button onClick={() => setShowForm(false)} style={{ marginLeft: '10px' }}>Cancel</button>
         </div>
       )}
 
-      {/* Add Model Form */}
-      {showForm && (
-        <form onSubmit={handleAddModel} className="settings-form">
-          <div className="form-group">
-            <label htmlFor="model-name">Model Name *</label>
-            <input
-              id="model-name"
-              type="text"
-              value={formData.modelName}
-              onChange={(e) => setFormData({ ...formData, modelName: e.target.value })}
-              placeholder="e.g., GPT-4, Gemini, Claude"
-              className="form-input"
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="model-type">Model Type *</label>
-            <select
-              id="model-type"
-              value={formData.modelType}
-              onChange={(e) => setFormData({ ...formData, modelType: e.target.value })}
-              className="form-input"
-              disabled={isLoading}
-            >
-              <option value="text-generation">Text Generation</option>
-              <option value="image-generation">Image Generation</option>
-              <option value="embedding">Embedding</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="api-key">API Key *</label>
-            <input
-              id="api-key"
-              type="password"
-              value={formData.apiKey}
-              onChange={(e) => setFormData({ ...formData, apiKey: e.target.value })}
-              placeholder="Your API key"
-              className="form-input"
-              disabled={isLoading}
-            />
-            <small>Your API key is stored securely on your computer</small>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="api-endpoint">API Endpoint (Optional)</label>
-            <input
-              id="api-endpoint"
-              type="url"
-              value={formData.apiEndpoint}
-              onChange={(e) => setFormData({ ...formData, apiEndpoint: e.target.value })}
-              placeholder="https://api.example.com/v1"
-              className="form-input"
-              disabled={isLoading}
-            />
-          </div>
-
-          <div className="form-actions">
-            <button type="submit" className="btn btn-primary" disabled={isLoading}>
-              {isLoading ? 'Adding...' : 'Add Model'}
-            </button>
-            <button
-              type="button"
-              className="btn btn-secondary"
-              onClick={() => setShowForm(false)}
-              disabled={isLoading}
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-
-      {!showForm && (
-        <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-          + Add New AI Model
-        </button>
-      )}
-
-      {/* Models List */}
-      <div className="models-list">
-        {models.length === 0 ? (
-          <p className="empty-state">No AI models configured yet. Add one to get started!</p>
-        ) : (
-          models.map((model) => (
-            <div key={model.id} className="model-card">
-              <div className="model-info">
-                <h4>{model.model_name}</h4>
-                <p>Type: {model.model_type}</p>
-                {model.api_endpoint && <p>Endpoint: {model.api_endpoint}</p>}
-                <p className={`status ${model.is_active ? 'active' : 'inactive'}`}>
-                  {model.is_active ? '✓ Active' : '✗ Inactive'}
-                </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+        {models.map(model => (
+          <div key={model.id} style={{ padding: '20px', background: '#fff', border: '1px solid #eee', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+              <div>
+                <div style={{ fontSize: '11px', color: '#0077b5', fontWeight: 'bold', textTransform: 'uppercase' }}>{model.role}</div>
+                <strong style={{ fontSize: '18px', display: 'block', margin: '5px 0' }}>{model.model_name}</strong>
               </div>
-              <button
-                className="btn btn-danger btn-small"
-                onClick={() => handleDeleteModel(model.id)}
-              >
-                Delete
-              </button>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: '#4CAF50', display: 'inline-block' }}></div>
+                <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>ACTIVE</div>
+              </div>
             </div>
-          ))
-        )}
+            <button onClick={async () => { if(confirm("Remove?")) { await (window as any).electron.invoke('ai-models:delete', model.id); loadData(); } }} 
+              style={{ marginTop: '15px', background: 'none', border: 'none', color: '#f44336', cursor: 'pointer', fontSize: '12px', fontWeight: 'bold' }}>🗑️ Remove</button>
+          </div>
+        ))}
+      </div>
+
+      {/* DEBUG BOX */}
+      <div style={{ marginTop: '40px', padding: '15px', background: '#f5f5f5', borderRadius: '8px', fontSize: '11px' }}>
+        <strong>🛠️ Team Status Debug:</strong><br/>
+        Thinker (Adam): {models.find(m => m.role === 'Thinker') ? '✅ Found' : '❌ Missing'}<br/>
+        Auditor (Eve): {models.find(m => m.role === 'Auditor') ? '✅ Found' : '❌ Missing'}
       </div>
     </div>
   );

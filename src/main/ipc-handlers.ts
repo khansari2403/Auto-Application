@@ -3,15 +3,16 @@ import { ipcMain, BrowserWindow, dialog } from 'electron';
 import * as aiService from './ai-service';
 
 export function setupIpcHandlers(): void {
+  // --- AI MODELS ---
+  ipcMain.handle('ai-models:add', async (_, data) => await runQuery('INSERT INTO ai_models', [data]));
+  ipcMain.handle('ai-models:get-all', async (_, userId) => ({ success: true, data: await getAllQuery('SELECT * FROM ai_models') }));
+  ipcMain.handle('ai-models:update', async (_, data) => await runQuery('UPDATE ai_models', [data]));
+  ipcMain.handle('ai-models:delete', async (_, id) => await runQuery('DELETE ai_models WHERE id = ?', [id]));
+
   // --- AI GENERATOR LOOP ---
   ipcMain.handle('ai:process-application', async (_, jobId, userId) => {
     return await aiService.processApplication(jobId, userId);
   });
-
-  // --- AI MODELS ---
-  ipcMain.handle('ai-models:add', async (_, data) => await runQuery('INSERT INTO ai_models', [data]));
-  ipcMain.handle('ai-models:get-all', async (_, userId) => ({ success: true, data: await getAllQuery('SELECT * FROM ai_models') }));
-  ipcMain.handle('ai-models:delete', async (_, id) => await runQuery('DELETE ai_models WHERE id = ?', [id]));
 
   // --- STORAGE & SETTINGS ---
   ipcMain.handle('settings:get', async () => ({ success: true, data: await getQuery('SELECT * FROM settings') }));
@@ -42,6 +43,7 @@ export function setupIpcHandlers(): void {
   ipcMain.handle('logs:clear', async (_, userId) => await runQuery('DELETE action_logs', []));
   
   // --- EXISTING ---
+  ipcMain.handle('apps:get-all', async (_, userId) => ({ success: true, data: await getAllQuery('SELECT * FROM applications') }));
   ipcMain.handle('email:get-config', async (_, userId) => ({ success: true, data: await getQuery('SELECT * FROM email_config') }));
   ipcMain.handle('user:get-profile', async (_, userId) => ({ success: true, data: await getQuery('SELECT * FROM user_profile') }));
   ipcMain.handle('user:update-profile', async (_, data) => await runQuery('UPDATE user_profile', [data]));

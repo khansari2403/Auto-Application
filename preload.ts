@@ -1,18 +1,22 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electron', {
-  // A general tool to call any background command
   invoke: (channel: string, ...args: any[]) => ipcRenderer.invoke(channel, ...args),
   
-  // Specific Email tools
-  saveEmailConfig: (data: any) => ipcRenderer.invoke('email:save-config', data),
-  getEmailConfig: (userId: number) => ipcRenderer.invoke('email:get-config', userId),
-  getGmailAuthUrl: (userId: number) => ipcRenderer.invoke('email:get-gmail-auth-url', userId),
-  onGmailCodeReceived: (callback: (code: string) => void) => 
-    ipcRenderer.on('gmail:code-received', (_event, code) => callback(code)),
-  exchangeCode: (userId: number, code: string) => ipcRenderer.invoke('email:exchange-code', userId, code),
+  // Documents
+  saveDoc: (data: any) => ipcRenderer.invoke('docs:save', data),
+  getDocs: (userId: number) => ipcRenderer.invoke('docs:get-all', userId),
   
-  // Application tools
-  saveApp: (data: any) => ipcRenderer.invoke('apps:save', data),
-  getApps: (userId: number) => ipcRenderer.invoke('apps:get-all', userId),
+  // Profiles
+  saveProfile: (data: any) => ipcRenderer.invoke('profiles:save', data),
+  getProfiles: (userId: number) => ipcRenderer.invoke('profiles:get-all', userId),
+  updateProfileStatus: (data: any) => ipcRenderer.invoke('profiles:update', data),
+
+  // AI Loop
+  generateCV: (data: any) => ipcRenderer.invoke('ai:generate-cv', data),
+  verifyCV: (data: any) => ipcRenderer.invoke('ai:verify-cv', data),
+
+  // Existing
+  getEmailConfig: (userId: number) => ipcRenderer.invoke('email:get-config', userId),
+  onGmailCodeReceived: (callback: (code: string) => void) => ipcRenderer.on('gmail:code-received', (_event, code) => callback(code)),
 });

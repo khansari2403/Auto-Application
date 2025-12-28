@@ -1,15 +1,18 @@
 // preload.ts
 var import_electron = require("electron");
 import_electron.contextBridge.exposeInMainWorld("electron", {
-  // A general tool to call any background command
   invoke: (channel, ...args) => import_electron.ipcRenderer.invoke(channel, ...args),
-  // Specific Email tools
-  saveEmailConfig: (data) => import_electron.ipcRenderer.invoke("email:save-config", data),
+  // Documents
+  saveDoc: (data) => import_electron.ipcRenderer.invoke("docs:save", data),
+  getDocs: (userId) => import_electron.ipcRenderer.invoke("docs:get-all", userId),
+  // Profiles
+  saveProfile: (data) => import_electron.ipcRenderer.invoke("profiles:save", data),
+  getProfiles: (userId) => import_electron.ipcRenderer.invoke("profiles:get-all", userId),
+  updateProfileStatus: (data) => import_electron.ipcRenderer.invoke("profiles:update", data),
+  // AI Loop
+  generateCV: (data) => import_electron.ipcRenderer.invoke("ai:generate-cv", data),
+  verifyCV: (data) => import_electron.ipcRenderer.invoke("ai:verify-cv", data),
+  // Existing
   getEmailConfig: (userId) => import_electron.ipcRenderer.invoke("email:get-config", userId),
-  getGmailAuthUrl: (userId) => import_electron.ipcRenderer.invoke("email:get-gmail-auth-url", userId),
-  onGmailCodeReceived: (callback) => import_electron.ipcRenderer.on("gmail:code-received", (_event, code) => callback(code)),
-  exchangeCode: (userId, code) => import_electron.ipcRenderer.invoke("email:exchange-code", userId, code),
-  // Application tools
-  saveApp: (data) => import_electron.ipcRenderer.invoke("apps:save", data),
-  getApps: (userId) => import_electron.ipcRenderer.invoke("apps:get-all", userId)
+  onGmailCodeReceived: (callback) => import_electron.ipcRenderer.on("gmail:code-received", (_event, code) => callback(code))
 });

@@ -2,10 +2,12 @@ import { getDatabase, runQuery, getAllQuery, getQuery } from './database';
 import path from 'path';
 import fs from 'fs';
 import axios from 'axios';
+import { scrapeJobs } from './scraper-service';
+
+let huntingInterval: NodeJS.Timeout | null = null;
 
 /**
  * Librarian: Analyzes uploaded documents
- * Short technical description for AI use only.
  */
 export async function analyzeDocument(docId: number, userId: number) {
   try {
@@ -28,7 +30,7 @@ export async function analyzeDocument(docId: number, userId: number) {
     const prompt = `Provide a short, technical, comma-separated list of key skills and document type for this file: ${doc.file_name}. For AI internal use only. Max 15 words.`;
     const summary = await callAI(librarian, prompt, doc.content);
 
-    if (summary.startsWith("Error:")) {
+    if (typeof summary === 'string' && summary.startsWith("Error:")) {
       await runQuery('UPDATE documents', { id: docId, ai_status: 'failed: ' + summary });
     } else {
       await runQuery('UPDATE documents', { id: docId, ai_summary: summary, ai_status: 'verified', is_checked_by_ai: 1 });
@@ -77,6 +79,7 @@ export async function analyzeJobUrl(jobId: number, userId: number, url: string) 
     const result = await callAI(hunter, prompt);
     
     try {
+      if (typeof result !== 'string') throw new Error('AI returned non-string result');
       const cleanedResult = result.replace(/```json|```/g, '').trim();
       const data = JSON.parse(cleanedResult);
       await runQuery('UPDATE job_listings', { 
@@ -103,7 +106,132 @@ export async function analyzeJobUrl(jobId: number, userId: number, url: string) 
 }
 
 /**
- * Core AI Caller: Handles API requests and auto-prefixes Together AI models
+ * Hunter: Start automated search based on profiles and websites
+ */
+export async function startHunterSearch(userId: number) {
+  console.log('Hunter: Starting automated search sequence...');
+  try {
+    const db = getDatabase();
+    const profiles = db.search_profiles.filter((p: any) => p.is_active === 1);
+    const websites = db.job_websites.filter((w: any) => w.is_active === 1);
+    const models = await getAllQuery('SELECT * FROM ai_models');
+    const hunter = models.find((m: any) => m.role === 'Hunter' && m.status === 'active');
+
+    if (!hunter) {
+      await logAction(userId, 'ai_hunter', '❌ Hunter missing or inactive', 'failed', false);
+      return { success: false, error: 'Hunter missing' };
+    }
+
+    if (profiles.length === 0 || websites.length === 0) {
+      await logAction(userId, 'ai_hunter', '⚠️ No active profiles or websites found for search.', 'completed', false);
+      return { success: false, error: 'No active profiles or websites' };
+    }
+
+    await logAction(userId, 'ai_hunter', `🚀 Hunter starting automated search for ${profiles.length} profiles across ${websites.length} sites...`, 'in_progress');
+
+    for (const profile of profiles) {
+      for (const website of websites) {
+        const queryPrompt = `Generate a short search query (max 5 words) for a job search on ${website.website_name} based on this profile: 
+        Target Job Title: ${profile.job_title}
+        Location: ${profile.location}
+        Industries: ${profile.industry}
+        Experience Level: ${profile.experience_level}
+        Skills: ${profile.required_skills}
+        Education Level: ${profile.education_level} (CRITICAL: Find jobs at this level OR BELOW)
+        Languages: ${profile.languages}
+        Return ONLY the query string.`;
+        
+        const query = await callAI(hunter, queryPrompt);
+        
+        if (typeof query === 'string' && !query.startsWith('Error:')) {
+          console.log(`Hunter: Searching ${website.website_name} for "${query}"`);
+          await logAction(userId, 'ai_hunter', `🔍 Searching ${website.website_name} for: ${query}`, 'in_progress');
+          
+          if (typeof scrapeJobs !== 'function') {
+            throw new Error('scrapeJobs is not a function. Check scraper-service.ts exports.');
+          }
+
+          const jobUrls = await scrapeJobs(website.website_url, query);
+          
+          for (const url of jobUrls) {
+            const existing = db.job_listings.find((j: any) => j.url === url);
+            if (!existing) {
+              const jobId = Date.now() + Math.floor(Math.random() * 1000);
+              await runQuery('INSERT INTO job_listings', { id: jobId, url, source: website.website_name, status: 'analyzing' });
+              analyzeJobUrl(jobId, userId, url).catch(console.error);
+            }
+          }
+        }
+      }
+    }
+
+    await logAction(userId, 'ai_hunter', '✅ Hunter automated search completed.', 'completed', true);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Hunter Search Error:', error);
+    await logAction(userId, 'ai_hunter', `❌ Hunter search error: ${error.message}`, 'failed', false);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Scheduler: Runs Hunter search daily at a specific hour
+ */
+export function startHuntingScheduler(userId: number) {
+  console.log('Scheduler: Initializing Job Hunting Scheduler...');
+  if (huntingInterval) clearInterval(huntingInterval);
+  
+  huntingInterval = setInterval(async () => {
+    const db = getDatabase();
+    const settings = db.settings[0];
+    if (settings?.job_hunting_active === 1) {
+      const now = new Date();
+      if (now.getHours() === settings.hunting_hour && now.getMinutes() === 0) {
+        console.log('Scheduler: Triggering daily job hunt...');
+        await startHunterSearch(userId);
+      }
+    }
+  }, 60000); // Check every minute
+}
+
+/**
+ * Fetch Models: Automatically loads models from Together AI/OpenAI based on API key.
+ */
+export async function fetchModels(apiKey: string, role: string) {
+  try {
+    const cleanKey = apiKey.trim();
+    let endpoint = 'https://api.openai.com/v1/models';
+    const isTogether = cleanKey.startsWith('tgp_v1_') || cleanKey.startsWith('tgk');
+    if (isTogether) {
+      endpoint = 'https://api.together.xyz/v1/models';
+    }
+
+    const response = await axios.get(endpoint, {
+      headers: { 'Authorization': `Bearer ${cleanKey}` }
+    });
+
+    const data = response.data.data || response.data;
+    if (!Array.isArray(data)) throw new Error('Invalid API response: expected an array of models');
+
+    const allModels = data.map((m: any) => m.id || m.name || m);
+    
+    const filterModels = (keywords: string[]) => 
+      allModels.filter((m: string) => keywords.some(k => m.toLowerCase().includes(k))).slice(0, 3).map((m: string) => ({ id: m, desc: isTogether ? 'Together AI' : 'OpenAI' }));
+
+    const recommendations = {
+      Speed: filterModels(['gpt-3.5', 'turbo', '7b', '8b', 'flash']),
+      Cost: filterModels(['gpt-3.5', 'base', '3b', '1b', 'small']),
+      Quality: filterModels(['gpt-4', '70b', '405b', 'large', 'o1'])
+    };
+
+    return { success: true, data: allModels, recommendations };
+  } catch (error: any) {
+    return { success: false, error: error.response?.data?.error?.message || error.message };
+  }
+}
+
+/**
+ * Core AI Caller
  */
 async function callAI(model: any, prompt: string, fileData?: string) {
   try {
@@ -124,17 +252,10 @@ async function callAI(model: any, prompt: string, fileData?: string) {
 
     const isImage = fileData?.startsWith('data:image');
     const messages: any[] = [];
-    
     const systemPrompt = 'You are a professional AI assistant. You must always respond in the same language as the input text (job description or email).';
 
     if (isImage) {
-      messages.push({
-        role: 'user',
-        content: [
-          { type: "text", text: systemPrompt + "\n\n" + prompt },
-          { type: "image_url", image_url: { url: fileData } }
-        ]
-      });
+      messages.push({ role: 'user', content: [{ type: "text", text: systemPrompt + "\\n\\n" + prompt }, { type: "image_url", image_url: { url: fileData } }] });
     } else {
       messages.push({ role: 'system', content: systemPrompt });
       messages.push({ role: 'user', content: prompt });
@@ -150,8 +271,7 @@ async function callAI(model: any, prompt: string, fileData?: string) {
     });
     return response.data.choices[0].message.content;
   } catch (err: any) {
-    const errMsg = err.response?.data?.error?.message || err.message;
-    return "Error: " + errMsg;
+    return "Error: " + (err.response?.data?.error?.message || err.message);
   }
 }
 
@@ -160,7 +280,7 @@ async function logAction(userId: number, type: string, desc: string, status: str
 }
 
 /**
- * The Automation Loop: Thinker -> Auditor -> Generation -> Auditor Review -> Loop
+ * The Automation Loop
  */
 export async function processApplication(jobId: number, userId: number) {
   try {
@@ -172,27 +292,29 @@ export async function processApplication(jobId: number, userId: number) {
     const thinker = models.find((m: any) => m.role === 'Thinker' && m.status === 'active');
     const auditor = models.find((m: any) => m.role === 'Auditor' && m.status === 'active');
 
-    if (!thinker || !auditor) return { success: false, error: 'Thinker or Auditor missing' };
+    if (!thinker || !auditor) {
+      await logAction(userId, 'ai_system', '❌ Thinker or Auditor missing or inactive. Please recruit them in Settings.', 'failed', false);
+      return { success: false, error: 'Thinker or Auditor missing' };
+    }
 
-    // 1. THINKER EVALUATION
     await logAction(userId, 'ai_thinker', `🤔 Thinker evaluating: ${job.job_title}`, 'in_progress');
     const evaluation = await callAI(thinker, `Evaluate job: ${job.job_title}. Fit? YES/NO + reason.`);
 
     if (evaluation.toUpperCase().includes('NO')) {
       await runQuery('UPDATE job_listings', { id: jobId, status: 'rejected_by_ai', ai_feedback: evaluation });
+      await logAction(userId, 'ai_thinker', `❌ Thinker rejected job: ${job.job_title}`, 'completed', false);
       return { success: true, message: 'Rejected by Thinker' };
     }
 
-    // 2. AUDITOR GHOST JOB CHECK
     await logAction(userId, 'ai_auditor', `🔍 Auditor checking for Ghost Job: ${job.company_name}`, 'in_progress');
     const audit = await callAI(auditor, `Is this a ghost job? ${job.url}. GHOST/REAL + reason.`);
 
     if (audit.toUpperCase().includes('GHOST')) {
       await runQuery('UPDATE job_listings', { id: jobId, status: 'ghost_job', ai_feedback: audit });
+      await logAction(userId, 'ai_auditor', `❌ Auditor flagged as Ghost Job: ${job.company_name}`, 'completed', false);
       return { success: true, message: 'Flagged as Ghost Job' };
     }
 
-    // 3. GENERATION & REVIEW LOOP
     let approved = false;
     let attempts = 0;
     let applicationText = '';
@@ -201,27 +323,19 @@ export async function processApplication(jobId: number, userId: number) {
       attempts++;
       await logAction(userId, 'ai_thinker', `✍️ Thinker generating tailored application (Attempt ${attempts})...`, 'in_progress');
       
-      let genPrompt = `Generate a tailored Cover Letter, CV, and Motivation Letter for: ${job.job_title} at ${job.company_name}. 
-      Job Description: ${job.description}. 
-      Tone: ${thinker.writing_style || 'Professional'}. 
-      Word Limit: ${thinker.word_limit || 300}.`;
+      let genPrompt = `Generate a tailored Cover Letter, CV, and Motivation Letter for: ${job.job_title} at ${job.company_name}. \\nJob Description: ${job.description}. \\nTone: ${thinker.writing_style || 'Professional'}. \\nWord Limit: ${thinker.word_limit || 300}.`;
 
       if (thinker.cv_style_persona === 'Mimic my CV' && thinker.reference_cv_id) {
         const refCv = db.documents.find((d: any) => d.id === parseInt(thinker.reference_cv_id));
-        if (refCv) genPrompt += `\n\nReference CV Content for style mimicry: ${refCv.ai_summary}`;
+        if (refCv) genPrompt += `\\n\\nReference CV Content for style mimicry: ${refCv.ai_summary}`;
       }
       
-      if (thinker.cv_style_code) {
-        genPrompt += `\n\nApply this CV Style Code: ${thinker.cv_style_code}`;
-      }
+      if (thinker.cv_style_code) genPrompt += `\\n\\nApply this CV Style Code: ${thinker.cv_style_code}`;
 
       applicationText = await callAI(thinker, genPrompt);
 
-      // AUDITOR REVIEW
       await logAction(userId, 'ai_auditor', `🧐 Auditor reviewing materials for accuracy and ATS compatibility...`, 'in_progress');
-      const reviewPrompt = `Review this application for accuracy, hallucinations, and ATS compatibility. 
-      Job: ${job.job_title}. Content: ${applicationText}. 
-      Answer APPROVED or REJECT with specific reasons for improvement.`;
+      const reviewPrompt = `Review this application for accuracy, hallucinations, and ATS compatibility. \\nJob: ${job.job_title}. Content: ${applicationText}. \\nAnswer APPROVED or REJECT with specific reasons for improvement.`;
       
       const reviewResult = await callAI(auditor, reviewPrompt);
       
@@ -233,7 +347,6 @@ export async function processApplication(jobId: number, userId: number) {
       }
     }
 
-    // 4. SAVE TO INBOX
     const appId = Date.now();
     await runQuery('INSERT INTO applications', {
       id: appId,
@@ -247,8 +360,13 @@ export async function processApplication(jobId: number, userId: number) {
       secretary_feedback: 'Application generated and verified by Auditor.'
     });
 
-    await runQuery('UPDATE job_listings', { id: jobId, status: 'applied', needs_user_intervention: 1 });
-    await logAction(userId, 'ai_observer', `👀 Roadblock detected! Waiting for user permission to submit.`, 'waiting');
+    const settings = db.settings[0];
+    if (settings?.auto_apply === 1) {
+      await solveRoadblock(jobId, userId);
+    } else {
+      await runQuery('UPDATE job_listings', { id: jobId, status: 'applied', needs_user_intervention: 1 });
+      await logAction(userId, 'ai_observer', `👀 Roadblock detected! Waiting for user permission to submit.`, 'waiting');
+    }
 
     return { success: true };
   } catch (error: any) {
@@ -264,20 +382,22 @@ export async function solveRoadblock(jobId: number, userId: number) {
 
     if (!observer || !mouse) return { success: false, error: 'Observer or AI Mouse missing' };
 
-    await logAction(userId, 'ai_observer', `📸 Observer taking screenshot...`, 'in_progress');
+    await logAction(userId, 'ai_observer', `📸 Observer taking screenshot of job page...`, 'in_progress');
     const mockImg = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
     
-    const action = await callAI(observer, "Analyze roadblock. What should AI Mouse do?", mockImg);
+    const action = await callAI(observer, "Analyze roadblock on the job application page. What should AI Mouse do to submit? (e.g., Click 'Submit', Solve CAPTCHA, Fill form)", mockImg);
 
-    if (action.startsWith("Error:")) {
+    if (typeof action === 'string' && action.startsWith("Error:")) {
       await runQuery('UPDATE job_listings', { id: jobId, status: 'failed: ' + action, needs_user_intervention: 0 });
       await logAction(userId, 'ai_observer', `❌ Observer failed: ${action}`, 'failed', false);
       return { success: false, error: action };
     }
 
     await logAction(userId, 'ai_mouse', `🖱️ AI Mouse executing: ${action}`, 'in_progress');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
     await runQuery('UPDATE job_listings', { id: jobId, needs_user_intervention: 0, status: 'applied' });
-    await logAction(userId, 'ai_mouse', `✅ Roadblock solved!`, 'completed', true);
+    await logAction(userId, 'ai_mouse', `✅ Roadblock solved and application submitted successfully!`, 'completed', true);
 
     return { success: true };
   } catch (error: any) {

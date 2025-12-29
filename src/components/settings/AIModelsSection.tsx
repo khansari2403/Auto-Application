@@ -34,13 +34,18 @@ function AIModelsSection({ userId }: { userId: number }) {
   const fetchAvailableModels = async () => {
     if (!formData.apiKey) return alert('Please enter an API Key first');
     setIsFetching(true);
-    const result = await (window as any).electron.invoke('ai:fetch-models', formData.apiKey, formData.role);
-    setIsFetching(false);
-    if (result.success) {
-      setAvailableModels(result.data);
-      setRecommendations(result.recommendations || { Speed: [], Cost: [], Quality: [] });
-    } else {
-      alert('Failed to fetch models: ' + result.error);
+    try {
+      const result = await (window as any).electron.invoke('ai:fetch-models', formData.apiKey, formData.role);
+      setIsFetching(false);
+      if (result && result.success) {
+        setAvailableModels(Array.isArray(result.data) ? result.data : []);
+        setRecommendations(result.recommendations || { Speed: [], Cost: [], Quality: [] });
+      } else {
+        alert('Failed to fetch models: ' + (result?.error || 'Unknown error'));
+      }
+    } catch (error: any) {
+      setIsFetching(false);
+      alert('IPC Error: ' + error.message);
     }
   };
 
@@ -229,7 +234,7 @@ function AIModelsSection({ userId }: { userId: number }) {
             
             {model.functional_prompt && (
               <div style={{ fontSize: '12px', color: '#666', background: '#f5f5f5', padding: '10px', borderRadius: '8px', marginTop: '12px', fontStyle: 'italic', border: '1px solid #eee' }}>
-                " {model.functional_prompt.substring(0, 80)}{model.functional_prompt.length > 80 ? '...' : ''} "
+                \" {model.functional_prompt.substring(0, 80)}{model.functional_prompt.length > 80 ? '...' : ''} \"
               </div>
             )}
 

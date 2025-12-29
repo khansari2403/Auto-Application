@@ -42,9 +42,13 @@ export function ApplicationInbox({ userId }: { userId: number }) {
             border: app.needs_manual_confirmation ? '2px solid #ff9800' : '1px solid #ddd', 
             borderRadius: '12px', padding: '20px', opacity: app.status === 'rejected' ? 0.7 : 1 
           }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
               <strong style={{ fontSize: '18px' }}>#{index + 1} {app.job_title} at {app.company_name}</strong>
-              <span style={{ fontSize: '12px', color: '#999' }}>Status: <strong>{app.status.toUpperCase()}</strong></span>
+              <span style={{ fontSize: '12px', color: '#999' }}>Status: <strong style={{ color: app.status === 'appointment' ? '#4CAF50' : app.status === 'rejected' ? '#f44336' : '#0077b5' }}>{app.status.toUpperCase()}</strong></span>
+            </div>
+            
+            <div style={{ fontSize: '13px', color: '#555', marginBottom: '15px', fontStyle: 'italic' }}>
+              💬 Secretary Feedback: {app.secretary_feedback || 'Waiting for response...'}
             </div>
 
             {app.needs_manual_confirmation === 1 && (

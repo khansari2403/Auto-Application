@@ -2,11 +2,14 @@ import { useState, useEffect } from 'react';
 
 export function JobSearch({ userId }: { userId: number }) {
   const [jobs, setJobs] = useState<any[]>([]);
-  const [questions, setQuestions] = useState<any[]>([]);
   const [processingId, setProcessingId] = useState<number | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [huntingStatus, setHuntingStatus] = useState('');
   const [timers, setTimers] = useState<{ [key: number]: number }>({});
   const [manualUrl, setManualUrl] = useState('');
   const [autoApply, setAutoApply] = useState(false);
+  const [jobHuntingActive, setJobHuntingActive] = useState(false);
+  const [huntingHour, setHuntingHour] = useState(9);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['job_title', 'company_name', 'location', 'job_type', 'experience_level', 'role', 'date_imported']);
 
   const allColumns = [
@@ -31,7 +34,9 @@ export function JobSearch({ userId }: { userId: number }) {
     { id: 'travel_requirement', label: 'Travel' },
     { id: 'shift_schedule', label: 'Shift' },
     { id: 'role', label: 'Role' },
-    { id: 'date_imported', label: 'Imported' }
+    { id: 'date_imported', label: 'Imported' },
+    { id: 'posted_date', label: 'Posted' },
+    { id: 'application_url', label: 'App URL' }
   ];
 
   const loadData = async () => {
@@ -50,33 +55,87 @@ export function JobSearch({ userId }: { userId: number }) {
         return changed ? newTimers : prev;
       });
     }
-    const qRes = await (window as any).electron.invoke('questions:get-all', userId);
-    if (qRes?.success) setQuestions(qRes.data);
+    
+    const settingsRes = await (window as any).electron.invoke('settings:get', userId);
+    if (settingsRes?.success && settingsRes.data) {
+      setAutoApply(settingsRes.data.auto_apply === 1);
+      setJobHuntingActive(settingsRes.data.job_hunting_active === 1);
+      setHuntingHour(settingsRes.data.hunting_hour || 9);
+    }
   };
 
   useEffect(() => { loadData(); const i = setInterval(loadData, 5000); return () => clearInterval(i); }, [userId]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTimers(prev => {
-        const newTimers = { ...prev };
-        let changed = false;
-        Object.keys(newTimers).forEach(id => {
-          const jobId = parseInt(id);
-          if (newTimers[jobId] > 0) {
-            newTimers[jobId] -= 1;
-            changed = true;
-          } else if (newTimers[jobId] === 0) {
-            handleIntervention(jobId, true);
-            delete newTimers[jobId];
-            changed = true;
-          }
-        });
-        return changed ? newTimers : prev;
-      });
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+    if (autoApply && !processingId) {
+      const nextJob = jobs.find(j => j.status === 'analyzed' || j.status === 'analyzing_failed');
+      if (nextJob) handleApply(nextJob.id);
+    }
+  }, [autoApply, jobs, processingId]);
+
+  const handleStartHunterSearch = async () => {
+    if (!jobHuntingActive) return;
+    setIsSearching(true);
+    setHuntingStatus('Initializing Hunters...');
+    try {
+      const profilesRes = await (window as any).electron.invoke('profiles:get-all', userId);
+      const websitesRes = await (window as any).electron.invoke('websites:get-all', userId);
+      const modelsRes = await (window as any).electron.invoke('ai-models:get-all', userId);
+
+      const activeProfiles = profilesRes.data.filter((p: any) => p.is_active === 1);
+      const activeWebsites = websitesRes.data.filter((w: any) => w.is_active === 1);
+      const hunterModel = modelsRes.data.find((m: any) => m.role === 'Hunter' && m.status === 'active');
+
+      if (hunterModel && activeProfiles.length > 0 && activeWebsites.length > 0) {
+        const profileTitles = activeProfiles.map((p: any) => p.job_title || p.profile_name).join(', ');
+        const siteNames = activeWebsites.map((w: any) => w.website_name).join(', ');
+        setHuntingStatus(`Hunter (${hunterModel.model_name}) is searching ${siteNames} for: ${profileTitles}`);
+      }
+
+      const result = await (window as any).electron.invoke('hunter:start-search', userId);
+      if (!result.success) {
+        alert('Hunter Search Failed: ' + result.error);
+        setHuntingStatus('Search Failed.');
+      } else {
+        setHuntingStatus('Search Completed Successfully.');
+      }
+    } catch (e: any) {
+      alert('Hunter Search Error: ' + e.message);
+      setHuntingStatus('Search Error.');
+    } finally {
+      setIsSearching(false);
+      loadData();
+      setTimeout(() => setHuntingStatus(''), 10000);
+    }
+  };
+
+  const handleApply = async (jobId: number) => {
+    setProcessingId(jobId);
+    try {
+      const result = await (window as any).electron.invoke('ai:process-application', jobId, userId);
+      if (!result.success) alert('Application Failed: ' + result.error);
+    } catch (e: any) {
+      alert('Application Error: ' + e.message);
+    } finally {
+      setProcessingId(null);
+      loadData();
+    }
+  };
+
+  const toggleJobHunting = async () => {
+    const newVal = !jobHuntingActive;
+    setJobHuntingActive(newVal);
+    await (window as any).electron.invoke('settings:update', { id: 1, job_hunting_active: newVal ? 1 : 0 });
+  };
+
+  const updateHuntingHour = async (hour: number) => {
+    setHuntingHour(hour);
+    await (window as any).electron.invoke('settings:update', { id: 1, hunting_hour: hour });
+  };
+
+  const toggleColumn = (id: string) => {
+    setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  };
 
   const handleAddManual = async () => {
     if (!manualUrl) return;
@@ -91,13 +150,6 @@ export function JobSearch({ userId }: { userId: number }) {
     loadData();
   };
 
-  const handleApply = async (jobId: number) => {
-    setProcessingId(jobId);
-    await (window as any).electron.invoke('ai:process-application', jobId, userId);
-    setProcessingId(null);
-    loadData();
-  };
-
   const handleIntervention = async (jobId: number, allowAI: boolean) => {
     setProcessingId(jobId);
     await (window as any).electron.invoke('ai:handle-intervention', jobId, userId, allowAI);
@@ -105,34 +157,113 @@ export function JobSearch({ userId }: { userId: number }) {
     loadData();
   };
 
-  const toggleColumn = (id: string) => {
-    setVisibleColumns(prev => prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]);
+  const toggleAutoApply = async () => {
+    const newVal = !autoApply;
+    setAutoApply(newVal);
+    await (window as any).electron.invoke('settings:update', { id: 1, auto_apply: newVal ? 1 : 0 });
   };
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', flex: 1, marginRight: '20px' }}>
+      <style>{`
+        @keyframes moveMagnifier {
+          0% { transform: translate(0, 0) rotate(0deg); }
+          25% { transform: translate(5px, -5px) rotate(10deg); }
+          50% { transform: translate(0, -10px) rotate(0deg); }
+          75% { transform: translate(-5px, -5px) rotate(-10deg); }
+          100% { transform: translate(0, 0) rotate(0deg); }
+        }
+        .magnifier-icon {
+          display: inline-block;
+          animation: moveMagnifier 2s infinite ease-in-out;
+          margin-right: 10px;
+          font-size: 20px;
+        }
+        .hunting-status {
+          background: #e3f2fd;
+          color: #0d47a1;
+          padding: 10px 15px;
+          border-radius: 8px;
+          margin-bottom: 20px;
+          font-size: 13px;
+          font-weight: bold;
+          border: 1px solid #bbdefb;
+          display: flex;
+          align-items: center;
+        }
+        .btn-disabled {
+          background: #ccc !important;
+          cursor: not-allowed !important;
+          opacity: 0.6;
+        }
+      `}</style>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '20px' }}>
+        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', flex: 2 }}>
           <h4 style={{ marginTop: 0 }}>🔗 Add Job Manually</h4>
           <div style={{ display: 'flex', gap: '10px' }}>
             <input type='text' value={manualUrl} onChange={e => setManualUrl(e.target.value)} placeholder='Paste Job URL here...' style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }} />
             <button onClick={handleAddManual} style={{ padding: '10px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Add Job</button>
           </div>
         </div>
+
+        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center', flex: 2 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+            <h4 style={{ margin: 0 }}>🚀 Job Hunting</h4>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ fontSize: '11px', color: '#666' }}>Daily at:</span>
+              <select value={huntingHour} onChange={e => updateHuntingHour(parseInt(e.target.value))} style={{ padding: '2px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '11px' }}>
+                {[...Array(24)].map((_, i) => <option key={i} value={i}>{i}:00</option>)}
+              </select>
+              <button onClick={toggleJobHunting} style={{ padding: '4px 10px', background: jobHuntingActive ? '#4CAF50' : '#ccc', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
+                {jobHuntingActive ? 'ACTIVE' : 'OFF'}
+              </button>
+            </div>
+          </div>
+          <button 
+            onClick={handleStartHunterSearch} 
+            disabled={isSearching || !jobHuntingActive}
+            className={(!jobHuntingActive || isSearching) ? 'btn-disabled' : ''}
+            style={{ 
+              padding: '12px 20px', 
+              background: isSearching ? '#9c27b0' : '#673ab7', 
+              color: '#fff', 
+              border: 'none', 
+              borderRadius: '8px', 
+              cursor: 'pointer', 
+              fontWeight: 'bold', 
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            <span className="magnifier-icon">🔍</span>
+            {isSearching ? 'Hunting in Progress...' : 'Start Job Hunting'}
+          </button>
+        </div>
         
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center' }}>
+        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center', flex: 1 }}>
           <h4 style={{ marginTop: 0 }}>🤖 Auto-Apply</h4>
           <button 
-            onClick={() => setAutoApply(!autoApply)} 
-            style={{ padding: '10px 30px', background: autoApply ? '#4CAF50' : '#ccc', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}
+            onClick={toggleAutoApply} 
+            style={{ padding: '10px 30px', background: autoApply ? '#4CAF50' : '#ccc', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}
           >
             {autoApply ? 'ON' : 'OFF'}
           </button>
         </div>
       </div>
 
+      {huntingStatus && (
+        <div className="hunting-status">
+          <span style={{ marginRight: '10px' }}>📡</span>
+          {huntingStatus}
+        </div>
+      )}
+
       <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #eee' }}>
-        <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '10px', color: '#666' }}>⚙️ CUSTOMIZE TABLE COLUMNS:</div>
+        <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '10px', color: '#666' }}>⚙️ CUSTOMIZE TABLE COLUMNS (24 CRITERIA):</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {allColumns.map(col => (
             <button key={col.id} onClick={() => toggleColumn(col.id)} style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '20px', border: '1px solid #ccc', background: visibleColumns.includes(col.id) ? '#0077b5' : '#fff', color: visibleColumns.includes(col.id) ? '#fff' : '#666', cursor: 'pointer' }}>
@@ -183,11 +314,13 @@ export function JobSearch({ userId }: { userId: number }) {
                 {visibleColumns.includes('shift_schedule') && <td style={{ padding: '10px' }}>{job.shift_schedule || 'N/A'}</td>}
                 {visibleColumns.includes('role') && <td style={{ padding: '10px' }}>{job.role || 'N/A'}</td>}
                 {visibleColumns.includes('date_imported') && <td style={{ padding: '10px' }}>{job.date_imported || 'N/A'}</td>}
+                {visibleColumns.includes('posted_date') && <td style={{ padding: '10px' }}>{job.posted_date || 'N/A'}</td>}
+                {visibleColumns.includes('application_url') && <td style={{ padding: '10px' }}><a href={job.application_url} target='_blank' rel='noreferrer' style={{ color: '#666' }}>Link</a></td>}
                 
                 <td style={{ padding: '10px', textAlign: 'center' }}>
                   <div style={{ display: 'flex', gap: '4px', justifyContent: 'center' }}>
                     {job.needs_user_intervention === 1 ? (
-                      <button onClick={() => handleIntervention(job.id, true)} disabled={processingId === job.id} style={{ padding: '3px 6px', background: '#e91e63', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer' }}>Allow AI</button>
+                      <button onClick={() => handleIntervention(job.id, true)} disabled={processingId === job.id} style={{ padding: '3px 6px', background: '#e91e63', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer' }}>Allow AI (${timers[job.id] || 0}s)</button>
                     ) : (
                       <button onClick={() => handleApply(job.id)} disabled={processingId === job.id || job.status === 'applied' || job.status === 'analyzing'} style={{ padding: '3px 6px', background: job.status === 'applied' ? '#999' : '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer' }}>
                         {processingId === job.id ? '...' : job.status === 'applied' ? 'Applied' : 'Apply'}

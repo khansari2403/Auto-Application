@@ -1,20 +1,11 @@
-/**
- * Electron Main Process
- * Handles window creation, IPC communication, and background tasks
- */
-
-import { app, BrowserWindow, ipcMain, Menu } from 'electron';
+import { app, BrowserWindow, Menu, MenuItem } from 'electron';
 import path from 'path';
 import isDev from 'electron-is-dev';
-import sqlite3 from 'sqlite3';
 import { initializeDatabase } from './src/main/database';
 import { setupIpcHandlers } from './src/main/ipc-handlers';
 
 let mainWindow: BrowserWindow | null = null;
 
-/**
- * Create the main application window
- */
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -22,58 +13,33 @@ function createWindow() {
     minWidth: 1000,
     minHeight: 700,
     webPreferences: {
-  preload: path.join(__dirname, "preload.cjs"),
-  contextIsolation: true,
-  nodeIntegration: false
-},
+      preload: path.join(__dirname, "preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false
+    },
   });
 
-  // Load the app
-  const startUrl = isDev
-    ? 'http://localhost:5173' // Vite dev server
-    : `file://${path.join(__dirname, '../dist/index.html')}`; // Production build
-
+  const startUrl = isDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '../dist/index.html')}`;
   mainWindow.loadURL(startUrl);
 
-  // Open DevTools in development
-  if (isDev) {
-    mainWindow.webContents.openDevTools();
-  }
-
-  mainWindow.on('closed', () => {
-    mainWindow = null;
+  // ENABLE RIGHT-CLICK CONTEXT MENU
+  mainWindow.webContents.on('context-menu', (event, params) => {
+    const menu = new Menu();
+    menu.append(new MenuItem({ label: 'Cut', role: 'cut', enabled: params.editFlags.canCut }));
+    menu.append(new MenuItem({ label: 'Copy', role: 'copy', enabled: params.editFlags.canCopy }));
+    menu.append(new MenuItem({ label: 'Paste', role: 'paste', enabled: params.editFlags.canPaste }));
+    menu.append(new MenuItem({ type: 'separator' }));
+    menu.append(new MenuItem({ label: 'Select All', role: 'selectAll', enabled: params.editFlags.canSelectAll }));
+    menu.popup({ window: mainWindow! });
   });
+
+  mainWindow.on('closed', () => { mainWindow = null; });
 }
 
-/**
- * App event handlers
- */
 app.on('ready', async () => {
-  // Initialize database
   await initializeDatabase();
-
-  // Setup IPC handlers for communication between renderer and main process
   setupIpcHandlers();
-
-  // Create window
   createWindow();
 });
 
-app.on('window-all-closed', () => {
-  // On macOS, keep app running until user quits explicitly
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('activate', () => {
-  // On macOS, re-create window when dock icon is clicked
-  if (mainWindow === null) {
-    createWindow();
-  }
-});
-
-// Handle any uncaught exceptions
-process.on('uncaughtException', (error) => {
-  console.error('Uncaught Exception:', error);
-});
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });

@@ -35,6 +35,26 @@ export function DocumentRepository({ userId }: { userId: number }) {
     return { text: '⏳ Initializing...', color: '#999' };
   };
 
+  const renderPreview = (doc: any) => {
+    if (!doc.content) return <div style={{ padding: '60px', textAlign: 'center', color: '#666' }}>No content available.</div>;
+
+    if (doc.file_type.includes('image')) {
+      return <img src={doc.content} style={{ maxWidth: '100%', borderRadius: '8px' }} />;
+    }
+
+    if (doc.file_type.includes('pdf')) {
+      return <iframe src={doc.content} style={{ width: '100%', height: '600px', border: 'none', borderRadius: '8px' }} />;
+    }
+
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', color: '#666', background: '#f9f9f9', borderRadius: '8px' }}>
+        <div style={{ fontSize: '40px', marginBottom: '10px' }}>📄</div>
+        Preview not available for <strong>{doc.file_type}</strong>.<br/>
+        Please download the file to view it.
+      </div>
+    );
+  };
+
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
       <h2>📂 Master Document Repository</h2>
@@ -79,14 +99,10 @@ export function DocumentRepository({ userId }: { userId: number }) {
 
       {preview && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '16px', maxWidth: '90%', maxHeight: '90%', overflow: 'auto', position: 'relative' }}>
+          <div style={{ background: '#fff', padding: '25px', borderRadius: '16px', maxWidth: '90%', maxHeight: '90%', width: '800px', overflow: 'auto', position: 'relative' }}>
             <button onClick={() => setPreview(null)} style={{ position: 'absolute', top: '15px', right: '15px', fontSize: '20px', border: 'none', background: 'none', cursor: 'pointer' }}>✕</button>
             <h3>Preview: {preview.file_name}</h3>
-            {preview.content ? (
-              <img src={preview.content} style={{ maxWidth: '100%', borderRadius: '8px' }} />
-            ) : (
-              <div style={{ padding: '60px', textAlign: 'center', color: '#666' }}>Preview not available for this file type.</div>
-            )}
+            {renderPreview(preview)}
           </div>
         </div>
       )}

@@ -8,10 +8,11 @@ import { DocumentRepository } from './components/DocumentRepository';
 import { SearchProfiles } from './components/SearchProfiles';
 import { JobSearch } from './components/JobSearch';
 import { ApplicationInbox } from './components/ApplicationInbox';
+import JobWebsitesSection from './components/settings/JobWebsitesSection';
 
 function App() {
   const [userId] = useState<number>(1);
-  const [currentTab, setCurrentTab] = useState<'settings' | 'search' | 'applications' | 'logs' | 'inbox' | 'alerts' | 'documents' | 'profiles'>('settings');
+  const [currentTab, setCurrentTab] = useState<'settings' | 'documents' | 'websites' | 'profiles' | 'search' | 'applications' | 'inbox' | 'alerts' | 'logs'>('settings');
 
   return (
     <div className="app-container">
@@ -25,6 +26,7 @@ function App() {
       <nav className="app-nav">
         <button className={`nav-button ${currentTab === 'settings' ? 'active' : ''}`} onClick={() => setCurrentTab('settings')}>⚙️ Settings</button>
         <button className={`nav-button ${currentTab === 'documents' ? 'active' : ''}`} onClick={() => setCurrentTab('documents')}>📂 Documents</button>
+        <button className={`nav-button ${currentTab === 'websites' ? 'active' : ''}`} onClick={() => setCurrentTab('websites')}>🌐 Job Websites</button>
         <button className={`nav-button ${currentTab === 'profiles' ? 'active' : ''}`} onClick={() => setCurrentTab('profiles')}>🔍 Search Profiles</button>
         <button className={`nav-button ${currentTab === 'search' ? 'active' : ''}`} onClick={() => setCurrentTab('search')}>🎯 Job Search</button>
         <button className={`nav-button ${currentTab === 'applications' ? 'active' : ''}`} onClick={() => setCurrentTab('applications')}>📋 Applications</button>
@@ -36,6 +38,7 @@ function App() {
       <main className="app-main">
         {currentTab === 'settings' && <SettingsPanel userId={userId} />}
         {currentTab === 'documents' && <DocumentRepository userId={userId} />}
+        {currentTab === 'websites' && <JobWebsitesSection userId={userId} />}
         {currentTab === 'profiles' && <SearchProfiles userId={userId} />}
         {currentTab === 'search' && <JobSearch userId={userId} />}
         {currentTab === 'applications' && <ApplicationsPanel userId={userId} />}

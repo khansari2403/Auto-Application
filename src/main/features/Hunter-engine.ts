@@ -21,7 +21,7 @@ export async function startHunterSearch(userId: number, callAI: Function) {
         for (const url of jobUrls) {
           const existing = db.job_listings.find((j: any) => j.url === url);
           if (!existing) {
-            const jobId = Date.now();
+            const jobId = Date.now() + Math.floor(Math.random() * 1000);
             await runQuery('INSERT INTO job_listings', { id: jobId, url, source: website.website_name, status: 'analyzing' });
             analyzeJobUrl(jobId, userId, url, hunter, models.find((m: any) => m.role === 'Auditor'), callAI).catch(console.error);
           }
@@ -40,9 +40,22 @@ export async function analyzeJobUrl(jobId: number, userId: number, url: string, 
     if (!isRetry) return await analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI, true);
     return;
   }
+
+  // RELEVANCE CHECK
+  const relevancePrompt = `Is this page a specific job listing? Answer ONLY "YES" or "NO". \n\nContent: ${pageData.content.substring(0, 2000)}`;
+  const isRelevant = await callAI(hunter, relevancePrompt);
+  
+  if (isRelevant.toUpperCase().includes("NO")) {
+    console.log(`Hunter: Deleting irrelevant URL: ${url}`);
+    await runQuery('DELETE FROM job_listings', { id: jobId });
+    return;
+  }
+
   await runQuery('UPDATE job_listings', { id: jobId, description: pageData.content, status: 'draft_saved' });
+
   const prompt = `Analyze this job listing. Extract in STRICT JSON: { "jobTitle": "...", "companyName": "...", "location": "...", "jobType": "...", "experienceLevel": "...", "salaryRange": "...", "industry": "...", "requiredSkills": "...", "educationLevel": "...", "remoteOnsite": "...", "benefits": "...", "companySize": "...", "companyRating": "...", "deadline": "...", "certifications": "...", "languages": "...", "visaSponsorship": "...", "relocation": "...", "travelRequirement": "...", "shiftSchedule": "...", "role": "...", "postedDate": "...", "applicationUrl": "...", "isGhostJob": "boolean" }. \n\nContent: ${pageData.content.substring(0, 10000)}`;
   const result = await callAI(hunter, prompt);
+  
   try {
     const data = JSON.parse(result.replace(/```json|```/g, '').trim());
     await runQuery('UPDATE job_listings', { id: jobId, ...data, status: 'analyzed', date_imported: new Date().toLocaleDateString() });

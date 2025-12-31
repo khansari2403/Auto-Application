@@ -242,58 +242,54 @@ async function handleLoginRoadblock(page, credentials, userId) {
 }
 
 // src/main/scraper-service.ts
-var import_fs2 = __toESM(require("fs"), 1);
+async function handleCookieBanner(page) {
+  try {
+    await page.evaluate(() => {
+      const rejectKeywords = ["reject", "deny", "refuse", "decline", "only necessary", "essential only", "ablehnen", "nur essenzielle"];
+      const acceptKeywords = ["accept", "agree", "allow", "akzeptieren", "erlauben", "zustimmen"];
+      const buttons = Array.from(document.querySelectorAll("button, a, span, div"));
+      const rejectButton = buttons.find((btn) => {
+        var _a;
+        const text = ((_a = btn.textContent) == null ? void 0 : _a.toLowerCase().trim()) || "";
+        return rejectKeywords.some((k) => text.includes(k)) && text.length < 30;
+      });
+      if (rejectButton) {
+        rejectButton.click();
+        return;
+      }
+      const acceptButton = buttons.find((btn) => {
+        var _a;
+        const text = ((_a = btn.textContent) == null ? void 0 : _a.toLowerCase().trim()) || "";
+        return acceptKeywords.some((k) => text.includes(k)) && text.length < 30;
+      });
+      if (acceptButton) {
+        acceptButton.click();
+      }
+    });
+    await new Promise((resolve) => setTimeout(resolve, 2e3));
+  } catch (e) {
+  }
+}
 async function scrapeJobs(baseUrl, query, location, credentials, userId, callAI2) {
-  console.log(`Scraper: Starting localized search for "${query}" in "${location}"`);
   let browser = null;
   const jobUrls = [];
   try {
-    browser = await import_puppeteer.default.launch({
-      headless: false,
-      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-blink-features=AutomationControlled", "--start-maximized"]
-    });
+    browser = await import_puppeteer.default.launch({ headless: false, args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-blink-features=AutomationControlled", "--start-maximized"] });
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
     const startUrl = baseUrl.includes("linkedin.com") ? "https://www.linkedin.com/jobs/" : "https://de.indeed.com/";
     await page.goto(startUrl, { waitUntil: "networkidle2", timeout: 6e4 });
+    await handleCookieBanner(page);
     const roadblock = await page.evaluate(() => {
       const text = document.body.innerText.toLowerCase();
       if (text.includes("sign in") || !!document.querySelector("#username"))
         return "login";
-      if (text.includes("not a robot") || text.includes("captcha"))
-        return "captcha";
       return null;
     });
     if (roadblock === "login" && userId) {
       await handleLoginRoadblock(page, credentials, userId);
       await page.goto(startUrl, { waitUntil: "networkidle2" });
-    } else if (roadblock === "captcha" && userId) {
-      await logAction(userId, "ai_observer", "\u{1F916} CAPTCHA detected! Please solve it in the browser window...", "waiting");
-      await page.waitForSelector('input[name="q"], #keywords', { timeout: 3e5 });
-    }
-    if (callAI2) {
-      console.log("Scraper: Observer is analyzing the search layout...");
-      const screenshot = await page.screenshot({ encoding: "base64" });
-      const observerPrompt = `Analyze this job search page. Identify coordinates (x, y) for: 1. Keywords field, 2. Location field, 3. Search button. Return ONLY JSON: {"keywords": {"x": 0, "y": 0}, "location": {"x": 0, "y": 0}, "search": {"x": 0, "y": 0}}`;
-      const analysis = await callAI2({ model_name: "gpt-4o", role: "Observer" }, observerPrompt, `data:image/png;base64,${screenshot}`);
-      try {
-        const coords = JSON.parse(analysis.replace(/```json|```/g, "").trim());
-        await page.mouse.click(coords.keywords.x, coords.keywords.y);
-        await page.keyboard.type(query, { delay: 100 });
-        await page.mouse.click(coords.location.x, coords.location.y);
-        await page.keyboard.down("Control");
-        await page.keyboard.press("A");
-        await page.keyboard.up("Control");
-        await page.keyboard.press("Backspace");
-        await page.keyboard.type(location, { delay: 100 });
-        await page.mouse.click(coords.search.x, coords.search.y);
-        await page.waitForNavigation({ waitUntil: "networkidle2", timeout: 3e4 });
-      } catch (e) {
-        const cleanQuery = query.replace(/"/g, "");
-        const searchUrl = baseUrl.includes("linkedin.com") ? `https://www.linkedin.com/jobs/search?keywords=${encodeURIComponent(cleanQuery)}&location=${encodeURIComponent(location)}` : `https://de.indeed.com/jobs?q=${encodeURIComponent(cleanQuery)}&l=${encodeURIComponent(location)}`;
-        await page.goto(searchUrl, { waitUntil: "networkidle2" });
-      }
     }
     await page.evaluate(() => window.scrollBy(0, 800));
     await new Promise((resolve) => setTimeout(resolve, 5e3));
@@ -317,37 +313,15 @@ async function scrapeJobs(baseUrl, query, location, credentials, userId, callAI2
   return jobUrls;
 }
 async function getJobPageContent(url, useAlternativeMethod = false, userId) {
-  console.log(`Deep Reader: Opening ${url}...`);
   let browser = null;
   try {
     browser = await import_puppeteer.default.launch({ headless: false, args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-blink-features=AutomationControlled"] });
     const page = await browser.newPage();
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
     await page.goto(url, { waitUntil: "networkidle2", timeout: 6e4 });
-    const isCaptcha = await page.evaluate(() => document.body.innerText.toLowerCase().includes("not a robot") || document.body.innerText.toLowerCase().includes("captcha"));
-    if (isCaptcha && userId) {
-      await logAction(userId, "ai_observer", "\u{1F916} CAPTCHA blocked the reader! Please solve it in the browser window...", "waiting");
-      await page.waitForSelector(".job-description, #jobDescriptionText, .description__text", { timeout: 3e5 });
-    }
-    const selectors = [".job-description", "#jobDescriptionText", ".description__text", ".show-more-less-html__markup", "main"];
-    for (const selector of selectors) {
-      try {
-        await page.waitForSelector(selector, { timeout: 1e4 });
-        await page.evaluate((s) => {
-          var _a;
-          return (_a = document.querySelector(s)) == null ? void 0 : _a.scrollIntoView();
-        }, selector);
-        break;
-      } catch (e) {
-      }
-    }
+    await handleCookieBanner(page);
     await new Promise((resolve) => setTimeout(resolve, 5e3));
     const content = await page.evaluate(() => document.body.innerText);
-    const draftPath = `C:/Users/Sideadde/Auto-Application/Drafts/last_capture.txt`;
-    try {
-      import_fs2.default.writeFileSync(draftPath, content);
-    } catch (e) {
-    }
     return { content: content || "" };
   } catch (error) {
     console.error(`Deep Reader Error:`, error);
@@ -359,6 +333,9 @@ async function getJobPageContent(url, useAlternativeMethod = false, userId) {
 }
 
 // src/main/features/ghost-job-network.ts
+async function checkReputation(company, role) {
+  return { isFlagged: false, reportCount: 0 };
+}
 async function reportGhostJob(jobData, reason) {
   console.log(`GJN: Reporting ${jobData.companyName}...`);
 }
@@ -382,7 +359,7 @@ async function startHunterSearch(userId, callAI2) {
         for (const url of jobUrls) {
           const existing = db.job_listings.find((j) => j.url === url);
           if (!existing) {
-            const jobId = Date.now();
+            const jobId = Date.now() + Math.floor(Math.random() * 1e3);
             await runQuery("INSERT INTO job_listings", { id: jobId, url, source: website.website_name, status: "analyzing" });
             analyzeJobUrl(jobId, userId, url, hunter, models.find((m) => m.role === "Auditor"), callAI2).catch(console.error);
           }
@@ -399,6 +376,15 @@ async function analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI2, isRet
   if (!pageData.content || pageData.content.length < 100) {
     if (!isRetry)
       return await analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI2, true);
+    return;
+  }
+  const relevancePrompt = `Is this page a specific job listing? Answer ONLY "YES" or "NO". 
+
+Content: ${pageData.content.substring(0, 2e3)}`;
+  const isRelevant = await callAI2(hunter, relevancePrompt);
+  if (isRelevant.toUpperCase().includes("NO")) {
+    console.log(`Hunter: Deleting irrelevant URL: ${url}`);
+    await runQuery("DELETE FROM job_listings", { id: jobId });
     return;
   }
   await runQuery("UPDATE job_listings", { id: jobId, description: pageData.content, status: "draft_saved" });
@@ -488,7 +474,7 @@ async function callAI(model, prompt, fileData) {
       endpoint = "https://api.together.xyz/v1/chat/completions";
     const response = await import_axios.default.post(endpoint, {
       model: modelName,
-      messages: [{ role: "system", content: "Professional Assistant. Always respond in the language of the input text." }, { role: "user", content: prompt }],
+      messages: [{ role: "system", content: "Professional Assistant" }, { role: "user", content: prompt }],
       max_tokens: 1e3
     }, {
       headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -505,6 +491,13 @@ async function processApplication(jobId, userId, userConsentGiven = false) {
     const job = db.job_listings.find((j) => j.id === jobId);
     if (!job)
       return { success: false, error: "Job not found" };
+    if (!userConsentGiven) {
+      const reputation = await checkReputation(job.company_name, job.job_title);
+      if (reputation.isFlagged) {
+        await runQuery("UPDATE job_listings", { id: jobId, status: "ghost_job_detected", needs_user_consent: 1 });
+        return { success: true, message: "Paused for GJN reputation" };
+      }
+    }
     const models = await getAllQuery("SELECT * FROM ai_models");
     const thinker = models.find((m) => m.role === "Thinker" && m.status === "active");
     const auditor = models.find((m) => m.role === "Auditor" && m.status === "active");
@@ -525,9 +518,6 @@ async function analyzeJobUrl2(jobId, userId, url) {
   const auditor = models.find((m) => m.role === "Auditor" && m.status === "active");
   return await analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI);
 }
-async function analyzeDocument(docId, userId) {
-  console.log(`Orchestrator: Triggering document analysis for ID ${docId}`);
-}
 function startHuntingScheduler2(userId) {
   if (huntingInterval)
     clearInterval(huntingInterval);
@@ -537,10 +527,42 @@ function startHuntingScheduler2(userId) {
 // src/main/ipc-handlers.ts
 function setupIpcHandlers() {
   console.log("Registering all IPC Handlers...");
+  import_electron2.ipcMain.handle("settings:get", async () => {
+    const settings = await getAllQuery("SELECT * FROM settings");
+    return { success: true, data: settings[0] || null };
+  });
+  import_electron2.ipcMain.handle("settings:update", async (_, data) => {
+    return await runQuery("UPDATE settings", data);
+  });
+  import_electron2.ipcMain.handle("user:get-profile", async () => {
+    const profile = await getAllQuery("SELECT * FROM user_profile");
+    return { success: true, data: profile[0] || null };
+  });
+  import_electron2.ipcMain.handle("profiles:get-all", async () => ({
+    success: true,
+    data: await getAllQuery("SELECT * FROM search_profiles")
+  }));
+  import_electron2.ipcMain.handle("profiles:save", async (_, data) => await runQuery("INSERT INTO search_profiles", [data]));
+  import_electron2.ipcMain.handle("profiles:update", async (_, data) => await runQuery("UPDATE search_profiles", data));
+  import_electron2.ipcMain.handle("jobs:get-all", async () => ({
+    success: true,
+    data: await getAllQuery("SELECT * FROM job_listings")
+  }));
+  import_electron2.ipcMain.handle("jobs:delete", async (_, id) => await runQuery("DELETE FROM job_listings", { id }));
+  import_electron2.ipcMain.handle("jobs:add-manual", async (_, data) => {
+    const result = await runQuery("INSERT INTO job_listings", { ...data, source: "Manual", status: "analyzing" });
+    analyzeJobUrl2(result.id, data.userId, data.url).catch(console.error);
+    return { success: true, id: result.id };
+  });
+  import_electron2.ipcMain.handle("jobs:update-doc-confirmation", async (_, { jobId, confirmed }) => {
+    return await runQuery("UPDATE job_listings", { id: jobId, user_confirmed_docs: confirmed });
+  });
+  import_electron2.ipcMain.handle("hunter:start-search", async (_, userId) => await startHunterSearch2(userId));
+  import_electron2.ipcMain.handle("ai:process-application", async (_, jobId, userId) => await processApplication(jobId, userId));
   import_electron2.ipcMain.handle("docs:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM documents") }));
   import_electron2.ipcMain.handle("docs:save", async (_, data) => {
     const result = await runQuery("INSERT INTO documents", [data]);
-    analyzeDocument(result.id, data.userId).catch(console.error);
+    (void 0)(result.id, data.userId).catch(console.error);
     return result;
   });
   import_electron2.ipcMain.handle("websites:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM job_websites") }));
@@ -550,30 +572,10 @@ function setupIpcHandlers() {
   import_electron2.ipcMain.handle("ai-models:add", async (_, data) => await runQuery("INSERT INTO ai_models", [data]));
   import_electron2.ipcMain.handle("ai-models:update", async (_, data) => await runQuery("UPDATE ai_models", [data]));
   import_electron2.ipcMain.handle("ai-models:delete", async (_, id) => await runQuery("DELETE FROM ai_models", { id }));
-  import_electron2.ipcMain.handle("jobs:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM job_listings") }));
-  import_electron2.ipcMain.handle("jobs:delete", async (_, id) => await runQuery("DELETE FROM job_listings", { id }));
-  import_electron2.ipcMain.handle("jobs:add-manual", async (_, data) => {
-    const result = await runQuery("INSERT INTO job_listings", { ...data, source: "Manual", status: "analyzing" });
-    analyzeJobUrl2(result.id, data.userId, data.url).catch(console.error);
-    return { success: true, id: result.id };
-  });
-  import_electron2.ipcMain.handle("hunter:start-search", async (_, userId) => await startHunterSearch2(userId));
-  import_electron2.ipcMain.handle("ai:process-application", async (_, jobId, userId) => await processApplication(jobId, userId));
-  import_electron2.ipcMain.handle("profiles:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM search_profiles") }));
-  import_electron2.ipcMain.handle("profiles:save", async (_, data) => await runQuery("INSERT INTO search_profiles", [data]));
-  import_electron2.ipcMain.handle("profiles:update", async (_, data) => await runQuery("UPDATE search_profiles", data));
-  import_electron2.ipcMain.handle("user:get-profile", async () => {
-    const profile = await getAllQuery("SELECT * FROM user_profile");
-    return { success: true, data: profile[0] || null };
-  });
-  import_electron2.ipcMain.handle("settings:get", async () => {
-    const settings = await getAllQuery("SELECT * FROM settings");
-    return { success: true, data: settings[0] || null };
-  });
   import_electron2.ipcMain.handle("logs:get-recent-actions", async () => ({ success: true, data: await getAllQuery("SELECT * FROM action_logs") }));
   import_electron2.ipcMain.handle("apps:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM applications") }));
   startHuntingScheduler2(1);
-  console.log("All IPC Handlers (including Profiles and Manual Jobs) successfully restored.");
+  console.log("All IPC Handlers (Settings, Profiles, Jobs) successfully restored.");
 }
 
 // electron-main.ts

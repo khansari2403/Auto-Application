@@ -30,7 +30,7 @@ export async function callAI(model: any, prompt: string, fileData?: string) {
     if (apiKey.startsWith('tgp_v1_')) endpoint = 'https://api.together.xyz/v1/chat/completions';
     const response = await axios.post(endpoint, {
       model: modelName,
-      messages: [{ role: 'system', content: 'Professional Assistant. Always respond in the language of the input text.' }, { role: 'user', content: prompt }],
+      messages: [{ role: 'system', content: 'Professional Assistant' }, { role: 'user', content: prompt }],
       max_tokens: 1000
     }, {
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -42,11 +42,19 @@ export async function callAI(model: any, prompt: string, fileData?: string) {
   }
 }
 
+// --- MERGED APPLICATION LOGIC ---
 export async function processApplication(jobId: number, userId: number, userConsentGiven: boolean = false) {
   try {
     const db = getDatabase();
     const job = db.job_listings.find((j: any) => j.id === jobId);
     if (!job) return { success: false, error: 'Job not found' };
+    if (!userConsentGiven) {
+      const reputation = await GhostJobNetwork.checkReputation(job.company_name, job.job_title);
+      if (reputation.isFlagged) {
+        await runQuery('UPDATE job_listings', { id: jobId, status: 'ghost_job_detected', needs_user_consent: 1 });
+        return { success: true, message: 'Paused for GJN reputation' };
+      }
+    }
     const models = await getAllQuery('SELECT * FROM ai_models');
     const thinker = models.find((m: any) => m.role === 'Thinker' && m.status === 'active');
     const auditor = models.find((m: any) => m.role === 'Auditor' && m.status === 'active');
@@ -59,6 +67,11 @@ export async function processApplication(jobId: number, userId: number, userCons
   }
 }
 
+export async function solveRoadblock(jobId: number) {
+  await runQuery('UPDATE job_listings', { id: jobId, status: 'applied' });
+  return { success: true };
+}
+
 export async function startHunterSearch(userId: number) {
   return await HunterEngine.startHunterSearch(userId, callAI);
 }
@@ -68,10 +81,6 @@ export async function analyzeJobUrl(jobId: number, userId: number, url: string) 
   const hunter = models.find((m: any) => m.role === 'Hunter' && m.status === 'active');
   const auditor = models.find((m: any) => m.role === 'Auditor' && m.status === 'active');
   return await HunterEngine.analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI);
-}
-
-export async function analyzeDocument(docId: number, userId: number) {
-  console.log(`Orchestrator: Triggering document analysis for ID ${docId}`);
 }
 
 export function startHuntingScheduler(userId: number) {

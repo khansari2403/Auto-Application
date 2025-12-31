@@ -6,7 +6,6 @@ import * as HunterEngine from './features/Hunter-engine';
 import * as DocGenerator from './features/doc-generator';
 import * as GhostJobNetwork from './features/ghost-job-network';
 import * as SecretaryService from './features/secretary-service';
-import * as AppOrchestrator from './application-orchestrator'; // FIXED: Correct path
 import { verifyWebsiteLogin as verifyLogin } from './features/login-verifier';
 import { startHuntingScheduler as initScheduler } from './features/scheduler';
 
@@ -31,7 +30,7 @@ export async function callAI(model: any, prompt: string, fileData?: string) {
     if (apiKey.startsWith('tgp_v1_')) endpoint = 'https://api.together.xyz/v1/chat/completions';
     const response = await axios.post(endpoint, {
       model: modelName,
-      messages: [{ role: 'system', content: 'Professional Assistant' }, { role: 'user', content: prompt }],
+      messages: [{ role: 'system', content: 'Professional Assistant. Always respond in the language of the input text.' }, { role: 'user', content: prompt }],
       max_tokens: 1000
     }, {
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -40,6 +39,23 @@ export async function callAI(model: any, prompt: string, fileData?: string) {
     return response.data.choices[0].message.content;
   } catch (err: any) {
     return "Error: " + (err.response?.data?.error?.message || err.message);
+  }
+}
+
+export async function processApplication(jobId: number, userId: number, userConsentGiven: boolean = false) {
+  try {
+    const db = getDatabase();
+    const job = db.job_listings.find((j: any) => j.id === jobId);
+    if (!job) return { success: false, error: 'Job not found' };
+    const models = await getAllQuery('SELECT * FROM ai_models');
+    const thinker = models.find((m: any) => m.role === 'Thinker' && m.status === 'active');
+    const auditor = models.find((m: any) => m.role === 'Auditor' && m.status === 'active');
+    if (thinker && auditor) {
+      await DocGenerator.generateTailoredDocs(job, thinker, auditor, { cv: true, coverLetter: true }, callAI);
+    }
+    return { success: true };
+  } catch (error: any) {
+    return { success: false, error: error.message };
   }
 }
 
@@ -54,8 +70,8 @@ export async function analyzeJobUrl(jobId: number, userId: number, url: string) 
   return await HunterEngine.analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI);
 }
 
-export async function processApplication(jobId: number, userId: number, userConsentGiven: boolean = false) {
-  return await AppOrchestrator.processApplication(jobId, userId, callAI, userConsentGiven);
+export async function analyzeDocument(docId: number, userId: number) {
+  console.log(`Orchestrator: Triggering document analysis for ID ${docId}`);
 }
 
 export function startHuntingScheduler(userId: number) {

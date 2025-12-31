@@ -13,7 +13,7 @@ function createWindow() {
     minWidth: 1000,
     minHeight: 700,
     webPreferences: {
-      preload: path.join(__dirname, "preload.cjs"),
+      preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false
     },
@@ -22,7 +22,8 @@ function createWindow() {
   const startUrl = isDev ? 'http://localhost:5173' : `file://${path.join(__dirname, '../dist/index.html')}`;
   mainWindow.loadURL(startUrl);
 
-  // ENABLE RIGHT-CLICK CONTEXT MENU
+  if (isDev) mainWindow.webContents.openDevTools();
+
   mainWindow.webContents.on('context-menu', (event, params) => {
     const menu = new Menu();
     menu.append(new MenuItem({ label: 'Cut', role: 'cut', enabled: params.editFlags.canCut }));

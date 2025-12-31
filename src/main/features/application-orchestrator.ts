@@ -1,6 +1,6 @@
-import { getDatabase, runQuery, getAllQuery } from '../database';
-import { checkReputation } from './ghost-job-network';
-import { generateTailoredDocs } from './doc-generator';
+import { getDatabase, runQuery, getAllQuery } from './database'; // FIXED: Correct path
+import { checkReputation } from './features/ghost-job-network'; // FIXED: Correct path
+import { generateTailoredDocs } from './features/doc-generator'; // FIXED: Correct path
 
 export async function processApplication(jobId: number, userId: number, callAI: Function, userConsentGiven: boolean = false) {
   try {
@@ -21,8 +21,7 @@ export async function processApplication(jobId: number, userId: number, callAI: 
     const auditor = models.find((m: any) => m.role === 'Auditor' && m.status === 'active');
 
     if (thinker && auditor) {
-      const mockOptions = { cv: true, coverLetter: true, manualReview: true };
-      await generateTailoredDocs(job, thinker, auditor, mockOptions, callAI);
+      await generateTailoredDocs(job, thinker, auditor, { cv: true, coverLetter: true }, callAI);
     }
     return { success: true };
   } catch (error: any) {

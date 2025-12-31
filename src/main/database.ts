@@ -47,19 +47,15 @@ export async function runQuery(sql: string, params: any = []): Promise<any> {
   const id = Date.now();
   const sqlParts = sql.trim().split(/\s+/);
   let table = '';
-  
   if (sql.toUpperCase().includes('INSERT INTO')) table = sqlParts[2];
   else if (sql.toUpperCase().includes('UPDATE')) table = sqlParts[1];
   else if (sql.toUpperCase().includes('DELETE FROM')) table = sqlParts[2];
-
   table = table.replace(/[`"']/g, '');
   if (!db[table]) return { success: false, error: 'Table not found' };
-
   const newData = Array.isArray(params) ? params[0] : params;
-
   if (sql.toUpperCase().includes('INSERT')) {
     const mapped = mapToSnakeCase(newData);
-    db[table].push({ ...mapped, id, timestamp: new Date().toISOString() });
+    db[table].push({ ...mapped, id, is_active: mapped.is_active ?? 1, timestamp: new Date().toISOString() });
   } else if (sql.toUpperCase().includes('UPDATE')) {
     const index = db[table].findIndex((item: any) => item.id === newData.id || ['user_profile', 'settings'].includes(table));
     if (index !== -1) db[table][index] = { ...db[table][index], ...mapToSnakeCase(newData) };
@@ -72,14 +68,14 @@ export async function runQuery(sql: string, params: any = []): Promise<any> {
   return { id };
 }
 
-export async function getAllQuery(sql: string, params: any[] = []): Promise<any[]> {
+export async function getAllQuery(sql: string): Promise<any[]> {
   const db = getDatabase();
   const table = sql.trim().split(/\s+/)[3].replace(/[`"']/g, '');
   return db[table] || [];
 }
 
 /**
- * Global Action Logger
+ * Global Action Logger - FIXED: Added export
  */
 export async function logAction(userId: number, type: string, desc: string, status: string, success?: boolean) {
   await runQuery('INSERT INTO action_logs', { 

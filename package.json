@@ -18,9 +18,8 @@
   },
   "dependencies": {
     "axios": "^1.6.0",
-    "better-sqlite3": "^9.0.0",
     "dotenv": "^16.3.1",
-    "electron-is-dev": "^2.0.0",
+    "electron-is-dev": "^1.2.0",
     "imap": "^0.8.19",
     "mailparser": "^3.7.1",
     "nodemailer": "^6.9.7",

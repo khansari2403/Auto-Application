@@ -26,11 +26,24 @@ export function setupIpcHandlers(): void {
 
   // --- JOBS & AUTOMATION ---
   ipcMain.handle('jobs:get-all', async () => ({ success: true, data: await getAllQuery('SELECT * FROM job_listings') }));
+  ipcMain.handle('jobs:delete', async (_, id) => await runQuery('DELETE FROM job_listings', { id }));
+  
+  // FIX: Added missing manual job handler
+  ipcMain.handle('jobs:add-manual', async (_, data) => {
+    const result = await runQuery('INSERT INTO job_listings', { ...data, source: 'Manual', status: 'analyzing' });
+    aiService.analyzeJobUrl(result.id, data.userId, data.url).catch(console.error);
+    return { success: true, id: result.id };
+  });
+
   ipcMain.handle('hunter:start-search', async (_, userId) => await aiService.startHunterSearch(userId));
   ipcMain.handle('ai:process-application', async (_, jobId, userId) => await aiService.processApplication(jobId, userId));
 
   // --- PROFILES ---
   ipcMain.handle('profiles:get-all', async () => ({ success: true, data: await getAllQuery('SELECT * FROM search_profiles') }));
+  
+  // FIX: Added missing profile update/save handlers
+  ipcMain.handle('profiles:save', async (_, data) => await runQuery('INSERT INTO search_profiles', [data]));
+  ipcMain.handle('profiles:update', async (_, data) => await runQuery('UPDATE search_profiles', data));
 
   // --- SETTINGS & USER ---
   ipcMain.handle('user:get-profile', async () => {
@@ -47,5 +60,5 @@ export function setupIpcHandlers(): void {
   ipcMain.handle('apps:get-all', async () => ({ success: true, data: await getAllQuery('SELECT * FROM applications') }));
 
   aiService.startHuntingScheduler(1);
-  console.log('All IPC Handlers and Automation logic successfully restored.');
+  console.log('All IPC Handlers (including Profiles and Manual Jobs) successfully restored.');
 }

@@ -519,6 +519,12 @@ async function processApplication(jobId, userId, userConsentGiven = false) {
 async function startHunterSearch2(userId) {
   return await startHunterSearch(userId, callAI);
 }
+async function analyzeJobUrl2(jobId, userId, url) {
+  const models = await getAllQuery("SELECT * FROM ai_models");
+  const hunter = models.find((m) => m.role === "Hunter" && m.status === "active");
+  const auditor = models.find((m) => m.role === "Auditor" && m.status === "active");
+  return await analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI);
+}
 async function analyzeDocument(docId, userId) {
   console.log(`Orchestrator: Triggering document analysis for ID ${docId}`);
 }
@@ -545,9 +551,17 @@ function setupIpcHandlers() {
   import_electron2.ipcMain.handle("ai-models:update", async (_, data) => await runQuery("UPDATE ai_models", [data]));
   import_electron2.ipcMain.handle("ai-models:delete", async (_, id) => await runQuery("DELETE FROM ai_models", { id }));
   import_electron2.ipcMain.handle("jobs:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM job_listings") }));
+  import_electron2.ipcMain.handle("jobs:delete", async (_, id) => await runQuery("DELETE FROM job_listings", { id }));
+  import_electron2.ipcMain.handle("jobs:add-manual", async (_, data) => {
+    const result = await runQuery("INSERT INTO job_listings", { ...data, source: "Manual", status: "analyzing" });
+    analyzeJobUrl2(result.id, data.userId, data.url).catch(console.error);
+    return { success: true, id: result.id };
+  });
   import_electron2.ipcMain.handle("hunter:start-search", async (_, userId) => await startHunterSearch2(userId));
   import_electron2.ipcMain.handle("ai:process-application", async (_, jobId, userId) => await processApplication(jobId, userId));
   import_electron2.ipcMain.handle("profiles:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM search_profiles") }));
+  import_electron2.ipcMain.handle("profiles:save", async (_, data) => await runQuery("INSERT INTO search_profiles", [data]));
+  import_electron2.ipcMain.handle("profiles:update", async (_, data) => await runQuery("UPDATE search_profiles", data));
   import_electron2.ipcMain.handle("user:get-profile", async () => {
     const profile = await getAllQuery("SELECT * FROM user_profile");
     return { success: true, data: profile[0] || null };
@@ -559,7 +573,7 @@ function setupIpcHandlers() {
   import_electron2.ipcMain.handle("logs:get-recent-actions", async () => ({ success: true, data: await getAllQuery("SELECT * FROM action_logs") }));
   import_electron2.ipcMain.handle("apps:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM applications") }));
   startHuntingScheduler2(1);
-  console.log("All IPC Handlers and Automation logic successfully restored.");
+  console.log("All IPC Handlers (including Profiles and Manual Jobs) successfully restored.");
 }
 
 // electron-main.ts

@@ -1,22 +1,15 @@
 import { useState, useEffect } from 'react';
 
-/**
- * Job Search Component - Phase 3.6
- * CRITICAL: ALL ORIGINAL FEATURES PRESERVED + NEW DOCUMENTATION LOGIC.
- */
 export function JobSearch({ userId }: { userId: number }) {
   const [jobs, setJobs] = useState<any[]>([]);
   const [processingId, setProcessingId] = useState<number | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [huntingStatus, setHuntingStatus] = useState('');
-  const [timers, setTimers] = useState<{ [key: number]: number }>({});
   const [manualUrl, setManualUrl] = useState('');
   const [autoApply, setAutoApply] = useState(false);
   const [jobHuntingActive, setJobHuntingActive] = useState(false);
-  const [huntingHour, setHuntingHour] = useState(9);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['job_title', 'company_name', 'location', 'job_type', 'experience_level', 'role', 'date_imported']);
   
-  // Documentation Options State
   const [docOptions, setDocOptions] = useState({
     cv: true,
     motivationLetter: true,
@@ -56,55 +49,16 @@ export function JobSearch({ userId }: { userId: number }) {
 
   const loadData = async () => {
     const jobRes = await (window as any).electron.invoke('jobs:get-all', userId);
-    if (jobRes?.success) {
-      setJobs(jobRes.data.sort((a: any) => a.needs_user_intervention ? -1 : 1));
-      setTimers(prev => {
-        const newTimers = { ...prev };
-        let changed = false;
-        jobRes.data.forEach((job: any) => {
-          if (job.needs_user_intervention === 1 && newTimers[job.id] === undefined) {
-            newTimers[job.id] = 10;
-            changed = true;
-          }
-        });
-        return changed ? newTimers : prev;
-      });
-    }
+    if (jobRes?.success) setJobs(jobRes.data.sort((a: any) => a.needs_user_intervention ? -1 : 1));
     
     const settingsRes = await (window as any).electron.invoke('settings:get', userId);
     if (settingsRes?.success && settingsRes.data) {
       setAutoApply(settingsRes.data.auto_apply === 1);
       setJobHuntingActive(settingsRes.data.job_hunting_active === 1);
-      setHuntingHour(settingsRes.data.hunting_hour || 9);
     }
   };
 
   useEffect(() => { loadData(); const i = setInterval(loadData, 5000); return () => clearInterval(i); }, [userId]);
-
-  // Auto-Apply Logic (Disabled if tailored docs are requested)
-  useEffect(() => {
-    const tailoredDocsRequested = docOptions.cv || docOptions.motivationLetter || docOptions.portfolio || docOptions.proposal || docOptions.coverLetter;
-    if (autoApply && !processingId && !tailoredDocsRequested) {
-      const nextJob = jobs.find(j => j.status === 'analyzed' || j.status === 'analyzing_failed');
-      if (nextJob) handleApply(nextJob.id);
-    }
-  }, [autoApply, jobs, processingId, docOptions]);
-
-  const handleStartHunterSearch = async () => {
-    if (!jobHuntingActive) return;
-    setIsSearching(true);
-    setHuntingStatus('Initializing Hunters...');
-    try {
-      const result = await (window as any).electron.invoke('hunter:start-search', userId);
-      setHuntingStatus(result.success ? 'Search Completed Successfully.' : 'Search Failed: ' + result.error);
-    } catch (e: any) {
-      setHuntingStatus('Search Error.');
-    } finally {
-      setIsSearching(false);
-      loadData();
-      setTimeout(() => setHuntingStatus(''), 10000);
-    }
-  };
 
   const handleApply = async (jobId: number) => {
     const job = jobs.find(j => j.id === jobId);
@@ -136,31 +90,7 @@ export function JobSearch({ userId }: { userId: number }) {
     }
   };
 
-  const handleConfirmDocs = async (jobId: number, confirmed: boolean) => {
-    await (window as any).electron.invoke('jobs:update-doc-confirmation', { jobId, confirmed: confirmed ? 1 : 0 });
-    loadData();
-  };
-
-  const handleAddManual = async () => {
-    if (!manualUrl) return;
-    const result = await (window as any).electron.invoke('jobs:add-manual', { userId, url: manualUrl });
-    if (!result.success) alert(result.error);
-    setManualUrl('');
-    loadData();
-  };
-
-  const handleDelete = async (id: number) => {
-    await (window as any).electron.invoke('jobs:delete', id);
-    loadData();
-  };
-
-  const toggleAutoApply = async () => {
-    const newVal = !autoApply;
-    setAutoApply(newVal);
-    await (window as any).electron.invoke('settings:update', { id: 1, auto_apply: newVal ? 1 : 0 });
-  };
-
-  const renderDocIcon = (job: any, type: string, label: string) => {
+  const renderDocIcon = (job: any, type: string, label: string, shortLabel: string) => {
     const status = job[`${type}_status`];
     const path = job[`${type}_path`];
 
@@ -170,13 +100,13 @@ export function JobSearch({ userId }: { userId: number }) {
         title={`${label}: ${status || 'Not started'}`}
         style={{ 
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: '22px', height: '22px', borderRadius: '4px', background: '#f5f5f5', border: '1px solid #ddd',
-          fontSize: '9px', position: 'relative', fontWeight: 'bold'
+          width: '24px', height: '24px', borderRadius: '4px', background: '#fff', border: '1px solid #ccc',
+          fontSize: '10px', position: 'relative', fontWeight: 'bold', color: '#333'
         }}
       >
-        {type.toUpperCase().substring(0, 2)}
-        {status === 'thinker_done' && <span style={{ position: 'absolute', bottom: -3, right: -1, color: '#4CAF50', fontSize: '12px' }}>✓</span>}
-        {status === 'auditor_done' && <span style={{ position: 'absolute', bottom: -3, right: -1, color: '#4CAF50', fontSize: '12px' }}>✓✓</span>}
+        {shortLabel}
+        {status === 'thinker_done' && <span style={{ position: 'absolute', bottom: -4, right: -2, color: '#4CAF50', fontSize: '14px' }}>✓</span>}
+        {status === 'auditor_done' && <span style={{ position: 'absolute', bottom: -4, right: -2, color: '#4CAF50', fontSize: '14px' }}>✓✓</span>}
         {(!status || status === 'none' || status === 'failed') && <span style={{ position: 'absolute', bottom: -2, right: -1, fontSize: '8px' }}>🔄</span>}
       </div>
     );
@@ -184,13 +114,6 @@ export function JobSearch({ userId }: { userId: number }) {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <style>{`
-        @keyframes moveMagnifier { 0% { transform: translate(0, 0) rotate(0deg); } 50% { transform: translate(0, -10px) rotate(0deg); } 100% { transform: translate(0, 0) rotate(0deg); } }
-        .magnifier-icon { display: inline-block; animation: moveMagnifier 2s infinite ease-in-out; margin-right: 10px; font-size: 20px; }
-        .hunting-status { background: #e3f2fd; color: #0d47a1; padding: 10px 15px; border-radius: 8px; margin-bottom: 20px; font-size: 13px; font-weight: bold; border: 1px solid #bbdefb; display: flex; align-items: center; }
-      `}</style>
-
-      {/* INFO POPUP */}
       {showInfo && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: '#fff', padding: '30px', borderRadius: '12px', maxWidth: '500px', position: 'relative' }}>
@@ -198,24 +121,20 @@ export function JobSearch({ userId }: { userId: number }) {
             <p><strong>Thinker AI:</strong> Creates tailored versions based on your repository source files.</p>
             <p><strong>Auditor AI:</strong> Verifies files for ATS compatibility and hallucinations.</p>
             <p><strong>Status Marks:</strong> 🔄 (Retry/Start), ✓ (Thinker Done), ✓✓ (Auditor Verified).</p>
-            <p><strong>Ghost Jobs:</strong> Automatic generation is disabled to save tokens. Use the manual button.</p>
             <button onClick={() => setShowInfo(false)} style={{ position: 'absolute', top: 10, right: 10, border: 'none', background: 'none', cursor: 'pointer', fontSize: '20px' }}>×</button>
           </div>
         </div>
       )}
 
-      {/* TOP CONFIGURATION ROW */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', gap: '20px' }}>
-        {/* Manual URL Box */}
         <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', flex: 1.5 }}>
           <h4 style={{ marginTop: 0 }}>🔗 Add Job Manually</h4>
           <div style={{ display: 'flex', gap: '10px' }}>
             <input type='text' value={manualUrl} onChange={e => setManualUrl(e.target.value)} placeholder='Paste Job URL here...' style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }} />
-            <button onClick={handleAddManual} style={{ padding: '10px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Add Job</button>
+            <button onClick={() => (window as any).electron.invoke('jobs:add-manual', { userId, url: manualUrl })} style={{ padding: '10px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Add Job</button>
           </div>
         </div>
 
-        {/* Documentation Box */}
         <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #0077b5', flex: 2, position: 'relative' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <h4 style={{ margin: 0, color: '#0077b5' }}>📄 Application Specific Documentations</h4>
@@ -236,47 +155,36 @@ export function JobSearch({ userId }: { userId: number }) {
           </label>
         </div>
 
-        {/* Job Hunting Box */}
         <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center', flex: 1.5 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h4 style={{ margin: 0 }}>🚀 Job Hunting</h4>
-            <button onClick={() => (window as any).electron.invoke('settings:update', { id: 1, job_hunting_active: jobHuntingActive ? 0 : 1 }).then(loadData)} style={{ padding: '4px 10px', background: jobHuntingActive ? '#4CAF50' : '#ccc', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '10px', fontWeight: 'bold' }}>
-              {jobHuntingActive ? 'ACTIVE' : 'OFF'}
-            </button>
-          </div>
-          <button onClick={handleStartHunterSearch} disabled={isSearching || !jobHuntingActive} style={{ padding: '12px 20px', background: '#673ab7', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <span className="magnifier-icon">🔍</span> {isSearching ? 'Hunting...' : 'Start Job Hunting'}
+          <h4 style={{ marginTop: 0 }}>🚀 Job Hunting</h4>
+          <button onClick={() => (window as any).electron.invoke('hunter:start-search', userId)} disabled={isSearching || !jobHuntingActive} style={{ padding: '12px 20px', background: '#673ab7', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>
+            {isSearching ? 'Hunting...' : 'Start Job Hunting'}
           </button>
         </div>
         
-        {/* Auto-Apply Box */}
         <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center', flex: 1 }}>
           <h4 style={{ marginTop: 0 }}>🤖 Auto-Apply</h4>
-          <button onClick={toggleAutoApply} style={{ padding: '10px 30px', background: autoApply ? '#4CAF50' : '#ccc', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>
+          <button onClick={() => (window as any).electron.invoke('settings:update', { id: 1, auto_apply: autoApply ? 0 : 1 }).then(loadData)} style={{ padding: '10px 30px', background: autoApply ? '#4CAF50' : '#ccc', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>
             {autoApply ? 'ON' : 'OFF'}
           </button>
         </div>
       </div>
 
-      {huntingStatus && <div className="hunting-status"><span>📡</span> {huntingStatus}</div>}
-
-      {/* COLUMN CUSTOMIZATION */}
       <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #eee' }}>
         <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '10px', color: '#666' }}>⚙️ CUSTOMIZE TABLE COLUMNS (24 CRITERIA):</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {allColumns.map(col => (
-            <button key={col.id} onClick={() => toggleColumn(col.id)} style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '20px', border: '1px solid #ccc', background: visibleColumns.includes(col.id) ? '#0077b5' : '#fff', color: visibleColumns.includes(col.id) ? '#fff' : '#666', cursor: 'pointer' }}>{col.label}</button>
+            <button key={col.id} onClick={() => setVisibleColumns(prev => prev.includes(col.id) ? prev.filter(c => c !== col.id) : [...prev, col.id])} style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '20px', border: '1px solid #ccc', background: visibleColumns.includes(col.id) ? '#0077b5' : '#fff', color: visibleColumns.includes(col.id) ? '#fff' : '#666', cursor: 'pointer' }}>{col.label}</button>
           ))}
         </div>
       </div>
 
-      {/* JOBS TABLE */}
       <h2>🎯 Found Jobs</h2>
       <div style={{ overflowX: 'auto', background: '#fff', borderRadius: '12px', border: '1px solid #eee' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead>
             <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
-              <th style={{ padding: '10px', textAlign: 'center' }}>Docs</th>
+              <th style={{ padding: '10px', textAlign: 'center', background: '#e3f2fd', color: '#0d47a1', width: '120px' }}>DOCs</th>
               {allColumns.filter(c => visibleColumns.includes(c.id)).map(col => (
                 <th key={col.id} style={{ padding: '10px', textAlign: 'left', whiteSpace: 'nowrap' }}>{col.label}</th>
               ))}
@@ -286,13 +194,13 @@ export function JobSearch({ userId }: { userId: number }) {
           <tbody>
             {jobs.map(job => (
               <tr key={job.id} style={{ borderBottom: '1px solid #eee', background: job.status === 'ghost_job_detected' ? '#fff3e0' : 'transparent' }}>
-                <td style={{ padding: '10px' }}>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    {docOptions.cv && renderDocIcon(job, 'cv', 'CV')}
-                    {docOptions.motivationLetter && renderDocIcon(job, 'motivation_letter', 'ML')}
-                    {docOptions.portfolio && renderDocIcon(job, 'portfolio', 'PT')}
-                    {docOptions.proposal && renderDocIcon(job, 'proposal', 'PR')}
-                    {docOptions.coverLetter && renderDocIcon(job, 'cover_letter', 'CL')}
+                <td style={{ padding: '10px', background: '#f9fcff' }}>
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                    {docOptions.cv && renderDocIcon(job, 'cv', 'CV', 'CV')}
+                    {docOptions.motivationLetter && renderDocIcon(job, 'motivation_letter', 'Motivation Letter', 'ML')}
+                    {docOptions.portfolio && renderDocIcon(job, 'portfolio', 'Portfolio', 'PT')}
+                    {docOptions.proposal && renderDocIcon(job, 'proposal', 'Proposal', 'PR')}
+                    {docOptions.coverLetter && renderDocIcon(job, 'cover_letter', 'Cover Letter', 'CL')}
                   </div>
                 </td>
                 {visibleColumns.includes('job_title') && (
@@ -312,14 +220,14 @@ export function JobSearch({ userId }: { userId: number }) {
                       <>
                         {docOptions.manualReview && (
                           <label style={{ fontSize: '9px', color: '#666', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <input type="checkbox" checked={!!job.user_confirmed_docs} onChange={(e) => handleConfirmDocs(job.id, e.target.checked)} /> Happy with files?
+                            <input type="checkbox" checked={!!job.user_confirmed_docs} onChange={(e) => (window as any).electron.invoke('jobs:update-doc-confirmation', { jobId: job.id, confirmed: e.target.checked ? 1 : 0 }).then(loadData)} /> Happy with files?
                           </label>
                         )}
                         <div style={{ display: 'flex', gap: '4px' }}>
                           <button onClick={() => handleApply(job.id)} disabled={processingId === job.id || (docOptions.manualReview && !job.user_confirmed_docs)} style={{ padding: '5px 15px', background: job.status === 'applied' ? '#999' : '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
                             {processingId === job.id ? '...' : job.status === 'applied' ? 'Applied' : 'Apply'}
                           </button>
-                          <button onClick={() => handleDelete(job.id)} style={{ padding: '5px', background: '#fff', color: '#f44336', border: '1px solid #ffcdd2', borderRadius: '4px', cursor: 'pointer' }}>🗑️</button>
+                          <button onClick={() => (window as any).electron.invoke('jobs:delete', job.id).then(loadData)} style={{ padding: '5px', background: '#fff', color: '#f44336', border: '1px solid #ffcdd2', borderRadius: '4px', cursor: 'pointer' }}>🗑️</button>
                         </div>
                       </>
                     )}

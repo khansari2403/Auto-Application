@@ -17,12 +17,15 @@ import JobWebsitesSection from './components/settings/JobWebsitesSection';
  */
 function App() {
   const [userId] = useState<number>(1);
-  const [currentTab, setCurrentTab] = useState<'settings' | 'documents' | 'websites' | 'profiles' | 'search' | 'applications' | 'inbox' | 'alerts' | 'logs' | 'tutorial' | 'why_free'>('settings');
+  const [currentTab, setCurrentTab] = useState<'settings' | 'documents' | 'websites' | 'profiles' | 'search' | 'applications' | 'inbox' | 'alerts' | 'logs'>('settings');
 
   // Function to handle external jumps for the new tabs
   const openExternalLink = (url: string) => {
-    // This will be updated with your specific URLs later
-    window.open(url, '_blank');
+    if (url === 'tutorial') {
+      window.open('https://your-tutorial-website.com', '_blank');
+    } else if (url === 'why_free') {
+      window.open('https://your-info-website.com', '_blank');
+    }
   };
 
   return (
@@ -46,8 +49,8 @@ function App() {
         <button className={`nav-button ${currentTab === 'logs' ? 'active' : ''}`} onClick={() => setCurrentTab('logs')}>📊 Logs</button>
         
         {/* NEW TABS FOR PHASE 3.6 */}
-        <button className="nav-button secondary" onClick={() => openExternalLink('https://your-tutorial-link.com')}>📖 Tutorial</button>
-        <button className="nav-button secondary" onClick={() => openExternalLink('https://your-info-link.com')}>❓ Why Free?</button>
+        <button className="nav-button secondary" onClick={() => openExternalLink('tutorial')}>📖 Tutorial</button>
+        <button className="nav-button secondary" onClick={() => openExternalLink('why_free')}>❓ Why Free?</button>
       </nav>
 
       <main className="app-main">

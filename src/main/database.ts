@@ -1,9 +1,3 @@
-/**
- * Database Service
- * Local JSON-based persistence layer.
- * Updated to support site-specific credentials and monitoring frequencies.
- */
-
 import path from 'path';
 import { app } from 'electron';
 import fs from 'fs';
@@ -27,7 +21,6 @@ export function getDatabase(): any {
   }
   const tables = ['user_profile', 'email_config', 'job_preferences', 'ai_models', 'job_websites', 'company_monitoring', 'job_listings', 'applications', 'action_logs', 'email_alerts', 'documents', 'search_profiles', 'settings', 'questions'];
   tables.forEach(t => { if (!dbData[t]) dbData[t] = []; });
-  
   return dbData;
 }
 
@@ -66,16 +59,11 @@ export async function runQuery(sql: string, params: any = []): Promise<any> {
 
   if (sql.toUpperCase().includes('INSERT')) {
     const mapped = mapToSnakeCase(newData);
-    db[table].push({ 
-      ...mapped, 
-      id, 
-      is_active: mapped.is_active ?? 1,
-      last_checked: null,
-      timestamp: new Date().toISOString() 
-    });
+    db[table].push({ ...mapped, id, timestamp: new Date().toISOString() });
   } else if (sql.toUpperCase().includes('UPDATE')) {
     const index = db[table].findIndex((item: any) => item.id === newData.id || ['user_profile', 'settings'].includes(table));
     if (index !== -1) db[table][index] = { ...db[table][index], ...mapToSnakeCase(newData) };
+    else if (['user_profile', 'settings'].includes(table)) db[table].push({ ...mapToSnakeCase(newData), id });
   } else if (sql.toUpperCase().includes('DELETE')) {
     const deleteId = Array.isArray(params) ? params[0] : params;
     db[table] = db[table].filter((item: any) => item.id !== deleteId);
@@ -84,14 +72,21 @@ export async function runQuery(sql: string, params: any = []): Promise<any> {
   return { id };
 }
 
-export async function getQuery(sql: string, params: any[] = []): Promise<any> {
-  const db = getDatabase();
-  const table = sql.trim().split(/\s+/)[3].replace(/[`"']/g, '');
-  return db[table]?.[0] || null;
-}
-
 export async function getAllQuery(sql: string, params: any[] = []): Promise<any[]> {
   const db = getDatabase();
   const table = sql.trim().split(/\s+/)[3].replace(/[`"']/g, '');
   return db[table] || [];
+}
+
+/**
+ * Global Action Logger
+ */
+export async function logAction(userId: number, type: string, desc: string, status: string, success?: boolean) {
+  await runQuery('INSERT INTO action_logs', { 
+    user_id: userId, 
+    action_type: type, 
+    action_description: desc, 
+    status: status, 
+    success: success 
+  });
 }

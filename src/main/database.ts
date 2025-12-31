@@ -61,7 +61,8 @@ export async function runQuery(sql: string, params: any = []): Promise<any> {
     if (index !== -1) db[table][index] = { ...db[table][index], ...mapToSnakeCase(newData) };
     else if (['user_profile', 'settings'].includes(table)) db[table].push({ ...mapToSnakeCase(newData), id });
   } else if (sql.toUpperCase().includes('DELETE')) {
-    const deleteId = Array.isArray(params) ? params[0] : params;
+    // FIXED: Correctly extract ID for deletion
+    const deleteId = typeof newData === 'object' ? newData.id : newData;
     db[table] = db[table].filter((item: any) => item.id !== deleteId);
   }
   saveDb();
@@ -74,9 +75,6 @@ export async function getAllQuery(sql: string): Promise<any[]> {
   return db[table] || [];
 }
 
-/**
- * Global Action Logger - FIXED: Added export
- */
 export async function logAction(userId: number, type: string, desc: string, status: string, success?: boolean) {
   await runQuery('INSERT INTO action_logs', { 
     user_id: userId, 

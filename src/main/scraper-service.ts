@@ -5,45 +5,29 @@ import { logAction } from './database';
 let activeBrowser: Browser | null = null;
 let activePage: Page | null = null;
 
-/**
- * Handles cookie banners by preferring "Reject" or "Deny" options.
- */
 async function handleCookieBanner(page: Page) {
   try {
     await page.evaluate(() => {
       const rejectKeywords = ['reject', 'deny', 'refuse', 'decline', 'only necessary', 'essential only', 'ablehnen', 'nur essenzielle', 'nicht akzeptieren'];
       const acceptKeywords = ['accept', 'agree', 'allow', 'akzeptieren', 'erlauben', 'zustimmen', 'alle akzeptieren'];
-      
       const buttons = Array.from(document.querySelectorAll('button, a, span, div'));
       
-      // 1. Try to find a "Reject" button
       const rejectButton = buttons.find(btn => {
         const text = btn.textContent?.toLowerCase().trim() || '';
         return rejectKeywords.some(k => text.includes(k)) && text.length < 40;
       }) as HTMLElement;
       
-      if (rejectButton) {
-        rejectButton.click();
-        return 'rejected';
-      }
+      if (rejectButton) { rejectButton.click(); return; }
       
-      // 2. If no reject button, try to find an "Accept" button
       const acceptButton = buttons.find(btn => {
         const text = btn.textContent?.toLowerCase().trim() || '';
         return acceptKeywords.some(k => text.includes(k)) && text.length < 40;
       }) as HTMLElement;
       
-      if (acceptButton) {
-        acceptButton.click();
-        return 'accepted';
-      }
-      
-      return 'none';
+      if (acceptButton) { acceptButton.click(); }
     });
     await new Promise(resolve => setTimeout(resolve, 2000));
-  } catch (e) {
-    console.error('Cookie Banner Error:', e);
-  }
+  } catch (e) {}
 }
 
 export async function scrapeJobs(baseUrl: string, query: string, location: string, credentials?: any, userId?: number, callAI?: Function): Promise<string[]> {
@@ -54,25 +38,20 @@ export async function scrapeJobs(baseUrl: string, query: string, location: strin
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-    
     const startUrl = baseUrl.includes('linkedin.com') ? 'https://www.linkedin.com/jobs/' : 'https://de.indeed.com/';
     await page.goto(startUrl, { waitUntil: 'networkidle2', timeout: 60000 });
     await handleCookieBanner(page);
-
     const roadblock = await page.evaluate(() => {
       const text = document.body.innerText.toLowerCase();
       if (text.includes('sign in') || !!document.querySelector('#username')) return 'login';
       return null;
     });
-
     if (roadblock === 'login' && userId) {
       await handleLoginRoadblock(page, credentials, userId);
       await page.goto(startUrl, { waitUntil: 'networkidle2' });
     }
-
     await page.evaluate(() => window.scrollBy(0, 800));
     await new Promise(resolve => setTimeout(resolve, 5000)); 
-
     const links = await page.evaluate(() => {
       const selectors = ['a.job-card-container__link', 'a.job-card-list__title', 'a.base-card__full-link', 'a.jcs-JobTitle', 'h2.jobTitle a'];
       const foundLinks: string[] = [];
@@ -95,8 +74,7 @@ export async function getJobPageContent(url: string, useAlternativeMethod: boole
     await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
     await handleCookieBanner(page);
-
-    // Wait for common job description selectors
+    
     const selectors = ['.job-description', '#jobDescriptionText', '.description__text', '.show-more-less-html__markup', 'main', 'article'];
     for (const selector of selectors) {
       try {
@@ -110,7 +88,6 @@ export async function getJobPageContent(url: string, useAlternativeMethod: boole
       const desc = document.querySelector('.job-description, #jobDescriptionText, .description__text, .show-more-less-html__markup');
       return desc ? (desc as HTMLElement).innerText : document.body.innerText;
     });
-
     return { content: content || '' };
   } catch (error) { console.error(`Deep Reader Error:`, error); return { content: '' }; } finally { if (browser) await browser.close(); }
 }

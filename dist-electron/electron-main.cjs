@@ -111,7 +111,7 @@ async function runQuery(sql, params = []) {
     else if (["user_profile", "settings"].includes(table))
       db[table].push({ ...mapToSnakeCase(newData), id });
   } else if (sql.toUpperCase().includes("DELETE")) {
-    const deleteId = Array.isArray(params) ? params[0] : params;
+    const deleteId = typeof newData === "object" ? newData.id : newData;
     db[table] = db[table].filter((item) => item.id !== deleteId);
   }
   saveDb();
@@ -245,13 +245,13 @@ async function handleLoginRoadblock(page, credentials, userId) {
 async function handleCookieBanner(page) {
   try {
     await page.evaluate(() => {
-      const rejectKeywords = ["reject", "deny", "refuse", "decline", "only necessary", "essential only", "ablehnen", "nur essenzielle"];
-      const acceptKeywords = ["accept", "agree", "allow", "akzeptieren", "erlauben", "zustimmen"];
+      const rejectKeywords = ["reject", "deny", "refuse", "decline", "only necessary", "essential only", "ablehnen", "nur essenzielle", "nicht akzeptieren"];
+      const acceptKeywords = ["accept", "agree", "allow", "akzeptieren", "erlauben", "zustimmen", "alle akzeptieren"];
       const buttons = Array.from(document.querySelectorAll("button, a, span, div"));
       const rejectButton = buttons.find((btn) => {
         var _a;
         const text = ((_a = btn.textContent) == null ? void 0 : _a.toLowerCase().trim()) || "";
-        return rejectKeywords.some((k) => text.includes(k)) && text.length < 30;
+        return rejectKeywords.some((k) => text.includes(k)) && text.length < 40;
       });
       if (rejectButton) {
         rejectButton.click();
@@ -260,7 +260,7 @@ async function handleCookieBanner(page) {
       const acceptButton = buttons.find((btn) => {
         var _a;
         const text = ((_a = btn.textContent) == null ? void 0 : _a.toLowerCase().trim()) || "";
-        return acceptKeywords.some((k) => text.includes(k)) && text.length < 30;
+        return acceptKeywords.some((k) => text.includes(k)) && text.length < 40;
       });
       if (acceptButton) {
         acceptButton.click();
@@ -320,8 +320,19 @@ async function getJobPageContent(url, useAlternativeMethod = false, userId) {
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
     await page.goto(url, { waitUntil: "networkidle2", timeout: 6e4 });
     await handleCookieBanner(page);
-    await new Promise((resolve) => setTimeout(resolve, 5e3));
-    const content = await page.evaluate(() => document.body.innerText);
+    const selectors = [".job-description", "#jobDescriptionText", ".description__text", ".show-more-less-html__markup", "main", "article"];
+    for (const selector of selectors) {
+      try {
+        await page.waitForSelector(selector, { timeout: 5e3 });
+        break;
+      } catch (e) {
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 3e3));
+    const content = await page.evaluate(() => {
+      const desc = document.querySelector(".job-description, #jobDescriptionText, .description__text, .show-more-less-html__markup");
+      return desc ? desc.innerText : document.body.innerText;
+    });
     return { content: content || "" };
   } catch (error) {
     console.error(`Deep Reader Error:`, error);
@@ -526,28 +537,20 @@ function startHuntingScheduler2(userId) {
 
 // src/main/ipc-handlers.ts
 function setupIpcHandlers() {
-  console.log("Registering all IPC Handlers...");
+  console.log("Registering Consolidated IPC Handlers...");
   import_electron2.ipcMain.handle("settings:get", async () => {
     const settings = await getAllQuery("SELECT * FROM settings");
     return { success: true, data: settings[0] || null };
   });
-  import_electron2.ipcMain.handle("settings:update", async (_, data) => {
-    return await runQuery("UPDATE settings", data);
-  });
+  import_electron2.ipcMain.handle("settings:update", async (_, data) => await runQuery("UPDATE settings", data));
   import_electron2.ipcMain.handle("user:get-profile", async () => {
     const profile = await getAllQuery("SELECT * FROM user_profile");
     return { success: true, data: profile[0] || null };
   });
-  import_electron2.ipcMain.handle("profiles:get-all", async () => ({
-    success: true,
-    data: await getAllQuery("SELECT * FROM search_profiles")
-  }));
+  import_electron2.ipcMain.handle("profiles:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM search_profiles") }));
   import_electron2.ipcMain.handle("profiles:save", async (_, data) => await runQuery("INSERT INTO search_profiles", [data]));
   import_electron2.ipcMain.handle("profiles:update", async (_, data) => await runQuery("UPDATE search_profiles", data));
-  import_electron2.ipcMain.handle("jobs:get-all", async () => ({
-    success: true,
-    data: await getAllQuery("SELECT * FROM job_listings")
-  }));
+  import_electron2.ipcMain.handle("jobs:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM job_listings") }));
   import_electron2.ipcMain.handle("jobs:delete", async (_, id) => await runQuery("DELETE FROM job_listings", { id }));
   import_electron2.ipcMain.handle("jobs:add-manual", async (_, data) => {
     const result = await runQuery("INSERT INTO job_listings", { ...data, source: "Manual", status: "analyzing" });
@@ -575,7 +578,7 @@ function setupIpcHandlers() {
   import_electron2.ipcMain.handle("logs:get-recent-actions", async () => ({ success: true, data: await getAllQuery("SELECT * FROM action_logs") }));
   import_electron2.ipcMain.handle("apps:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM applications") }));
   startHuntingScheduler2(1);
-  console.log("All IPC Handlers (Settings, Profiles, Jobs) successfully restored.");
+  console.log("All IPC Handlers successfully consolidated.");
 }
 
 // electron-main.ts

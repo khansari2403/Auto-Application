@@ -4,6 +4,9 @@ import isDev from 'electron-is-dev';
 import { initializeDatabase } from './src/main/database';
 import { setupIpcHandlers } from './src/main/ipc-handlers';
 
+// FIX: Resolve GPU process crashes on Windows
+app.disableHardwareAcceleration();
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
@@ -24,7 +27,6 @@ function createWindow() {
 
   if (isDev) mainWindow.webContents.openDevTools();
 
-  // ENABLE RIGHT-CLICK CONTEXT MENU
   mainWindow.webContents.on('context-menu', (event, params) => {
     const menu = new Menu();
     menu.append(new MenuItem({ label: 'Cut', role: 'cut', enabled: params.editFlags.canCut }));

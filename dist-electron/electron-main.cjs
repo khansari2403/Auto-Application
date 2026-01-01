@@ -154,7 +154,7 @@ async function handleCookieRoadblock(page, userId, callAI2) {
     const analysis = await callAI2({ model_name: "gpt-4o", role: "Observer" }, prompt, `data:image/png;base64,${screenshot}`);
     try {
       const coords = JSON.parse(analysis.replace(/```json|```/g, "").trim());
-      await logAction(userId, "ai_mouse", `\u{1F5B1}\uFE0F AI Mouse clicking ${coords.action} at (${coords.x}, ${coords.y})`, "in_progress");
+      await logAction(userId, "ai_mouse", `\u9F20\u6807 AI Mouse clicking ${coords.action} at (${coords.x}, ${coords.y})`, "in_progress");
       await page.mouse.click(coords.x, coords.y);
       await new Promise((resolve) => setTimeout(resolve, 2e3));
     } catch (e) {
@@ -179,7 +179,7 @@ async function getJobPageContent(url, userId, callAI2) {
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
     await page.goto(url, { waitUntil: "networkidle2", timeout: 6e4 });
     await handleCookieRoadblock(page, userId, callAI2);
-    await new Promise((resolve) => setTimeout(resolve, 3e3));
+    await new Promise((resolve) => setTimeout(resolve, 4e3));
     const result = await page.evaluate(() => {
       const getCleanText = (el) => el ? el.innerText.replace(/\s+/g, " ").trim() : "";
       const s1 = document.querySelector(".job-description, #jobDescriptionText, .description__text, .show-more-less-html__markup");
@@ -242,7 +242,7 @@ async function reportGhostJob(jobData, reason) {
 }
 
 // src/main/features/Hunter-engine.ts
-async function analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI2, isRetry = false) {
+async function analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI2) {
   const pageData = await getJobPageContent(url, userId, callAI2);
   if (!pageData.content || pageData.content.length < 200) {
     await runQuery("DELETE FROM job_listings", { id: jobId });
@@ -420,7 +420,6 @@ function startHuntingScheduler2(userId) {
 
 // src/main/ipc-handlers.ts
 function setupIpcHandlers() {
-  console.log("Registering Consolidated IPC Handlers...");
   const channels = [
     "settings:get",
     "settings:update",

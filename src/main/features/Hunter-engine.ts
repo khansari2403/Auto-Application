@@ -2,7 +2,7 @@ import { runQuery, getDatabase, getAllQuery, logAction } from '../database';
 import { scrapeJobs, getJobPageContent } from '../scraper-service';
 import { reportGhostJob } from './ghost-job-network';
 
-export async function analyzeJobUrl(jobId: number, userId: number, url: string, hunter: any, auditor: any, callAI: Function, isRetry: boolean = false) {
+export async function analyzeJobUrl(jobId: number, userId: number, url: string, hunter: any, auditor: any, callAI: Function) {
   const pageData = await getJobPageContent(url, userId, callAI);
   
   if (!pageData.content || pageData.content.length < 200) {
@@ -12,7 +12,6 @@ export async function analyzeJobUrl(jobId: number, userId: number, url: string, 
 
   await logAction(userId, 'ai_hunter', `Scraping successful using ${pageData.strategyUsed}`, 'completed', true);
 
-  // STRICT RELEVANCE CHECK
   const relevancePrompt = `Is this page a specific job listing? Answer ONLY "YES" or "NO". \n\nContent: ${pageData.content.substring(0, 2000)}`;
   const isRelevant = await callAI(hunter, relevancePrompt);
   

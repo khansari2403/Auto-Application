@@ -3,7 +3,6 @@ import { handleLoginRoadblock } from './features/automated-login';
 import { logAction } from './database';
 
 let activeBrowser: Browser | null = null;
-let activePage: Page | null = null;
 
 /**
  * VISUAL AI COOKIE BYPASS
@@ -25,11 +24,10 @@ async function handleCookieRoadblock(page: Page, userId: number, callAI: Functio
     
     try {
       const coords = JSON.parse(analysis.replace(/```json|```/g, '').trim());
-      await logAction(userId, 'ai_mouse', `🖱️ AI Mouse clicking ${coords.action} at (${coords.x}, ${coords.y})`, 'in_progress');
+      await logAction(userId, 'ai_mouse', `鼠标 AI Mouse clicking ${coords.action} at (${coords.x}, ${coords.y})`, 'in_progress');
       await page.mouse.click(coords.x, coords.y);
       await new Promise(resolve => setTimeout(resolve, 2000));
     } catch (e) {
-      // Brute force fallback
       await page.evaluate(() => {
         const btns = Array.from(document.querySelectorAll('button, a'));
         const reject = btns.find(b => b.textContent?.toLowerCase().includes('reject') || b.textContent?.toLowerCase().includes('ablehnen'));
@@ -52,20 +50,20 @@ export async function getJobPageContent(url: string, userId: number, callAI: Fun
     await page.goto(url, { waitUntil: 'networkidle2', timeout: 60000 });
     
     await handleCookieRoadblock(page, userId, callAI);
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise(resolve => setTimeout(resolve, 4000));
 
     const result = await page.evaluate(() => {
       const getCleanText = (el: Element | null) => el ? (el as HTMLElement).innerText.replace(/\s+/g, ' ').trim() : '';
       
-      // Strategy 1: Selectors
+      // Style A: Specific Selectors
       const s1 = document.querySelector('.job-description, #jobDescriptionText, .description__text, .show-more-less-html__markup');
       if (s1 && s1.textContent && s1.textContent.length > 300) return { content: getCleanText(s1), strategy: 'Style A: Selectors' };
       
-      // Strategy 2: Semantic
+      // Style B: Semantic Tags
       const s2 = document.querySelector('main, article');
       if (s2 && s2.textContent && s2.textContent.length > 300) return { content: getCleanText(s2), strategy: 'Style B: Semantic' };
       
-      // Strategy 3: Density
+      // Style C: Density Analysis (Largest Block)
       const blocks = Array.from(document.querySelectorAll('div')).map(el => getCleanText(el));
       const t3 = blocks.sort((a, b) => b.length - a.length)[0];
       if (t3 && t3.length > 300) return { content: t3, strategy: 'Style C: Density' };
@@ -109,9 +107,8 @@ export async function scrapeJobs(baseUrl: string, query: string, location: strin
 }
 
 export async function openLinkedIn(userId: number, url: string) {
-  if (activeBrowser) await activeBrowser.close();
   activeBrowser = await puppeteer.launch({ headless: false, defaultViewport: null, args: ['--start-maximized'] });
-  activePage = await activeBrowser.newPage();
-  await activePage.goto(url, { waitUntil: 'domcontentloaded' });
+  const page = await activeBrowser.newPage();
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
   return { success: true };
 }

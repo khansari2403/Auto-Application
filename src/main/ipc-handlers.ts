@@ -3,9 +3,7 @@ import { ipcMain } from 'electron';
 import * as aiService from './ai-service';
 
 export function setupIpcHandlers(): void {
-  console.log('Registering Consolidated IPC Handlers...');
-
-  // --- PREVENT DUPLICATE HANDLER ERRORS ---
+  // Clear existing handlers to prevent "second handler" error
   const channels = [
     'settings:get', 'settings:update', 'user:get-profile', 
     'profiles:get-all', 'profiles:save', 'profiles:update',

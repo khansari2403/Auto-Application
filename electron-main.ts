@@ -7,6 +7,12 @@ import { setupIpcHandlers } from './src/main/ipc-handlers';
 // FIX: Resolve GPU process crashes on Windows
 app.disableHardwareAcceleration();
 
+// FIX: Prevent multiple instances
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+}
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow() {
@@ -47,3 +53,10 @@ app.on('ready', async () => {
 });
 
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});

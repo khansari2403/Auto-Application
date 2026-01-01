@@ -22,8 +22,8 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 ));
 
 // electron-main.ts
-var import_electron3 = require("electron");
-var import_path2 = __toESM(require("path"), 1);
+var import_electron4 = require("electron");
+var import_path3 = __toESM(require("path"), 1);
 var import_electron_is_dev = __toESM(require("electron-is-dev"), 1);
 
 // src/main/database.ts
@@ -74,7 +74,14 @@ var getDefaultData = () => ({
   settings: [],
   questions: []
 });
-var saveDb = () => import_fs.default.writeFileSync(getDbPath(), JSON.stringify(dbData, null, 2));
+var saveDb = () => {
+  try {
+    import_fs.default.writeFileSync(getDbPath(), JSON.stringify(dbData, null, 2));
+    console.log("DB: Saved to disk");
+  } catch (e) {
+    console.error("DB: Save failed", e);
+  }
+};
 async function initializeDatabase() {
   getDatabase();
 }
@@ -88,217 +95,673 @@ var mapToSnakeCase = (obj) => {
 };
 async function runQuery(sql, params = []) {
   const db = getDatabase();
-  const id = Date.now();
+  const sqlUpper = sql.toUpperCase();
   const sqlParts = sql.trim().split(/\s+/);
   let table = "";
-  if (sql.toUpperCase().includes("INSERT INTO"))
+  if (sqlUpper.includes("INSERT INTO")) {
     table = sqlParts[2];
-  else if (sql.toUpperCase().includes("UPDATE"))
+  } else if (sqlUpper.includes("UPDATE")) {
     table = sqlParts[1];
-  else if (sql.toUpperCase().includes("DELETE FROM"))
+  } else if (sqlUpper.includes("DELETE FROM")) {
     table = sqlParts[2];
-  table = table.replace(/[`"']/g, "");
-  if (!db[table])
-    return { success: false, error: "Table not found" };
-  const newData = Array.isArray(params) ? params[0] : params;
-  if (sql.toUpperCase().includes("INSERT")) {
-    const mapped = mapToSnakeCase(newData);
-    db[table].push({ ...mapped, id, is_active: mapped.is_active ?? 1, timestamp: (/* @__PURE__ */ new Date()).toISOString() });
-  } else if (sql.toUpperCase().includes("UPDATE")) {
-    const index = db[table].findIndex((item) => item.id === newData.id || ["user_profile", "settings"].includes(table));
-    if (index !== -1)
-      db[table][index] = { ...db[table][index], ...mapToSnakeCase(newData) };
-    else if (["user_profile", "settings"].includes(table))
-      db[table].push({ ...mapToSnakeCase(newData), id });
-  } else if (sql.toUpperCase().includes("DELETE")) {
-    const deleteId = typeof newData === "object" ? newData.id : newData;
-    db[table] = db[table].filter((item) => item.id !== deleteId);
   }
-  saveDb();
-  return { id };
+  table = table.replace(/[`"']/g, "");
+  console.log(`DB: ${sqlUpper.split(" ")[0]} on "${table}"`);
+  if (!db[table]) {
+    console.log(`DB: Table "${table}" not found!`);
+    return { success: false, error: "Table not found" };
+  }
+  const newData = Array.isArray(params) ? params[0] : params;
+  if (sqlUpper.includes("INSERT")) {
+    const mapped = mapToSnakeCase(newData);
+    const recordId = mapped.id || newData.id || Date.now();
+    const record = {
+      ...mapped,
+      id: recordId,
+      is_active: mapped.is_active ?? 1,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    db[table].push(record);
+    saveDb();
+    console.log(`DB: Inserted into ${table} with id=${recordId}`);
+    return { id: recordId, success: true };
+  } else if (sqlUpper.includes("UPDATE")) {
+    const mapped = mapToSnakeCase(newData);
+    const updateId = mapped.id || newData.id;
+    console.log(`DB: Looking for id=${updateId} in ${table} (${db[table].length} records)`);
+    let index = -1;
+    if (updateId !== void 0) {
+      index = db[table].findIndex((item) => {
+        return item.id === updateId || item.id === Number(updateId) || String(item.id) === String(updateId);
+      });
+    }
+    if (index === -1 && ["user_profile", "settings", "job_preferences", "email_config"].includes(table)) {
+      if (db[table].length > 0) {
+        index = 0;
+      } else {
+        const record = { ...mapped, id: updateId || Date.now(), timestamp: (/* @__PURE__ */ new Date()).toISOString() };
+        db[table].push(record);
+        saveDb();
+        console.log(`DB: Created new ${table} record`);
+        return { id: record.id, success: true };
+      }
+    }
+    if (index !== -1) {
+      db[table][index] = {
+        ...db[table][index],
+        ...mapped,
+        id: db[table][index].id
+        // Keep original ID
+      };
+      saveDb();
+      console.log(`DB: Updated ${table}[${index}] with id=${db[table][index].id}`);
+      return { success: true, id: db[table][index].id };
+    } else {
+      console.log(`DB: \u274C Record not found for update! id=${updateId}`);
+      console.log(`DB: Available IDs in ${table}:`, db[table].map((r) => r.id));
+      return { success: false, error: "Record not found" };
+    }
+  } else if (sqlUpper.includes("DELETE")) {
+    const deleteId = typeof newData === "object" ? newData.id : newData;
+    const beforeCount = db[table].length;
+    db[table] = db[table].filter((item) => {
+      return item.id !== deleteId && item.id !== Number(deleteId) && String(item.id) !== String(deleteId);
+    });
+    const deleted = beforeCount - db[table].length;
+    saveDb();
+    console.log(`DB: Deleted ${deleted} record(s) from ${table} where id=${deleteId}`);
+    return { success: true, deleted };
+  }
+  return { success: false, error: "Unknown operation" };
 }
 async function getAllQuery(sql) {
   const db = getDatabase();
-  const table = sql.trim().split(/\s+/)[3].replace(/[`"']/g, "");
-  return db[table] || [];
+  const parts = sql.trim().split(/\s+/);
+  let table = "";
+  const fromIndex = parts.findIndex((p) => p.toUpperCase() === "FROM");
+  if (fromIndex !== -1 && parts[fromIndex + 1]) {
+    table = parts[fromIndex + 1].replace(/[`"']/g, "");
+  }
+  const result = db[table] || [];
+  console.log(`DB: SELECT from ${table} returned ${result.length} records`);
+  return result;
 }
 async function logAction(userId, type, desc, status, success) {
-  await runQuery("INSERT INTO action_logs", {
+  const db = getDatabase();
+  const logEntry = {
+    id: Date.now(),
     user_id: userId,
     action_type: type,
     action_description: desc,
     status,
-    success
-  });
+    success,
+    timestamp: (/* @__PURE__ */ new Date()).toISOString()
+  };
+  db.action_logs.push(logEntry);
+  if (db.action_logs.length > 200) {
+    db.action_logs = db.action_logs.slice(-200);
+  }
+  saveDb();
 }
 
 // src/main/ipc-handlers.ts
-var import_electron2 = require("electron");
+var import_electron3 = require("electron");
 
 // src/main/ai-service.ts
 var import_axios = __toESM(require("axios"), 1);
 
 // src/main/scraper-service.ts
 var import_puppeteer = __toESM(require("puppeteer"), 1);
+var import_path2 = __toESM(require("path"), 1);
+var import_electron2 = require("electron");
+var getUserDataDir = () => {
+  return import_path2.default.join(import_electron2.app.getPath("userData"), "browser_data");
+};
+function randomDelay(min, max) {
+  const delay = Math.floor(Math.random() * (max - min + 1)) + min;
+  return new Promise((resolve) => setTimeout(resolve, delay));
+}
 async function handleCookieRoadblock(page, userId, callAI2) {
   try {
     const isBannerVisible = await page.evaluate(() => {
       const text = document.body.innerText.toLowerCase();
-      return text.includes("cookie") || text.includes("accept") || text.includes("agree") || text.includes("zustimmen");
+      return text.includes("cookie") || text.includes("accept") || text.includes("agree") || text.includes("zustimmen") || text.includes("akzeptieren");
     });
     if (!isBannerVisible)
       return;
-    await logAction(userId, "ai_observer", "\u{1F4F8} Cookie banner detected. Taking a photo...", "in_progress");
-    const screenshot = await page.screenshot({ encoding: "base64" });
-    const prompt = `Analyze this cookie banner. Identify the (x, y) coordinates for the "Reject", "Deny", or "Essential Only" button. Return ONLY JSON: {"x": 0, "y": 0, "action": "reject"}`;
-    const analysis = await callAI2({ model_name: "gpt-4o", role: "Observer" }, prompt, `data:image/png;base64,${screenshot}`);
-    try {
-      const coords = JSON.parse(analysis.replace(/```json|```/g, "").trim());
-      await logAction(userId, "ai_mouse", `\u9F20\u6807 AI Mouse clicking ${coords.action} at (${coords.x}, ${coords.y})`, "in_progress");
-      await page.mouse.click(coords.x, coords.y);
-      await new Promise((resolve) => setTimeout(resolve, 2e3));
-    } catch (e) {
-      await page.evaluate(() => {
-        const btns = Array.from(document.querySelectorAll("button, a"));
-        const reject = btns.find((b) => {
-          var _a, _b;
-          return ((_a = b.textContent) == null ? void 0 : _a.toLowerCase().includes("reject")) || ((_b = b.textContent) == null ? void 0 : _b.toLowerCase().includes("ablehnen"));
-        });
-        if (reject)
-          reject.click();
+    await logAction(userId, "ai_observer", "\u{1F4F8} Cookie banner detected. Attempting bypass...", "in_progress");
+    const clicked = await page.evaluate(() => {
+      const selectors = [
+        'button[data-testid="cookie-policy-dialog-accept-button"]',
+        'button[id*="reject"]',
+        'button[id*="decline"]',
+        'button[id*="ablehnen"]',
+        'button[class*="reject"]',
+        'button[class*="decline"]',
+        '[data-tracking-control-name*="cookie"]',
+        "button.artdeco-button--secondary"
+      ];
+      for (const sel of selectors) {
+        const btn = document.querySelector(sel);
+        if (btn) {
+          btn.click();
+          return true;
+        }
+      }
+      const btns = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
+      const rejectBtn = btns.find((b) => {
+        var _a;
+        const txt = ((_a = b.textContent) == null ? void 0 : _a.toLowerCase()) || "";
+        return txt.includes("reject") || txt.includes("decline") || txt.includes("ablehnen") || txt.includes("nur notwendige") || txt.includes("essential");
       });
+      if (rejectBtn) {
+        rejectBtn.click();
+        return true;
+      }
+      const acceptBtn = btns.find((b) => {
+        var _a;
+        const txt = ((_a = b.textContent) == null ? void 0 : _a.toLowerCase()) || "";
+        return txt.includes("accept") || txt.includes("agree") || txt.includes("akzeptieren") || txt.includes("alle akzeptieren");
+      });
+      if (acceptBtn) {
+        acceptBtn.click();
+        return true;
+      }
+      return false;
+    });
+    if (clicked) {
+      await logAction(userId, "ai_observer", "\u2705 Cookie banner dismissed", "completed", true);
+      await randomDelay(1500, 2500);
     }
   } catch (e) {
+    console.log("Cookie bypass error:", e);
   }
+}
+async function isPageBlocked(page) {
+  return await page.evaluate(() => {
+    const text = document.body.innerText.toLowerCase();
+    return text.includes("verify you are human") || text.includes("captcha") || text.includes("unusual traffic") || text.includes("sign in to view") || text.includes("please verify") || text.includes("robot") || text.includes("blocked");
+  });
 }
 async function getJobPageContent(url, userId, callAI2) {
   let browser = null;
   try {
-    browser = await import_puppeteer.default.launch({ headless: false, args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-blink-features=AutomationControlled"] });
+    console.log(`Scraper: Opening ${url}`);
+    browser = await import_puppeteer.default.launch({
+      headless: false,
+      userDataDir: getUserDataDir(),
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-blink-features=AutomationControlled",
+        "--disable-infobars",
+        "--window-size=1280,800"
+      ]
+    });
     const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 800 });
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, "webdriver", { get: () => false });
+      Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
+      Object.defineProperty(navigator, "languages", { get: () => ["en-US", "en", "de"] });
+    });
     await page.goto(url, { waitUntil: "networkidle2", timeout: 6e4 });
     await handleCookieRoadblock(page, userId, callAI2);
-    await new Promise((resolve) => setTimeout(resolve, 4e3));
+    await page.evaluate(() => window.scrollBy(0, 300));
+    await randomDelay(800, 1500);
+    await page.evaluate(() => window.scrollBy(0, 400));
+    await randomDelay(1500, 3e3);
+    if (await isPageBlocked(page)) {
+      console.log("Scraper: Page blocked by bot detection");
+      return { content: "", strategyUsed: "Blocked" };
+    }
     const result = await page.evaluate(() => {
       const getCleanText = (el) => el ? el.innerText.replace(/\s+/g, " ").trim() : "";
-      const s1 = document.querySelector(".job-description, #jobDescriptionText, .description__text, .show-more-less-html__markup");
-      if (s1 && s1.textContent && s1.textContent.length > 300)
-        return { content: getCleanText(s1), strategy: "Style A: Selectors" };
-      const s2 = document.querySelector("main, article");
-      if (s2 && s2.textContent && s2.textContent.length > 300)
-        return { content: getCleanText(s2), strategy: "Style B: Semantic" };
-      const blocks = Array.from(document.querySelectorAll("div")).map((el) => getCleanText(el));
-      const t3 = blocks.sort((a, b) => b.length - a.length)[0];
-      if (t3 && t3.length > 300)
-        return { content: t3, strategy: "Style C: Density" };
-      return { content: getCleanText(document.body), strategy: "Style D: Body Dump" };
+      const jsonLdScripts = document.querySelectorAll('script[type="application/ld+json"]');
+      for (const script of jsonLdScripts) {
+        try {
+          const data = JSON.parse(script.textContent || "");
+          if (data["@type"] === "JobPosting" || data.title || data.jobTitle) {
+            console.log("Found JSON-LD JobPosting");
+            return { content: JSON.stringify(data, null, 2), strategy: "JSON-LD" };
+          }
+          if (Array.isArray(data)) {
+            const job = data.find((item) => item["@type"] === "JobPosting");
+            if (job) {
+              return { content: JSON.stringify(job, null, 2), strategy: "JSON-LD" };
+            }
+          }
+          if (data["@graph"]) {
+            const job = data["@graph"].find((item) => item["@type"] === "JobPosting");
+            if (job) {
+              return { content: JSON.stringify(job, null, 2), strategy: "JSON-LD" };
+            }
+          }
+        } catch (e) {
+        }
+      }
+      const jobSelectors = [
+        ".job-description",
+        "#jobDescriptionText",
+        ".description__text",
+        ".show-more-less-html__markup",
+        ".jobs-description__content",
+        ".jobs-box__html-content",
+        '[data-testid="job-description"]',
+        ".job-details",
+        ".jobsearch-JobComponent-description",
+        "#job-details"
+      ];
+      for (const sel of jobSelectors) {
+        const el = document.querySelector(sel);
+        if (el && el.textContent && el.textContent.length > 300) {
+          return { content: getCleanText(el), strategy: `Selector: ${sel}` };
+        }
+      }
+      const semanticEls = document.querySelectorAll('main, article, [role="main"]');
+      for (const el of semanticEls) {
+        if (el.textContent && el.textContent.length > 500) {
+          return { content: getCleanText(el), strategy: "Semantic" };
+        }
+      }
+      const divs = Array.from(document.querySelectorAll("div, section"));
+      const blocks = divs.map((el) => {
+        var _a;
+        return { el, text: getCleanText(el), len: ((_a = el.textContent) == null ? void 0 : _a.length) || 0 };
+      }).filter((b) => b.len > 500 && b.len < 5e4).sort((a, b) => b.len - a.len);
+      if (blocks.length > 0) {
+        return { content: blocks[0].text, strategy: "Density" };
+      }
+      const bodyText = getCleanText(document.body);
+      if (bodyText.length > 300) {
+        return { content: bodyText.substring(0, 15e3), strategy: "Body" };
+      }
+      return { content: "", strategy: "Empty" };
     });
+    console.log(`Scraper: Extracted using ${result.strategy}, length: ${result.content.length}`);
     return { content: result.content, strategyUsed: result.strategy };
   } catch (error) {
-    return { content: "", strategyUsed: "Failed" };
+    console.error("Scraper Error:", error.message);
+    return { content: "", strategyUsed: "Failed: " + error.message };
   } finally {
-    if (browser)
+    if (browser) {
       await browser.close();
+    }
   }
 }
 async function scrapeJobs(baseUrl, query, location, credentials, userId, callAI2) {
   let browser = null;
   const jobUrls = [];
   try {
-    browser = await import_puppeteer.default.launch({ headless: false, args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-blink-features=AutomationControlled", "--start-maximized"] });
+    console.log(`Scraper: Searching for "${query}" in "${location}" on ${baseUrl}`);
+    browser = await import_puppeteer.default.launch({
+      headless: false,
+      userDataDir: getUserDataDir(),
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-blink-features=AutomationControlled",
+        "--disable-infobars",
+        "--start-maximized"
+      ]
+    });
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-    const startUrl = baseUrl.includes("linkedin.com") ? "https://www.linkedin.com/jobs/" : "https://de.indeed.com/";
-    await page.goto(startUrl, { waitUntil: "networkidle2", timeout: 6e4 });
-    if (callAI2 && userId)
-      await handleCookieRoadblock(page, userId, callAI2);
-    await page.evaluate(() => window.scrollBy(0, 800));
-    await new Promise((resolve) => setTimeout(resolve, 5e3));
-    const links = await page.evaluate(() => {
-      const selectors = ["a.job-card-container__link", "a.base-card__full-link", "a.jcs-JobTitle", "h2.jobTitle a"];
-      const foundLinks = [];
-      selectors.forEach((s) => document.querySelectorAll(s).forEach((el) => {
-        const href = el.href;
-        if (href && href.startsWith("http") && !foundLinks.includes(href))
-          foundLinks.push(href);
-      }));
-      return foundLinks.slice(0, 15);
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, "webdriver", { get: () => false });
     });
-    jobUrls.push(...links);
+    let searchUrl;
+    if (baseUrl.includes("linkedin.com")) {
+      searchUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`;
+    } else if (baseUrl.includes("indeed")) {
+      searchUrl = `https://de.indeed.com/jobs?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}`;
+    } else if (baseUrl.includes("glassdoor")) {
+      searchUrl = `https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${encodeURIComponent(query)}&locT=C&locKeyword=${encodeURIComponent(location)}`;
+    } else if (baseUrl.includes("xing")) {
+      searchUrl = `https://www.xing.com/jobs/search?keywords=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`;
+    } else {
+      searchUrl = baseUrl;
+    }
+    console.log(`Scraper: Navigating to ${searchUrl}`);
+    await page.goto(searchUrl, { waitUntil: "networkidle2", timeout: 6e4 });
+    if (callAI2 && userId) {
+      await handleCookieRoadblock(page, userId, callAI2);
+    }
+    await randomDelay(2e3, 4e3);
+    await page.evaluate(() => window.scrollBy(0, 400));
+    await randomDelay(1e3, 2e3);
+    await page.evaluate(() => window.scrollBy(0, 400));
+    await randomDelay(2e3, 4e3);
+    if (await isPageBlocked(page)) {
+      console.log("Scraper: Search page blocked");
+      if (userId) {
+        await logAction(userId, "ai_hunter", "\u{1F6AB} Search page blocked by bot detection", "failed", false);
+      }
+      return [];
+    }
+    const links = await page.evaluate(() => {
+      const selectors = [
+        // LinkedIn
+        "a.job-card-container__link",
+        "a.base-card__full-link",
+        'a[data-tracking-control-name="public_jobs_jserp-result_search-card"]',
+        ".jobs-search__results-list a",
+        // Indeed
+        "a.jcs-JobTitle",
+        "h2.jobTitle a",
+        ".job_seen_beacon a[data-jk]",
+        ".jobsearch-ResultsList a.tapItem",
+        // Glassdoor
+        "a.job-title",
+        ".react-job-listing a",
+        // Xing
+        'a[data-testid="job-posting-link"]',
+        ".jobs-list a",
+        // Generic
+        'a[href*="/job/"]',
+        'a[href*="/jobs/"]',
+        'a[href*="jobPosting"]'
+      ];
+      const foundLinks = [];
+      selectors.forEach((selector) => {
+        document.querySelectorAll(selector).forEach((el) => {
+          const href = el.href;
+          if (href && href.startsWith("http") && !foundLinks.includes(href) && !href.includes("/login") && !href.includes("/signup") && !href.includes("/register")) {
+            foundLinks.push(href);
+          }
+        });
+      });
+      return foundLinks;
+    });
+    const uniqueLinks = [...new Set(links)].slice(0, 15);
+    jobUrls.push(...uniqueLinks);
+    console.log(`Scraper: Found ${jobUrls.length} job URLs`);
   } catch (error) {
-    console.error("Scraper Error:", error);
+    console.error("Scraper Error:", error.message);
   } finally {
-    if (browser)
+    if (browser) {
       await browser.close();
+    }
   }
   return jobUrls;
 }
 
-// src/main/features/ghost-job-network.ts
-async function reportGhostJob(jobData, reason) {
-  console.log(`GJN: Reporting ${jobData.companyName}...`);
-}
-
 // src/main/features/Hunter-engine.ts
 async function analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI2) {
+  var _a;
+  console.log(`
+========== ANALYZING JOB ${jobId} ==========`);
+  console.log(`URL: ${url}`);
+  console.log(`Hunter model:`, hunter ? hunter.model_name : "MISSING!");
+  await logAction(userId, "ai_hunter", `\u{1F50D} Analyzing: ${url}`, "in_progress");
+  console.log("Step 1: Getting page content...");
   const pageData = await getJobPageContent(url, userId, callAI2);
-  if (!pageData.content || pageData.content.length < 200) {
+  console.log(`Scraper result: strategy="${pageData.strategyUsed}", contentLength=${pageData.content.length}`);
+  if (pageData.strategyUsed.includes("Blocked") || pageData.strategyUsed.includes("Failed")) {
+    console.log("\u274C Page was blocked or failed");
+    await logAction(userId, "ai_auditor", `\u274C Blocked: ${url}`, "failed", false);
     await runQuery("DELETE FROM job_listings", { id: jobId });
     return;
   }
-  await logAction(userId, "ai_hunter", `Scraping successful using ${pageData.strategyUsed}`, "completed", true);
-  const relevancePrompt = `Is this page a specific job listing? Answer ONLY "YES" or "NO". 
-
-Content: ${pageData.content.substring(0, 2e3)}`;
-  const isRelevant = await callAI2(hunter, relevancePrompt);
-  if (isRelevant.toUpperCase().includes("NO")) {
-    await logAction(userId, "ai_hunter", `Irrelevant URL detected. Deleting: ${url}`, "failed", false);
+  if (!pageData.content || pageData.content.length < 100) {
+    console.log("\u274C Content too short:", pageData.content.length);
+    await logAction(userId, "ai_auditor", `\u274C Empty content: ${url}`, "failed", false);
     await runQuery("DELETE FROM job_listings", { id: jobId });
     return;
   }
-  await runQuery("UPDATE job_listings", { id: jobId, description: pageData.content, status: "analyzed" });
-  const prompt = `Analyze this job listing. Extract in STRICT JSON: { "jobTitle": "...", "companyName": "...", "location": "...", "jobType": "...", "experienceLevel": "...", "salaryRange": "...", "industry": "...", "requiredSkills": "...", "educationLevel": "...", "remoteOnsite": "...", "benefits": "...", "companySize": "...", "companyRating": "...", "deadline": "...", "certifications": "...", "languages": "...", "visaSponsorship": "...", "relocation": "...", "travelRequirement": "...", "shiftSchedule": "...", "role": "...", "postedDate": "...", "applicationUrl": "...", "isGhostJob": "boolean" }. 
+  console.log("\u2705 Got content, first 500 chars:", pageData.content.substring(0, 500));
+  await logAction(userId, "ai_hunter", `\u{1F4C4} Got ${pageData.content.length} chars via ${pageData.strategyUsed}`, "in_progress");
+  if (!hunter || !hunter.api_key) {
+    console.log("\u274C No Hunter AI model or missing API key!");
+    await logAction(userId, "ai_hunter", `\u274C No Hunter AI configured!`, "failed", false);
+    console.log("Attempting fallback extraction...");
+    const fallbackData = extractBasicInfo(pageData.content, url);
+    if (fallbackData.jobTitle) {
+      await runQuery("UPDATE job_listings", {
+        id: jobId,
+        ...fallbackData,
+        status: "analyzed",
+        date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString()
+      });
+      console.log("\u2705 Saved with fallback data:", fallbackData);
+    }
+    return;
+  }
+  const isJsonLd = pageData.strategyUsed.includes("JSON-LD");
+  console.log("Is JSON-LD:", isJsonLd);
+  let prompt;
+  if (isJsonLd) {
+    prompt = `You are a job data extractor. Extract job details from this JSON-LD data.
 
-Content: ${pageData.content.substring(0, 1e4)}`;
-  const result = await callAI2(hunter, prompt);
+Return ONLY a valid JSON object (no markdown, no explanation):
+{"jobTitle":"exact job title","companyName":"company name","location":"city, country","jobType":"Full-time/Part-time/Contract","experienceLevel":"Junior/Mid/Senior","salaryRange":"salary or N/A","description":"2-3 sentence summary","requiredSkills":"comma separated","remoteOnsite":"Remote/Hybrid/Onsite"}
+
+JSON-LD:
+${pageData.content.substring(0, 6e3)}`;
+  } else {
+    prompt = `You are a job data extractor. Extract job details from this job listing text.
+
+Return ONLY a valid JSON object (no markdown, no explanation):
+{"jobTitle":"exact job title","companyName":"company name","location":"city, country","jobType":"Full-time/Part-time/Contract","experienceLevel":"Junior/Mid/Senior","salaryRange":"salary or N/A","description":"2-3 sentence summary","requiredSkills":"comma separated","remoteOnsite":"Remote/Hybrid/Onsite"}
+
+Job listing:
+${pageData.content.substring(0, 6e3)}`;
+  }
+  console.log("Step 3: Calling AI...");
+  console.log("Prompt length:", prompt.length);
+  let aiResponse;
   try {
-    const data = JSON.parse(result.replace(/```json|```/g, "").trim());
-    await runQuery("UPDATE job_listings", { id: jobId, ...data, status: "analyzed", date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString() });
-    if (data.isGhostJob)
-      await reportGhostJob(data, "Flagged during analysis");
-  } catch (e) {
+    aiResponse = await callAI2(hunter, prompt);
+    console.log("AI Response:", aiResponse);
+  } catch (aiError) {
+    console.log("\u274C AI call failed:", aiError.message);
+    await logAction(userId, "ai_hunter", `\u274C AI error: ${aiError.message}`, "failed", false);
+    const fallbackData = extractBasicInfo(pageData.content, url);
+    if (fallbackData.jobTitle) {
+      await runQuery("UPDATE job_listings", { id: jobId, ...fallbackData, status: "analyzed", date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString() });
+    } else {
+      await runQuery("UPDATE job_listings", { id: jobId, status: "manual_review" });
+    }
+    return;
+  }
+  if (aiResponse.toLowerCase().includes("error:") || aiResponse.toLowerCase().includes("invalid api")) {
+    console.log("\u274C AI returned error:", aiResponse);
+    await logAction(userId, "ai_hunter", `\u274C AI error: ${aiResponse.substring(0, 100)}`, "failed", false);
     await runQuery("UPDATE job_listings", { id: jobId, status: "manual_review" });
+    return;
+  }
+  console.log("Step 5: Parsing AI response...");
+  try {
+    let cleanedResponse = aiResponse.replace(/```json/gi, "").replace(/```/g, "").replace(/^[^{]*/, "").replace(/[^}]*$/, "").trim();
+    const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.log("\u274C No JSON found in response");
+      throw new Error("No JSON in response");
+    }
+    const data = JSON.parse(jsonMatch[0]);
+    console.log("Parsed data:", data);
+    const jobTitle = data.jobTitle || data.title || data.job_title || "";
+    const companyName = data.companyName || data.company || data.company_name || ((_a = data.hiringOrganization) == null ? void 0 : _a.name) || "";
+    if (!jobTitle || jobTitle.toLowerCase() === "n/a" || jobTitle.toLowerCase() === "unknown") {
+      console.log("\u274C Missing job title");
+      await logAction(userId, "ai_auditor", `\u274C Missing job title`, "failed", false);
+      const fallbackData = extractBasicInfo(pageData.content, url);
+      if (fallbackData.jobTitle) {
+        await runQuery("UPDATE job_listings", { id: jobId, ...fallbackData, status: "analyzed", date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString() });
+      } else {
+        await runQuery("DELETE FROM job_listings", { id: jobId });
+      }
+      return;
+    }
+    console.log("Step 6: Saving to database...");
+    const updateData = {
+      id: jobId,
+      job_title: jobTitle,
+      company_name: companyName || "Unknown Company",
+      location: data.location || data.jobLocation || "N/A",
+      job_type: data.jobType || data.employmentType || "N/A",
+      experience_level: data.experienceLevel || "N/A",
+      salary_range: data.salaryRange || data.salary || data.baseSalary || "N/A",
+      description: data.description || "",
+      required_skills: data.requiredSkills || data.skills || "N/A",
+      remote_onsite: data.remoteOnsite || data.jobLocationType || "N/A",
+      posted_date: data.postedDate || data.datePosted || "N/A",
+      application_url: data.applicationUrl || data.url || url,
+      status: "analyzed",
+      date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString()
+    };
+    console.log("Update data:", updateData);
+    await runQuery("UPDATE job_listings", updateData);
+    await logAction(userId, "ai_auditor", `\u2705 Extracted: ${jobTitle} at ${companyName}`, "completed", true);
+    console.log(`\u2705 SUCCESS: ${jobTitle} at ${companyName}`);
+  } catch (parseError) {
+    console.log("\u274C Parse error:", parseError.message);
+    await logAction(userId, "ai_auditor", `\u274C Parse failed`, "failed", false);
+    const fallbackData = extractBasicInfo(pageData.content, url);
+    if (fallbackData.jobTitle) {
+      await runQuery("UPDATE job_listings", { id: jobId, ...fallbackData, status: "analyzed", date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString() });
+      console.log("\u2705 Saved with fallback:", fallbackData);
+    } else {
+      await runQuery("UPDATE job_listings", { id: jobId, status: "manual_review" });
+    }
   }
 }
-async function startHunterSearch(userId, callAI2) {
+function extractBasicInfo(content, url) {
+  var _a, _b, _c, _d;
+  console.log("Running fallback extraction...");
+  const data = {
+    application_url: url
+  };
   try {
+    if (content.startsWith("{")) {
+      const json = JSON.parse(content);
+      data.job_title = json.title || json.jobTitle || json.name || "";
+      data.company_name = ((_a = json.hiringOrganization) == null ? void 0 : _a.name) || json.companyName || json.company || "";
+      data.location = ((_c = (_b = json.jobLocation) == null ? void 0 : _b.address) == null ? void 0 : _c.addressLocality) || json.location || "";
+      data.job_type = json.employmentType || "";
+      data.description = ((_d = json.description) == null ? void 0 : _d.substring(0, 500)) || "";
+      console.log("Extracted from JSON:", data);
+      return data;
+    }
+  } catch (e) {
+  }
+  const lines = content.split("\n").map((l) => l.trim()).filter((l) => l);
+  for (const line of lines.slice(0, 10)) {
+    if (line.length > 5 && line.length < 100 && !line.includes("cookie") && !line.includes("Sign")) {
+      if (!data.job_title) {
+        data.job_title = line;
+        break;
+      }
+    }
+  }
+  const companyPatterns = [
+    /(?:at|@|by|company[:\s]+)([A-Z][A-Za-z0-9\s&.-]+)/i,
+    /([A-Z][A-Za-z0-9\s&.-]+)(?:\s+is hiring|\s+jobs)/i
+  ];
+  for (const pattern of companyPatterns) {
+    const match = content.match(pattern);
+    if (match && match[1]) {
+      data.company_name = match[1].trim();
+      break;
+    }
+  }
+  const locationPatterns = [
+    /(?:location|located in|based in)[:\s]+([A-Za-z\s,]+)/i,
+    /(Berlin|Munich|Hamburg|Frankfurt|London|Paris|Amsterdam|Remote)/i
+  ];
+  for (const pattern of locationPatterns) {
+    const match = content.match(pattern);
+    if (match && match[1]) {
+      data.location = match[1].trim();
+      break;
+    }
+  }
+  console.log("Fallback extracted:", data);
+  return data;
+}
+async function startHunterSearch(userId, callAI2) {
+  var _a;
+  console.log("\n========== STARTING HUNTER SEARCH ==========");
+  try {
+    await logAction(userId, "ai_hunter", "\u{1F680} Starting job hunt...", "in_progress");
     const db = getDatabase();
     const profiles = db.search_profiles.filter((p) => p.is_active === 1);
     const websites = db.job_websites.filter((w) => w.is_active === 1);
     const models = await getAllQuery("SELECT * FROM ai_models");
+    console.log("Search profiles:", profiles.length);
+    console.log("Job websites:", websites.length);
+    console.log("AI models:", models.length);
     const hunter = models.find((m) => m.role === "Hunter" && m.status === "active");
-    if (!hunter)
-      return { success: false, error: "Hunter missing" };
+    const auditor = models.find((m) => m.role === "Auditor" && m.status === "active");
+    console.log("Hunter:", hunter ? `${hunter.model_name} (key: ${(_a = hunter.api_key) == null ? void 0 : _a.substring(0, 10)}...)` : "NOT FOUND");
+    console.log("Auditor:", auditor ? auditor.model_name : "NOT FOUND (will use Hunter)");
+    if (!hunter) {
+      const errorMsg = 'No active Hunter AI model. Go to Settings > AI Models and add one with role "Hunter".';
+      console.log("\u274C", errorMsg);
+      await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
+      return { success: false, error: errorMsg };
+    }
+    if (profiles.length === 0) {
+      const errorMsg = "No active search profiles. Go to Search Profiles and create one.";
+      console.log("\u274C", errorMsg);
+      await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
+      return { success: false, error: errorMsg };
+    }
+    if (websites.length === 0) {
+      const errorMsg = "No active job websites. Go to Job Websites and add one.";
+      console.log("\u274C", errorMsg);
+      await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
+      return { success: false, error: errorMsg };
+    }
+    let totalJobsFound = 0;
     for (const profile of profiles) {
+      console.log(`
+Profile: ${profile.job_title} in ${profile.location}`);
       for (const website of websites) {
-        const queryPrompt = `Generate a job search query for ${website.website_name} based on: ${profile.job_title} in ${profile.location}.`;
-        let query = await callAI2(hunter, queryPrompt);
-        query = query.replace(/Here is.*?:\s*/gi, "").replace(/[`"']/g, "").trim();
-        const jobUrls = await scrapeJobs(website.website_url, query, profile.location, { email: website.email, password: website.password }, userId, callAI2);
+        console.log(`Website: ${website.website_name} (${website.website_url})`);
+        await logAction(userId, "ai_hunter", `\u{1F310} Searching ${website.website_name}...`, "in_progress");
+        const query = profile.job_title;
+        console.log(`Search query: "${query}"`);
+        const jobUrls = await scrapeJobs(
+          website.website_url,
+          query,
+          profile.location || "",
+          { email: website.email, password: website.password },
+          userId,
+          callAI2
+        );
+        console.log(`Found ${jobUrls.length} URLs`);
+        await logAction(userId, "ai_hunter", `\u{1F4E5} Found ${jobUrls.length} jobs on ${website.website_name}`, "completed", true);
         for (const url of jobUrls) {
           const existing = db.job_listings.find((j) => j.url === url);
-          if (!existing) {
-            const jobId = Date.now() + Math.floor(Math.random() * 1e3);
-            await runQuery("INSERT INTO job_listings", { id: jobId, url, source: website.website_name, status: "analyzing" });
-            analyzeJobUrl(jobId, userId, url, hunter, models.find((m) => m.role === "Auditor"), callAI2).catch(console.error);
+          if (existing) {
+            console.log(`Skipping duplicate: ${url}`);
+            continue;
           }
+          const jobId = Date.now() + Math.floor(Math.random() * 1e3);
+          await runQuery("INSERT INTO job_listings", {
+            id: jobId,
+            url,
+            source: website.website_name,
+            status: "analyzing"
+          });
+          totalJobsFound++;
+          console.log(`Added job ${jobId}: ${url}`);
+          await analyzeJobUrl(jobId, userId, url, hunter, auditor || hunter, callAI2);
+          await new Promise((resolve) => setTimeout(resolve, 2e3));
         }
       }
     }
-    return { success: true };
+    await logAction(userId, "ai_hunter", `\u2705 Done! Processed ${totalJobsFound} jobs.`, "completed", true);
+    console.log(`
+========== HUNT COMPLETE: ${totalJobsFound} jobs ==========
+`);
+    return { success: true, jobsFound: totalJobsFound };
   } catch (error) {
+    console.error("Hunt error:", error);
+    await logAction(userId, "ai_hunter", `\u274C Error: ${error.message}`, "failed", false);
     return { success: false, error: error.message };
   }
 }
@@ -355,45 +818,86 @@ function startHuntingScheduler(userId, startHunterSearch3, callAI2) {
 // src/main/ai-service.ts
 var huntingInterval = null;
 async function callAI(model, prompt, fileData) {
-  var _a, _b, _c, _d;
+  var _a, _b, _c, _d, _e, _f;
+  console.log("\n----- CALL AI -----");
+  console.log("Model:", model == null ? void 0 : model.model_name);
+  console.log("Prompt length:", prompt.length);
   try {
-    if (!model)
-      return "Error: Model missing";
+    if (!model) {
+      console.log("\u274C No model provided");
+      return "Error: No AI model provided";
+    }
     let apiKey = model.api_key ? model.api_key.trim() : "";
-    let modelName = model.model_name;
+    let modelName = model.model_name || "gpt-3.5-turbo";
     if (!apiKey && model.role) {
+      console.log(`Looking for API key by role: ${model.role}`);
       const models = await getAllQuery("SELECT * FROM ai_models");
       const dbModel = models.find((m) => m.role === model.role && m.status === "active");
       if (dbModel) {
-        apiKey = dbModel.api_key.trim();
-        if (!modelName || modelName === "gpt-4o")
-          modelName = dbModel.model_name;
+        apiKey = ((_a = dbModel.api_key) == null ? void 0 : _a.trim()) || "";
+        modelName = dbModel.model_name || modelName;
+        console.log(`Found model: ${modelName}, key: ${apiKey == null ? void 0 : apiKey.substring(0, 15)}...`);
       }
     }
-    let endpoint = model.model_type === "local" || ((_a = model.api_endpoint) == null ? void 0 : _a.includes("localhost")) ? model.api_endpoint || "http://localhost:11434/v1/chat/completions" : "https://api.openai.com/v1/chat/completions";
-    if (apiKey.startsWith("tgp_v1_"))
+    if (!apiKey) {
+      console.log("\u274C No API key found");
+      return "Error: No API key configured. Go to Settings > AI Models and add your API key.";
+    }
+    let endpoint = "https://api.openai.com/v1/chat/completions";
+    if (model.model_type === "local" || ((_b = model.api_endpoint) == null ? void 0 : _b.includes("localhost"))) {
+      endpoint = model.api_endpoint || "http://localhost:11434/v1/chat/completions";
+    } else if (apiKey.startsWith("tgp_v1_")) {
       endpoint = "https://api.together.xyz/v1/chat/completions";
-    const response = await import_axios.default.post(endpoint, {
+    }
+    console.log("Endpoint:", endpoint);
+    console.log("Model name:", modelName);
+    const requestBody = {
       model: modelName,
-      messages: [{ role: "system", content: "Professional Assistant" }, { role: "user", content: prompt }],
-      max_tokens: 1e3
-    }, {
-      headers: { "Authorization": `Bearer ${apiKey}`, "Content-Type": "application/json" },
+      messages: [
+        { role: "system", content: "You are a helpful assistant that extracts job information. Always respond with valid JSON only." },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 1500,
+      temperature: 0.3
+    };
+    if (fileData && modelName.includes("vision") || modelName.includes("gpt-4o")) {
+      requestBody.messages[1] = {
+        role: "user",
+        content: [
+          { type: "text", text: prompt },
+          { type: "image_url", image_url: { url: fileData } }
+        ]
+      };
+    }
+    console.log("Making API request...");
+    const response = await import_axios.default.post(endpoint, requestBody, {
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
       timeout: 6e4
     });
-    return response.data.choices[0].message.content;
+    const content = response.data.choices[0].message.content;
+    console.log("AI Response (first 500 chars):", content == null ? void 0 : content.substring(0, 500));
+    console.log("----- END CALL AI -----\n");
+    return content;
   } catch (err) {
-    return "Error: " + (((_d = (_c = (_b = err.response) == null ? void 0 : _b.data) == null ? void 0 : _c.error) == null ? void 0 : _d.message) || err.message);
+    const errorMsg = ((_e = (_d = (_c = err.response) == null ? void 0 : _c.data) == null ? void 0 : _d.error) == null ? void 0 : _e.message) || err.message;
+    console.log("\u274C AI Error:", errorMsg);
+    console.log("Full error:", ((_f = err.response) == null ? void 0 : _f.data) || err.message);
+    return "Error: " + errorMsg;
   }
 }
 async function startHunterSearch2(userId) {
+  console.log("startHunterSearch called with userId:", userId);
   return await startHunterSearch(userId, callAI);
 }
 async function analyzeJobUrl2(jobId, userId, url) {
+  console.log("analyzeJobUrl called:", { jobId, userId, url });
   const models = await getAllQuery("SELECT * FROM ai_models");
   const hunter = models.find((m) => m.role === "Hunter" && m.status === "active");
   const auditor = models.find((m) => m.role === "Auditor" && m.status === "active");
-  return await analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI);
+  return await analyzeJobUrl(jobId, userId, url, hunter, auditor || hunter, callAI);
 }
 async function processApplication(jobId, userId, userConsentGiven = false) {
   try {
@@ -419,6 +923,7 @@ function startHuntingScheduler2(userId) {
 }
 
 // src/main/ipc-handlers.ts
+var import_axios2 = __toESM(require("axios"), 1);
 function setupIpcHandlers() {
   const channels = [
     "settings:get",
@@ -433,8 +938,11 @@ function setupIpcHandlers() {
     "jobs:update-doc-confirmation",
     "hunter:start-search",
     "ai:process-application",
+    "ai:generate-tailored-docs",
+    "ai:fetch-models",
     "docs:get-all",
     "docs:save",
+    "docs:open-file",
     "websites:get-all",
     "websites:add",
     "websites:delete",
@@ -445,75 +953,307 @@ function setupIpcHandlers() {
     "logs:get-recent-actions",
     "apps:get-all"
   ];
-  channels.forEach((channel) => import_electron2.ipcMain.removeHandler(channel));
-  import_electron2.ipcMain.handle("settings:get", async () => ({ success: true, data: (await getAllQuery("SELECT * FROM settings"))[0] || null }));
-  import_electron2.ipcMain.handle("settings:update", async (_, data) => await runQuery("UPDATE settings", data));
-  import_electron2.ipcMain.handle("user:get-profile", async () => ({ success: true, data: (await getAllQuery("SELECT * FROM user_profile"))[0] || null }));
-  import_electron2.ipcMain.handle("profiles:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM search_profiles") }));
-  import_electron2.ipcMain.handle("profiles:save", async (_, data) => await runQuery("INSERT INTO search_profiles", [data]));
-  import_electron2.ipcMain.handle("profiles:update", async (_, data) => await runQuery("UPDATE search_profiles", data));
-  import_electron2.ipcMain.handle("jobs:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM job_listings") }));
-  import_electron2.ipcMain.handle("jobs:delete", async (_, id) => await runQuery("DELETE FROM job_listings", { id: typeof id === "object" ? id.id : id }));
-  import_electron2.ipcMain.handle("jobs:add-manual", async (_, data) => {
-    const result = await runQuery("INSERT INTO job_listings", { ...data, source: "Manual", status: "analyzing" });
-    analyzeJobUrl2(result.id, data.userId, data.url).catch(console.error);
-    return { success: true, id: result.id };
+  channels.forEach((channel) => {
+    try {
+      import_electron3.ipcMain.removeHandler(channel);
+    } catch (e) {
+    }
   });
-  import_electron2.ipcMain.handle("hunter:start-search", async (_, userId) => await startHunterSearch2(userId));
-  import_electron2.ipcMain.handle("ai:process-application", async (_, jobId, userId) => await processApplication(jobId, userId));
-  import_electron2.ipcMain.handle("docs:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM documents") }));
-  import_electron2.ipcMain.handle("docs:save", async (_, data) => await runQuery("INSERT INTO documents", [data]));
-  import_electron2.ipcMain.handle("websites:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM job_websites") }));
-  import_electron2.ipcMain.handle("websites:add", async (_, data) => await runQuery("INSERT INTO job_websites", [data]));
-  import_electron2.ipcMain.handle("websites:delete", async (_, id) => await runQuery("DELETE FROM job_websites", { id }));
-  import_electron2.ipcMain.handle("ai-models:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM ai_models") }));
-  import_electron2.ipcMain.handle("ai-models:add", async (_, data) => await runQuery("INSERT INTO ai_models", [data]));
-  import_electron2.ipcMain.handle("ai-models:update", async (_, data) => await runQuery("UPDATE ai_models", [data]));
-  import_electron2.ipcMain.handle("ai-models:delete", async (_, id) => await runQuery("DELETE FROM ai_models", { id }));
-  import_electron2.ipcMain.handle("logs:get-recent-actions", async () => ({ success: true, data: await getAllQuery("SELECT * FROM action_logs") }));
-  import_electron2.ipcMain.handle("apps:get-all", async () => ({ success: true, data: await getAllQuery("SELECT * FROM applications") }));
+  import_electron3.ipcMain.handle("settings:get", async () => {
+    try {
+      const data = await getAllQuery("SELECT * FROM settings");
+      return { success: true, data: data[0] || null };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("settings:update", async (_, data) => {
+    try {
+      await runQuery("UPDATE settings", data);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("user:get-profile", async () => {
+    try {
+      const data = await getAllQuery("SELECT * FROM user_profile");
+      return { success: true, data: data[0] || null };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("profiles:get-all", async () => {
+    try {
+      const data = await getAllQuery("SELECT * FROM search_profiles");
+      return { success: true, data };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("profiles:save", async (_, data) => {
+    try {
+      const result = await runQuery("INSERT INTO search_profiles", [data]);
+      return { success: true, id: result.id };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("profiles:update", async (_, data) => {
+    try {
+      await runQuery("UPDATE search_profiles", data);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("jobs:get-all", async () => {
+    try {
+      const data = await getAllQuery("SELECT * FROM job_listings");
+      return { success: true, data };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("jobs:delete", async (_, id) => {
+    try {
+      const deleteId = typeof id === "object" ? id.id : id;
+      await runQuery("DELETE FROM job_listings", { id: deleteId });
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("jobs:add-manual", async (_, data) => {
+    try {
+      const result = await runQuery("INSERT INTO job_listings", {
+        ...data,
+        source: "Manual",
+        status: "analyzing"
+      });
+      analyzeJobUrl2(result.id, data.userId, data.url).catch(console.error);
+      return { success: true, id: result.id };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("jobs:update-doc-confirmation", async (_, data) => {
+    try {
+      await runQuery("UPDATE job_listings", {
+        id: data.jobId,
+        user_confirmed_docs: data.confirmed
+      });
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("hunter:start-search", async (_, userId) => {
+    try {
+      const result = await startHunterSearch2(userId);
+      return result;
+    } catch (e) {
+      console.error("Hunter search error:", e);
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("ai:process-application", async (_, jobId, userId) => {
+    try {
+      return await processApplication(jobId, userId);
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("ai:generate-tailored-docs", async (_, data) => {
+    try {
+      return await processApplication(data.jobId, data.userId);
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("ai:fetch-models", async (_, data) => {
+    var _a;
+    try {
+      const { provider, apiKey } = data;
+      let models = [];
+      if (provider === "openai") {
+        const response = await import_axios2.default.get("https://api.openai.com/v1/models", {
+          headers: { "Authorization": `Bearer ${apiKey}` },
+          timeout: 1e4
+        });
+        models = response.data.data.filter((m) => m.id.includes("gpt")).map((m) => m.id).sort();
+      } else if (provider === "together") {
+        models = [
+          "mistralai/Mixtral-8x7B-Instruct-v0.1",
+          "meta-llama/Llama-3-70b-chat-hf",
+          "meta-llama/Llama-3-8b-chat-hf",
+          "togethercomputer/CodeLlama-34b-Instruct"
+        ];
+      } else if (provider === "local") {
+        try {
+          const response = await import_axios2.default.get("http://localhost:11434/api/tags", { timeout: 5e3 });
+          models = ((_a = response.data.models) == null ? void 0 : _a.map((m) => m.name)) || ["llama3", "mistral", "codellama"];
+        } catch {
+          models = ["llama3", "mistral", "codellama", "phi3"];
+        }
+      }
+      return { success: true, models };
+    } catch (e) {
+      console.error("Fetch models error:", e.message);
+      return { success: false, error: e.message, models: [] };
+    }
+  });
+  import_electron3.ipcMain.handle("docs:get-all", async () => {
+    try {
+      const data = await getAllQuery("SELECT * FROM documents");
+      return { success: true, data };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("docs:save", async (_, data) => {
+    try {
+      const result = await runQuery("INSERT INTO documents", [data]);
+      return { success: true, id: result.id };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("docs:open-file", async (_, filePath) => {
+    try {
+      const { shell } = require("electron");
+      await shell.openPath(filePath);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("websites:get-all", async () => {
+    try {
+      const data = await getAllQuery("SELECT * FROM job_websites");
+      return { success: true, data };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("websites:add", async (_, data) => {
+    try {
+      const result = await runQuery("INSERT INTO job_websites", [data]);
+      return { success: true, id: result.id };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("websites:delete", async (_, id) => {
+    try {
+      await runQuery("DELETE FROM job_websites", { id });
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("ai-models:get-all", async () => {
+    try {
+      const data = await getAllQuery("SELECT * FROM ai_models");
+      return { success: true, data };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("ai-models:add", async (_, data) => {
+    try {
+      const result = await runQuery("INSERT INTO ai_models", [data]);
+      return { success: true, id: result.id };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("ai-models:update", async (_, data) => {
+    try {
+      await runQuery("UPDATE ai_models", [data]);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("ai-models:delete", async (_, id) => {
+    try {
+      await runQuery("DELETE FROM ai_models", { id });
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("logs:get-recent-actions", async () => {
+    try {
+      const data = await getAllQuery("SELECT * FROM action_logs");
+      return { success: true, data };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("apps:get-all", async () => {
+    try {
+      const data = await getAllQuery("SELECT * FROM applications");
+      return { success: true, data };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
   startHuntingScheduler2(1);
+  console.log("\u2705 IPC Handlers registered successfully");
 }
 
 // electron-main.ts
-import_electron3.app.disableHardwareAcceleration();
+import_electron4.app.disableHardwareAcceleration();
+var gotTheLock = import_electron4.app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  import_electron4.app.quit();
+}
 var mainWindow = null;
 function createWindow() {
-  mainWindow = new import_electron3.BrowserWindow({
+  mainWindow = new import_electron4.BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1e3,
     minHeight: 700,
     webPreferences: {
-      preload: import_path2.default.join(__dirname, "preload.cjs"),
+      preload: import_path3.default.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false
     }
   });
-  const startUrl = import_electron_is_dev.default ? "http://localhost:5173" : `file://${import_path2.default.join(__dirname, "../dist/index.html")}`;
+  const startUrl = import_electron_is_dev.default ? "http://localhost:5173" : `file://${import_path3.default.join(__dirname, "../dist/index.html")}`;
   mainWindow.loadURL(startUrl);
   if (import_electron_is_dev.default)
     mainWindow.webContents.openDevTools();
   mainWindow.webContents.on("context-menu", (event, params) => {
-    const menu = new import_electron3.Menu();
-    menu.append(new import_electron3.MenuItem({ label: "Cut", role: "cut", enabled: params.editFlags.canCut }));
-    menu.append(new import_electron3.MenuItem({ label: "Copy", role: "copy", enabled: params.editFlags.canCopy }));
-    menu.append(new import_electron3.MenuItem({ label: "Paste", role: "paste", enabled: params.editFlags.canPaste }));
-    menu.append(new import_electron3.MenuItem({ type: "separator" }));
-    menu.append(new import_electron3.MenuItem({ label: "Select All", role: "selectAll", enabled: params.editFlags.canSelectAll }));
+    const menu = new import_electron4.Menu();
+    menu.append(new import_electron4.MenuItem({ label: "Cut", role: "cut", enabled: params.editFlags.canCut }));
+    menu.append(new import_electron4.MenuItem({ label: "Copy", role: "copy", enabled: params.editFlags.canCopy }));
+    menu.append(new import_electron4.MenuItem({ label: "Paste", role: "paste", enabled: params.editFlags.canPaste }));
+    menu.append(new import_electron4.MenuItem({ type: "separator" }));
+    menu.append(new import_electron4.MenuItem({ label: "Select All", role: "selectAll", enabled: params.editFlags.canSelectAll }));
     menu.popup({ window: mainWindow });
   });
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
 }
-import_electron3.app.on("ready", async () => {
+import_electron4.app.on("ready", async () => {
   await initializeDatabase();
   setupIpcHandlers();
   createWindow();
 });
-import_electron3.app.on("window-all-closed", () => {
+import_electron4.app.on("window-all-closed", () => {
   if (process.platform !== "darwin")
-    import_electron3.app.quit();
+    import_electron4.app.quit();
+});
+import_electron4.app.on("second-instance", () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized())
+      mainWindow.restore();
+    mainWindow.focus();
+  }
 });
 //# sourceMappingURL=electron-main.cjs.map

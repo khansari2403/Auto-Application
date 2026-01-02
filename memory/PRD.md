@@ -126,11 +126,15 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [x] Job Websites page redesign as clean list
 - [x] Cover letter JSON artifacts fix
 - [x] Motivation letter improvements
+- [x] CV icon clicking generates wrong document - FIXED
+- [x] "Generated for..." footer removed from documents
+- [x] Cover letter missing "Kind regards" sign-off - FIXED
+- [x] Auditor now checks for hallucinations/fabricated info
 
 ### P1 - High Priority (Testing Needed)
 - [ ] End-to-end test of Smart Apply flow
 - [ ] CV generation verification
-- [ ] Document quality verification (no JSON artifacts)
+- [ ] Document quality verification (no hallucinations)
 
 ### P2 - Medium Priority
 - [ ] Secretary Authentication Flow
@@ -143,7 +147,15 @@ Settings are stored in `settings.secretary_settings` as JSON:
 
 ## Changes Made - December 2025
 
-### Bug Fixes
+### Bug Fixes (Session 2)
+1. **CV Icon Bug** - Fixed: Clicking CV icon was generating Cover Letter instead. Added `handleGenerateSingleDoc()` function to generate only the specific document type clicked
+2. **"Generated for..." Footer** - Removed automated footer text from Motivation Letter and Cover Letter HTML templates
+3. **Cover Letter Sign-off** - Added requirement for "Kind regards," + applicant name at the end
+4. **Motivation Letter Sign-off** - Same as above
+5. **Hallucination Detection** - Updated Auditor prompt to specifically check for fabricated/invented information
+6. **Anti-Hallucination Rules** - Added explicit rules to Thinker prompts to only use data from the provided profile
+
+### Bug Fixes (Session 1)
 1. **Documents Tab Crash** - Fixed DocumentRepository.tsx to handle errors gracefully, added loading states
 2. **IPC Handler for docs:delete** - Added missing handler
 3. **LinkedIn Profile Section** - Removed "1. Open LinkedIn" and "2. Capture Profile Data" buttons, kept only "Edit Profile"
@@ -152,10 +164,11 @@ Settings are stored in `settings.secretary_settings` as JSON:
 6. **Motivation Letter** - Improved prompts to require full page (400-500 words), better structure, no apologies
 
 ### Files Modified
+- `/app/src/components/JobSearch.tsx` - Added handleGenerateSingleDoc() for individual document generation
 - `/app/src/components/DocumentRepository.tsx` - Fixed crashes, better error handling, theme support
 - `/app/src/components/settings/LinkedInSection.tsx` - Simplified UI, removed extra buttons
 - `/app/src/components/settings/JobWebsitesSection.tsx` - Complete redesign as clean list
-- `/app/src/main/features/doc-generator.ts` - Added cleanAIOutput(), improved prompts
+- `/app/src/main/features/doc-generator.ts` - Removed footer, improved prompts with anti-hallucination rules, added sign-off requirements
 - `/app/src/main/ipc-handlers.ts` - Added docs:delete handler
 
 ## Run Instructions

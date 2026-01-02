@@ -34,14 +34,26 @@
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  background: var(--card-bg);
+  background: var(--dropdown-bg, var(--card-bg));
+  backdrop-filter: none;
   border: var(--card-border);
   border-radius: var(--radius-lg);
   padding: 16px;
-  min-width: 240px;
+  min-width: 280px;
   box-shadow: var(--shadow-lg);
-  z-index: 100;
+  z-index: 9999;
   animation: dropdownFade 0.2s ease;
+}
+
+/* Fix glassmorphism transparency in dropdowns */
+[data-theme-style="glassmorphism"] .theme-dropdown {
+  background: rgba(255, 255, 255, 0.98) !important;
+  backdrop-filter: blur(20px);
+}
+
+[data-theme-style="glassmorphism"][data-theme-mode="dark"] .theme-dropdown {
+  background: rgba(30, 30, 40, 0.98) !important;
+  backdrop-filter: blur(20px);
 }
 
 .theme-section {

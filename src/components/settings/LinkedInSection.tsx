@@ -411,9 +411,43 @@ function LinkedInSection({ userId }: { userId: number }) {
           style={{ width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)' }} 
           placeholder="https://linkedin.com/in/your-profile" 
         />
+        
+        {scrapeStatus && (
+          <div style={{ 
+            padding: '10px 15px', 
+            background: scrapeStatus.includes('Error') ? 'var(--danger-light)' : 'var(--info-light)', 
+            borderRadius: '6px', 
+            marginBottom: '15px',
+            fontSize: '13px',
+            color: scrapeStatus.includes('Error') ? 'var(--danger)' : 'var(--info)'
+          }}>
+            {scrapeStatus}
+          </div>
+        )}
+        
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button onClick={() => (window as any).electron.invoke('user:open-linkedin', url)} style={{ padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', border: '1px solid #0077b5', background: 'var(--card-bg)', color: '#0077b5' }}>
-            Open LinkedIn
+          <button 
+            onClick={handleOpenLinkedIn} 
+            style={{ padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', border: '1px solid #0077b5', background: 'var(--card-bg)', color: '#0077b5' }}
+          >
+            1. Open LinkedIn
+          </button>
+          <button 
+            onClick={handleCaptureProfile}
+            disabled={isScraping}
+            style={{ 
+              padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', 
+              border: 'none', background: '#0077b5', color: '#fff', fontWeight: 'bold',
+              opacity: isScraping ? 0.7 : 1
+            }}
+          >
+            {isScraping ? '⏳ Capturing...' : '2. Capture Profile Data'}
+          </button>
+          <button 
+            onClick={() => setIsReviewing(true)}
+            style={{ padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text-primary)' }}
+          >
+            ✏️ Manual Entry
           </button>
         </div>
       </div>

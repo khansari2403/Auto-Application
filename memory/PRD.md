@@ -130,15 +130,24 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [x] "Generated for..." footer removed from documents
 - [x] Cover letter missing "Kind regards" sign-off - FIXED
 - [x] Auditor now checks for hallucinations/fabricated info
+- [x] Theme dropdown closing unexpectedly - FIXED
+- [x] Glassmorphism dropdown transparency - FIXED
+- [x] Arabic language removed
+- [x] Tutorial/Why Free buttons moved to right side
+- [x] New "Interview Insider" tab with HR AI
+- [x] Girlish themes added (Rose Petal, Lavender Dream)
+- [x] Headshot upload in Manual Profile
 
 ### P1 - High Priority (Testing Needed)
 - [ ] End-to-end test of Smart Apply flow
 - [ ] CV generation verification
 - [ ] Document quality verification (no hallucinations)
+- [ ] Interview Insider feature testing
 
 ### P2 - Medium Priority
 - [ ] Secretary Authentication Flow
 - [ ] Storage directory structure (Company/Position/Files)
+- [ ] Compatibility score dial on Job Search
 
 ### P3 - Low Priority
 - [ ] Full email integration (SMTP/IMAP)
@@ -146,6 +155,18 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [ ] Email verification flow completion
 
 ## Changes Made - December 2025
+
+### Session 3 - New Features
+1. **Theme Dropdown Fix** - Added useRef and useEffect for proper click-outside handling
+2. **Glassmorphism Dropdown** - Added solid backgrounds (98% opacity) to prevent text mixing
+3. **Arabic Removed** - Removed from available languages list
+4. **Nav Restructure** - Split nav into nav-main and nav-secondary, moved Tutorial/Why Free to right
+5. **Interview Insider Tab** - New tab with HR AI for interview preparation
+   - Generates interview questions by category (Get to Know, Psychological, Aptitude, Culture, Position Specific)
+   - Identifies important tools/technologies for the position
+   - Provides suggested answers tailored to user's profile
+6. **Girlish Themes** - Added Rose Petal and Lavender Dream themes (light/dark variants)
+7. **Headshot Upload** - Manual profile now has file upload for profile photo with preview
 
 ### Bug Fixes (Session 2)
 1. **CV Icon Bug** - Fixed: Clicking CV icon was generating Cover Letter instead. Added `handleGenerateSingleDoc()` function to generate only the specific document type clicked
@@ -163,13 +184,18 @@ Settings are stored in `settings.secretary_settings` as JSON:
 5. **Cover Letter JSON Fix** - Added cleanAIOutput() function to strip JSON formatting and meta-text
 6. **Motivation Letter** - Improved prompts to require full page (400-500 words), better structure, no apologies
 
-### Files Modified
-- `/app/src/components/JobSearch.tsx` - Added handleGenerateSingleDoc() for individual document generation
-- `/app/src/components/DocumentRepository.tsx` - Fixed crashes, better error handling, theme support
-- `/app/src/components/settings/LinkedInSection.tsx` - Simplified UI, removed extra buttons
-- `/app/src/components/settings/JobWebsitesSection.tsx` - Complete redesign as clean list
-- `/app/src/main/features/doc-generator.ts` - Removed footer, improved prompts with anti-hallucination rules, added sign-off requirements
-- `/app/src/main/ipc-handlers.ts` - Added docs:delete handler
+### Files Modified/Created
+- `/app/src/App.tsx` - Added Interview Insider tab, restructured nav layout
+- `/app/src/App.css` - Added nav-main and nav-secondary flex styles
+- `/app/src/components/InterviewInsider.tsx` - NEW: HR AI interview prep component
+- `/app/src/components/common/ThemeSelector.tsx` - Fixed dropdown with click-outside handler
+- `/app/src/components/common/ThemeSelector.css` - Fixed glassmorphism transparency
+- `/app/src/components/SettingsPanel.tsx` - Added headshot upload with preview
+- `/app/src/contexts/ThemeContext.tsx` - Added rosePetal, lavenderDream theme types
+- `/app/src/contexts/LanguageContext.tsx` - Removed Arabic
+- `/app/src/i18n/translations.ts` - Added new theme names, Interview Insider translations
+- `/app/src/styles/themes.css` - Added Rose Petal and Lavender Dream themes
+- `/app/src/main/ipc-handlers.ts` - Added ai:generate-interview-prep handler
 
 ## Run Instructions
 ```bash

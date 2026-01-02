@@ -263,6 +263,138 @@ export function setupIpcHandlers(): void {
     }
   });
 
+  // --- HR AI - INTERVIEW PREP ---
+  ipcMain.handle('ai:generate-interview-prep', async (_, data) => {
+    try {
+      const { jobUrl, userId } = data;
+      
+      // Get AI models
+      const models = await getAllQuery('SELECT * FROM ai_models');
+      const hrAI = models.find((m: any) => (m.role === 'HR AI' || m.role === 'Thinker') && m.status === 'active');
+      
+      if (!hrAI) {
+        return { success: false, error: 'No HR AI model configured. Please add an AI model with role "HR AI" or use an existing Thinker.' };
+      }
+      
+      // Get user profile
+      const profiles = await getAllQuery('SELECT * FROM user_profile');
+      const userProfile = profiles[0];
+      
+      // Scrape job info (simplified - in real implementation use Puppeteer)
+      let jobInfo = {
+        title: 'Position',
+        company: 'Company',
+        location: 'Location',
+        description: ''
+      };
+      
+      // Try to get job from database if it exists
+      const jobs = await getAllQuery('SELECT * FROM job_listings');
+      const existingJob = jobs.find((j: any) => j.url === jobUrl);
+      if (existingJob) {
+        jobInfo = {
+          title: existingJob.job_title || 'Position',
+          company: existingJob.company_name || 'Company',
+          location: existingJob.location || 'Location',
+          description: existingJob.description || ''
+        };
+      }
+      
+      // Generate interview questions using AI
+      const prompt = `You are an HR AI assistant helping a candidate prepare for a job interview.
+
+JOB INFORMATION:
+Title: ${jobInfo.title}
+Company: ${jobInfo.company}
+Location: ${jobInfo.location}
+Description: ${jobInfo.description || 'Not available - generate generic questions for this role type'}
+
+CANDIDATE PROFILE:
+Name: ${userProfile?.name || 'Candidate'}
+Title: ${userProfile?.title || 'Professional'}
+Skills: ${userProfile?.skills || 'Various professional skills'}
+Experience: ${JSON.stringify(userProfile?.experiences || [])}
+
+Generate a comprehensive interview preparation package with the following structure. Return ONLY valid JSON:
+
+{
+  "questions": [
+    {
+      "id": "q1",
+      "category": "get_to_know",
+      "question": "Tell me about yourself",
+      "suggestedAnswer": "A tailored answer based on the candidate's profile...",
+      "difficulty": "easy",
+      "tips": "Focus on professional journey, not personal life"
+    }
+  ],
+  "importantApps": ["Tool1", "Tool2"],
+  "jobInfo": {
+    "title": "${jobInfo.title}",
+    "company": "${jobInfo.company}",
+    "location": "${jobInfo.location}"
+  }
+}
+
+REQUIREMENTS:
+1. Generate 15-20 questions across these categories:
+   - get_to_know (3-4 questions): Background, career goals, strengths/weaknesses
+   - psychological (3-4 questions): Behavioral, situational, stress handling
+   - aptitude (3-4 questions): Problem-solving, analytical thinking
+   - culture (2-3 questions): Team fit, company values alignment
+   - position_specific (4-5 questions): Technical skills, role-specific scenarios
+
+2. For position_specific questions:
+   - Identify key technologies/tools from the job description
+   - List them in "importantApps" array
+   - Create questions about experience with these tools
+
+3. Each suggestedAnswer should be personalized to the candidate's profile where possible
+
+4. Difficulty levels: "easy", "medium", "hard"
+
+Return ONLY the JSON object, no other text.`;
+
+      const response = await aiService.callAI(hrAI, prompt);
+      
+      // Parse AI response
+      let parsed;
+      try {
+        // Try to extract JSON from the response
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('No JSON found in response');
+        }
+      } catch (parseError) {
+        console.error('Failed to parse HR AI response:', parseError);
+        // Return fallback questions
+        parsed = {
+          questions: [
+            { id: 'q1', category: 'get_to_know', question: 'Tell me about yourself', suggestedAnswer: 'Start with your current role, then briefly mention your background and what excites you about this opportunity.', difficulty: 'easy', tips: 'Keep it under 2 minutes' },
+            { id: 'q2', category: 'get_to_know', question: 'Why are you interested in this position?', suggestedAnswer: 'Connect your skills and career goals to what the role offers.', difficulty: 'easy', tips: 'Research the company beforehand' },
+            { id: 'q3', category: 'psychological', question: 'Describe a challenging situation at work and how you handled it', suggestedAnswer: 'Use the STAR method: Situation, Task, Action, Result.', difficulty: 'medium', tips: 'Choose a story with a positive outcome' },
+            { id: 'q4', category: 'aptitude', question: 'How do you prioritize your work when you have multiple deadlines?', suggestedAnswer: 'Explain your prioritization framework and give an example.', difficulty: 'medium', tips: 'Mention specific tools or methods you use' },
+            { id: 'q5', category: 'culture', question: 'What type of work environment do you thrive in?', suggestedAnswer: 'Be honest but also show flexibility and adaptability.', difficulty: 'easy', tips: 'Align with what you know about the company culture' },
+          ],
+          importantApps: [],
+          jobInfo: jobInfo
+        };
+      }
+      
+      return { 
+        success: true, 
+        questions: parsed.questions || [],
+        importantApps: parsed.importantApps || [],
+        jobInfo: parsed.jobInfo || jobInfo
+      };
+    } catch (e: any) {
+      console.error('Interview prep error:', e);
+      return { success: false, error: e.message };
+    }
+  });
+
   // --- DOCUMENTS ---
   ipcMain.handle('docs:get-all', async () => {
     try {

@@ -357,6 +357,9 @@ export function JobSearch({ userId }: { userId: number }) {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', background: 'var(--bg-primary)', minHeight: '100%' }}>
+      {/* Job Hunting Control Center */}
+      <JobHuntingControls userId={userId} onSettingsChange={loadData} />
+
       {/* Q&A Modal */}
       {showQAModal && (
         <div style={{ 

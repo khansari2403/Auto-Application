@@ -94,19 +94,37 @@ export function JobSearch({ userId }: { userId: number }) {
     const status = job[`${type}_status`];
     const path = job[`${type}_path`];
 
+    const handleDocClick = (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      if (status === 'auditor_done' && path) {
+        // Open the completed document
+        (window as any).electron.invoke('docs:open-file', path);
+      } else {
+        // Generate the document
+        handleGenerateDocs(job.id);
+      }
+    };
+
     return (
       <div 
-        onClick={() => status === 'auditor_done' ? (window as any).electron.invoke('docs:open-file', path) : handleGenerateDocs(job.id)}
-        title={`${label}: ${status || 'Not started'}`}
+        onClick={handleDocClick}
+        title={`${label}: ${status || 'Not started'} - Click to ${status === 'auditor_done' ? 'open' : 'generate'}`}
         style={{ 
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          width: '24px', height: '24px', borderRadius: '4px', background: '#fff', border: '1px solid #ccc',
-          fontSize: '10px', position: 'relative', fontWeight: 'bold', color: '#333'
+          width: '28px', height: '28px', borderRadius: '6px', 
+          background: status === 'auditor_done' ? 'var(--success-light)' : status === 'thinker_done' ? 'var(--info-light)' : 'var(--card-bg)', 
+          border: `1px solid ${status === 'auditor_done' ? 'var(--success)' : status === 'thinker_done' ? 'var(--info)' : 'var(--border)'}`,
+          fontSize: '10px', position: 'relative', fontWeight: 'bold', color: 'var(--text-primary)',
+          transition: 'all 0.2s ease'
         }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
       >
         {shortLabel}
-        {status === 'thinker_done' && <span style={{ position: 'absolute', bottom: -4, right: -2, color: '#4CAF50', fontSize: '14px' }}>✓</span>}
-        {status === 'auditor_done' && <span style={{ position: 'absolute', bottom: -4, right: -2, color: '#4CAF50', fontSize: '14px' }}>✓✓</span>}
+        {status === 'thinker_done' && <span style={{ position: 'absolute', bottom: -4, right: -2, color: 'var(--success)', fontSize: '14px' }}>✓</span>}
+        {status === 'auditor_done' && <span style={{ position: 'absolute', bottom: -4, right: -2, color: 'var(--success)', fontSize: '14px' }}>✓✓</span>}
         {(!status || status === 'none' || status === 'failed') && <span style={{ position: 'absolute', bottom: -2, right: -1, fontSize: '8px' }}>🔄</span>}
       </div>
     );

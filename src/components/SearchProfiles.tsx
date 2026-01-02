@@ -310,17 +310,17 @@ export function SearchProfiles({ userId }: { userId: number }) {
 
   if (editing) {
     return (
-      <div style={{ padding: '20px', background: '#fff', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div style={{ padding: '20px', background: 'var(--card-bg)', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0 }}>⚙️ {editing.is_speculative ? '🚀 Speculative Application Settings' : `Criteria: ${editing.profile_name}`}</h3>
-          <button onClick={handleSave} style={{ padding: '10px 30px', background: '#4CAF50', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>✅ Save Profile</button>
+          <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>⚙️ {editing.is_speculative ? '🚀 Speculative Application Settings' : `Criteria: ${editing.profile_name}`}</h3>
+          <button onClick={handleSave} style={{ padding: '10px 30px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>✅ Save Profile</button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
           {/* Column 1: Target & Core */}
           <div>
             <div style={groupStyle}>
-              <h4 style={{ marginTop: 0, marginBottom: '12px' }}>🎯 Target & Core</h4>
+              <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🎯 Target & Core</h4>
               
               {/* Job Titles Multi-Select */}
               <label style={labelStyle}>Job Titles (Multiple Selection)</label>

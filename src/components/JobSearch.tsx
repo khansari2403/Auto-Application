@@ -248,6 +248,37 @@ export function JobSearch({ userId }: { userId: number }) {
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', background: 'var(--bg-primary)', minHeight: '100%' }}>
+      {/* Q&A Modal */}
+      {showQAModal && (
+        <div style={{ 
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          background: 'rgba(0,0,0,0.6)', zIndex: 2000, 
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: '20px'
+        }}>
+          <div style={{ 
+            background: 'var(--bg-primary)', 
+            borderRadius: '16px', 
+            width: '100%', 
+            maxWidth: '600px',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            <div style={{ padding: '20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>🤖 AI Assistant Needs Your Input</h3>
+              <button onClick={handleCancelApplication} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: 'var(--text-primary)' }}>×</button>
+            </div>
+            <AlertsQASection 
+              userId={userId}
+              pendingQuestions={pendingQuestions}
+              jobId={activeJobId || undefined}
+              onAnswersSubmit={handleAnswersSubmit}
+              onCancel={handleCancelApplication}
+            />
+          </div>
+        </div>
+      )}
       {showInfo && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div style={{ background: 'var(--card-bg)', padding: '30px', borderRadius: '12px', maxWidth: '550px', position: 'relative', color: 'var(--text-primary)' }}>

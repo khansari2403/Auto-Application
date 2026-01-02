@@ -41,6 +41,29 @@
   width: 100%;
 }
 
+/* Navigation Layout - Flexbox with space-between */
+.app-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  overflow-x: auto;
+}
+
+.nav-main {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.nav-secondary {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
 /* Navigation scrollbar */
 .app-nav::-webkit-scrollbar {
   height: 6px;

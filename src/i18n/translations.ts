@@ -413,6 +413,3 @@ export const translations: Record<Language, TranslationKeys> = {
     selectLanguage: '언어 선택',
   },
 };
-    selectLanguage: 'Select Language',
-  },
-};

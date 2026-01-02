@@ -170,11 +170,11 @@ export function JobSearch({ userId }: { userId: number }) {
         </div>
       </div>
 
-      <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid #eee' }}>
-        <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '10px', color: '#666' }}>⚙️ CUSTOMIZE TABLE COLUMNS (24 CRITERIA):</div>
+      <div style={{ background: 'var(--bg-secondary)', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid var(--border)' }}>
+        <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '10px', color: 'var(--text-secondary)' }}>⚙️ CUSTOMIZE TABLE COLUMNS:</div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
           {allColumns.map(col => (
-            <button key={col.id} onClick={() => setVisibleColumns(prev => prev.includes(col.id) ? prev.filter(c => c !== col.id) : [...prev, col.id])} style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '20px', border: '1px solid #ccc', background: visibleColumns.includes(col.id) ? '#0077b5' : '#fff', color: visibleColumns.includes(col.id) ? '#fff' : '#666', cursor: 'pointer' }}>{col.label}</button>
+            <button key={col.id} onClick={() => setVisibleColumns(prev => prev.includes(col.id) ? prev.filter(c => c !== col.id) : [...prev, col.id])} style={{ padding: '4px 10px', fontSize: '11px', borderRadius: '20px', border: '1px solid var(--border)', background: visibleColumns.includes(col.id) ? '#0077b5' : 'var(--card-bg)', color: visibleColumns.includes(col.id) ? '#fff' : 'var(--text-secondary)', cursor: 'pointer' }}>{col.label}</button>
           ))}
         </div>
       </div>

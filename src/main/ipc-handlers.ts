@@ -7,16 +7,18 @@ export function setupIpcHandlers(): void {
   // CLEAN SLATE: Remove ALL existing handlers to prevent "second handler" error
   const channels = [
     'settings:get', 'settings:update', 'user:get-profile', 'user:update-profile',
-    'user:open-linkedin', 'user:capture-linkedin',
+    'user:open-linkedin', 'user:capture-linkedin', 'user:save-linkedin-profile',
     'profiles:get-all', 'profiles:save', 'profiles:update', 'profiles:delete',
     'jobs:get-all', 'jobs:delete', 'jobs:add-manual', 'jobs:update-doc-confirmation',
     'hunter:start-search', 'ai:process-application', 'ai:generate-tailored-docs',
+    'ai:smart-apply', 'ai:continue-application', 'ai:cancel-application',
     'ai:fetch-models',
-    'docs:get-all', 'docs:save', 'docs:open-file',
+    'docs:get-all', 'docs:save', 'docs:open-file', 'docs:convert-to-pdf', 'docs:convert-all-pdf',
     'websites:get-all', 'websites:add', 'websites:delete', 'websites:toggle-active',
     'ai-models:get-all', 'ai-models:add', 'ai-models:update', 'ai-models:delete',
     'logs:get-recent-actions', 'apps:get-all',
-    'scheduler:toggle', 'scheduler:get-status'
+    'scheduler:toggle', 'scheduler:get-status',
+    'qa:get-all', 'qa:update', 'qa:delete'
   ];
   
   // Remove handlers first - prevents duplication on hot reload

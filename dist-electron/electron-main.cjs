@@ -1845,6 +1845,7 @@ function setupIpcHandlers() {
     "user:update-profile",
     "user:open-linkedin",
     "user:capture-linkedin",
+    "user:save-linkedin-profile",
     "profiles:get-all",
     "profiles:save",
     "profiles:update",
@@ -1856,10 +1857,15 @@ function setupIpcHandlers() {
     "hunter:start-search",
     "ai:process-application",
     "ai:generate-tailored-docs",
+    "ai:smart-apply",
+    "ai:continue-application",
+    "ai:cancel-application",
     "ai:fetch-models",
     "docs:get-all",
     "docs:save",
     "docs:open-file",
+    "docs:convert-to-pdf",
+    "docs:convert-all-pdf",
     "websites:get-all",
     "websites:add",
     "websites:delete",
@@ -1871,7 +1877,10 @@ function setupIpcHandlers() {
     "logs:get-recent-actions",
     "apps:get-all",
     "scheduler:toggle",
-    "scheduler:get-status"
+    "scheduler:get-status",
+    "qa:get-all",
+    "qa:update",
+    "qa:delete"
   ];
   channels.forEach((channel) => {
     try {

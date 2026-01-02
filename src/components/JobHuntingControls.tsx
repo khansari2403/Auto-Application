@@ -1,0 +1,402 @@
+import { useState, useEffect } from 'react';
+
+interface Props {
+  userId: number;
+  onSettingsChange?: () => void;
+}
+
+export function JobHuntingControls({ userId, onSettingsChange }: Props) {
+  const [isActive, setIsActive] = useState(false);
+  const [autoApplyEnabled, setAutoApplyEnabled] = useState(false);
+  const [scheduleEnabled, setScheduleEnabled] = useState(false);
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('14:00');
+  const [minCompatibility, setMinCompatibility] = useState<'yellow' | 'green' | 'gold'>('green');
+  const [status, setStatus] = useState('idle');
+
+  useEffect(() => {
+    loadSettings();
+  }, [userId]);
+
+  const loadSettings = async () => {
+    try {
+      const result = await (window as any).electron.invoke('settings:get', userId);
+      if (result?.success && result.data) {
+        setIsActive(result.data.job_hunting_active === 1);
+        setAutoApplyEnabled(result.data.auto_apply === 1);
+        setScheduleEnabled(result.data.schedule_enabled === 1);
+        setStartTime(result.data.schedule_start || '09:00');
+        setEndTime(result.data.schedule_end || '14:00');
+        setMinCompatibility(result.data.min_compatibility || 'green');
+      }
+    } catch (e) {
+      console.error('Failed to load settings:', e);
+    }
+  };
+
+  const saveSettings = async (updates: any) => {
+    try {
+      await (window as any).electron.invoke('settings:update', updates);
+      onSettingsChange?.();
+    } catch (e) {
+      console.error('Failed to save settings:', e);
+    }
+  };
+
+  const toggleHunting = async () => {
+    const newValue = !isActive;
+    setIsActive(newValue);
+    await saveSettings({ job_hunting_active: newValue ? 1 : 0 });
+    
+    // Trigger scheduler
+    await (window as any).electron.invoke('scheduler:toggle', { active: newValue });
+  };
+
+  const handleAutoApplyToggle = async () => {
+    const newValue = !autoApplyEnabled;
+    setAutoApplyEnabled(newValue);
+    await saveSettings({ auto_apply: newValue ? 1 : 0 });
+  };
+
+  const handleScheduleToggle = async () => {
+    const newValue = !scheduleEnabled;
+    setScheduleEnabled(newValue);
+    await saveSettings({ schedule_enabled: newValue ? 1 : 0 });
+  };
+
+  const handleTimeChange = async (type: 'start' | 'end', value: string) => {
+    if (type === 'start') {
+      setStartTime(value);
+      await saveSettings({ schedule_start: value });
+    } else {
+      setEndTime(value);
+      await saveSettings({ schedule_end: value });
+    }
+  };
+
+  const handleCompatibilityChange = async (value: 'yellow' | 'green' | 'gold') => {
+    setMinCompatibility(value);
+    await saveSettings({ min_compatibility: value });
+  };
+
+  const getCompatibilityColor = (level: string) => {
+    switch (level) {
+      case 'gold': return 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)';
+      case 'green': return 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)';
+      case 'yellow': return 'linear-gradient(135deg, #FFC107 0%, #FF9800 100%)';
+      default: return '#ccc';
+    }
+  };
+
+  return (
+    <div style={{ 
+      background: 'var(--card-bg)', 
+      borderRadius: '16px', 
+      padding: '24px', 
+      marginBottom: '24px',
+      border: '1px solid var(--border)',
+      boxShadow: 'var(--shadow-md)'
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <div>
+          <h3 style={{ margin: '0 0 4px 0', color: 'var(--text-primary)', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+            🎯 Job Hunting Control Center
+          </h3>
+          <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px' }}>
+            Configure automated job search and application settings
+          </p>
+        </div>
+        
+        {/* Main Toggle */}
+        <button
+          onClick={toggleHunting}
+          style={{
+            padding: '14px 28px',
+            borderRadius: '12px',
+            border: 'none',
+            background: isActive 
+              ? 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)'
+              : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: '#fff',
+            fontWeight: 'bold',
+            fontSize: '14px',
+            cursor: 'pointer',
+            boxShadow: isActive ? '0 4px 15px rgba(76, 175, 80, 0.4)' : '0 4px 15px rgba(102, 126, 234, 0.4)',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          {isActive ? '⏹️ Stop Job Hunting' : '▶️ Start Job Hunting'}
+        </button>
+      </div>
+
+      {/* Two Column Layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        
+        {/* Left: Schedule Settings */}
+        <div style={{ 
+          background: 'var(--bg-secondary)', 
+          padding: '20px', 
+          borderRadius: '12px',
+          border: '1px solid var(--border)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              ⏰ Schedule Timer
+            </h4>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={scheduleEnabled} 
+                onChange={handleScheduleToggle}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Enable</span>
+            </label>
+          </div>
+
+          <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 16px 0' }}>
+            Set the time window when the Hunter should actively search for jobs
+          </p>
+
+          <div style={{ 
+            display: 'flex', 
+            gap: '20px', 
+            alignItems: 'center',
+            opacity: scheduleEnabled ? 1 : 0.5,
+            pointerEvents: scheduleEnabled ? 'auto' : 'none'
+          }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-primary)' }}>
+                Start Time
+              </label>
+              <input
+                type="time"
+                value={startTime}
+                onChange={(e) => handleTimeChange('start', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--input-bg)',
+                  color: 'var(--text-primary)',
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              />
+            </div>
+            
+            <div style={{ 
+              fontSize: '24px', 
+              color: 'var(--text-tertiary)',
+              paddingTop: '24px'
+            }}>→</div>
+            
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-primary)' }}>
+                End Time
+              </label>
+              <input
+                type="time"
+                value={endTime}
+                onChange={(e) => handleTimeChange('end', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border)',
+                  background: 'var(--input-bg)',
+                  color: 'var(--text-primary)',
+                  fontSize: '16px',
+                  fontWeight: 'bold'
+                }}
+              />
+            </div>
+          </div>
+
+          {scheduleEnabled && (
+            <div style={{ 
+              marginTop: '12px', 
+              padding: '10px', 
+              background: 'var(--info-light)', 
+              borderRadius: '8px',
+              fontSize: '12px',
+              color: 'var(--info)'
+            }}>
+              🕐 Hunter will be active from <strong>{startTime}</strong> to <strong>{endTime}</strong> daily
+            </div>
+          )}
+        </div>
+
+        {/* Right: Auto-Apply Criteria */}
+        <div style={{ 
+          background: 'var(--bg-secondary)', 
+          padding: '20px', 
+          borderRadius: '12px',
+          border: '1px solid var(--border)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+            <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🚀 Auto-Apply Criteria
+            </h4>
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <input 
+                type="checkbox" 
+                checked={autoApplyEnabled} 
+                onChange={handleAutoApplyToggle}
+                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Enable</span>
+            </label>
+          </div>
+
+          <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 16px 0' }}>
+            Only auto-apply to jobs that meet minimum compatibility score from HR AI
+          </p>
+
+          <div style={{ 
+            opacity: autoApplyEnabled ? 1 : 0.5,
+            pointerEvents: autoApplyEnabled ? 'auto' : 'none'
+          }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '10px', color: 'var(--text-primary)' }}>
+              Minimum Compatibility Score
+            </label>
+            
+            <div style={{ display: 'flex', gap: '10px' }}>
+              {/* Yellow */}
+              <button
+                onClick={() => handleCompatibilityChange('yellow')}
+                style={{
+                  flex: 1,
+                  padding: '16px 12px',
+                  borderRadius: '10px',
+                  border: minCompatibility === 'yellow' ? '3px solid #FF9800' : '2px solid var(--border)',
+                  background: minCompatibility === 'yellow' ? 'rgba(255, 193, 7, 0.15)' : 'var(--card-bg)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  background: getCompatibilityColor('yellow'),
+                  margin: '0 auto 8px',
+                  boxShadow: '0 4px 12px rgba(255, 193, 7, 0.4)'
+                }} />
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Yellow+</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Fair Match</div>
+              </button>
+
+              {/* Green */}
+              <button
+                onClick={() => handleCompatibilityChange('green')}
+                style={{
+                  flex: 1,
+                  padding: '16px 12px',
+                  borderRadius: '10px',
+                  border: minCompatibility === 'green' ? '3px solid #4CAF50' : '2px solid var(--border)',
+                  background: minCompatibility === 'green' ? 'rgba(76, 175, 80, 0.15)' : 'var(--card-bg)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  background: getCompatibilityColor('green'),
+                  margin: '0 auto 8px',
+                  boxShadow: '0 4px 12px rgba(76, 175, 80, 0.4)'
+                }} />
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Green+</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Good Match</div>
+              </button>
+
+              {/* Gold */}
+              <button
+                onClick={() => handleCompatibilityChange('gold')}
+                style={{
+                  flex: 1,
+                  padding: '16px 12px',
+                  borderRadius: '10px',
+                  border: minCompatibility === 'gold' ? '3px solid #FFD700' : '2px solid var(--border)',
+                  background: minCompatibility === 'gold' ? 'rgba(255, 215, 0, 0.15)' : 'var(--card-bg)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ 
+                  width: '40px', 
+                  height: '40px', 
+                  borderRadius: '50%', 
+                  background: getCompatibilityColor('gold'),
+                  margin: '0 auto 8px',
+                  boxShadow: '0 4px 12px rgba(255, 215, 0, 0.4)'
+                }} />
+                <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Gold Only</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Perfect Match</div>
+              </button>
+            </div>
+          </div>
+
+          {autoApplyEnabled && (
+            <div style={{ 
+              marginTop: '12px', 
+              padding: '10px', 
+              background: 'var(--success-light)', 
+              borderRadius: '8px',
+              fontSize: '12px',
+              color: 'var(--success)'
+            }}>
+              ✓ Auto-applying to jobs with <strong>{minCompatibility}</strong> or higher compatibility
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Status Bar */}
+      {isActive && (
+        <div style={{ 
+          marginTop: '16px',
+          padding: '12px 16px',
+          background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(46, 125, 50, 0.1) 100%)',
+          borderRadius: '10px',
+          border: '1px solid var(--success)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ 
+              width: '12px', 
+              height: '12px', 
+              borderRadius: '50%', 
+              background: '#4CAF50',
+              animation: 'pulse 2s infinite'
+            }} />
+            <span style={{ color: 'var(--success)', fontWeight: 600, fontSize: '14px' }}>
+              Hunter is actively searching for jobs...
+            </span>
+          </div>
+          <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
+            {scheduleEnabled ? `Scheduled: ${startTime} - ${endTime}` : 'Running continuously'}
+          </span>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.2); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+export default JobHuntingControls;

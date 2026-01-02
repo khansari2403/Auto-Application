@@ -1423,6 +1423,14 @@ function setupIpcHandlers() {
       return { success: false, error: e.message };
     }
   });
+  import_electron3.ipcMain.handle("profiles:delete", async (_, id) => {
+    try {
+      await runQuery("DELETE FROM search_profiles", { id });
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
   import_electron3.ipcMain.handle("jobs:get-all", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM job_listings");

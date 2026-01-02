@@ -126,7 +126,18 @@ export function setupIpcHandlers(): void {
 
   ipcMain.handle('profiles:update', async (_, data) => {
     try {
+      // data can include: job_titles, industry, excluded_industries, experience_levels, certifications
+      // These are stored as comma-separated strings
       await runQuery('UPDATE search_profiles', data);
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('profiles:delete', async (_, id) => {
+    try {
+      await runQuery('DELETE FROM search_profiles', { id });
       return { success: true };
     } catch (e: any) {
       return { success: false, error: e.message };

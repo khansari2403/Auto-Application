@@ -141,11 +141,26 @@ export function JobSearch({ userId }: { userId: number }) {
     <div style={{ padding: '20px', fontFamily: 'sans-serif', background: 'var(--bg-primary)', minHeight: '100%' }}>
       {showInfo && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: 'var(--card-bg)', padding: '30px', borderRadius: '12px', maxWidth: '500px', position: 'relative', color: 'var(--text-primary)' }}>
-            <h3>📖 Documentation Rules</h3>
-            <p><strong>Thinker AI:</strong> Creates tailored versions based on your repository source files.</p>
-            <p><strong>Auditor AI:</strong> Verifies files for ATS compatibility and hallucinations.</p>
-            <p><strong>Status Marks:</strong> 🔄 (Retry/Start), ✓ (Thinker Done), ✓✓ (Auditor Verified).</p>
+          <div style={{ background: 'var(--card-bg)', padding: '30px', borderRadius: '12px', maxWidth: '550px', position: 'relative', color: 'var(--text-primary)' }}>
+            <h3>📖 Document Generation System</h3>
+            <div style={{ marginTop: '15px', fontSize: '14px' }}>
+              <p><strong>🧠 Thinker AI:</strong> Generates tailored documents based on your profile and job description. Uses company research to personalize content.</p>
+              <p style={{ marginTop: '10px' }}><strong>🧐 Auditor AI:</strong> Reviews documents for quality, ATS compatibility, and removes AI-sounding phrases. Requests revisions if needed.</p>
+              <p style={{ marginTop: '10px' }}><strong>📁 Document Types:</strong></p>
+              <ul style={{ marginLeft: '20px', marginTop: '5px' }}>
+                <li><strong>CV</strong> - Tailored resume highlighting relevant experience</li>
+                <li><strong>Motivation Letter</strong> - Explains why you want the role (formal)</li>
+                <li><strong>Cover Letter</strong> - Brief introduction and qualifications</li>
+                <li><strong>Portfolio</strong> - Summary of relevant projects</li>
+                <li><strong>Proposal</strong> - Business approach for the role</li>
+              </ul>
+              <p style={{ marginTop: '10px' }}><strong>📊 Status Icons:</strong></p>
+              <div style={{ display: 'flex', gap: '15px', marginTop: '5px' }}>
+                <span>🔄 Generate/Retry</span>
+                <span>✓ AI Generated</span>
+                <span>✓✓ Auditor Approved</span>
+              </div>
+            </div>
             <button onClick={() => setShowInfo(false)} style={{ position: 'absolute', top: 10, right: 10, border: 'none', background: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--text-primary)' }}>×</button>
           </div>
         </div>

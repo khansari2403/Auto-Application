@@ -131,15 +131,15 @@ export function JobSearch({ userId }: { userId: number }) {
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif', background: 'var(--bg-primary)', minHeight: '100%' }}>
       {showInfo && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ background: '#fff', padding: '30px', borderRadius: '12px', maxWidth: '500px', position: 'relative' }}>
+          <div style={{ background: 'var(--card-bg)', padding: '30px', borderRadius: '12px', maxWidth: '500px', position: 'relative', color: 'var(--text-primary)' }}>
             <h3>📖 Documentation Rules</h3>
             <p><strong>Thinker AI:</strong> Creates tailored versions based on your repository source files.</p>
             <p><strong>Auditor AI:</strong> Verifies files for ATS compatibility and hallucinations.</p>
             <p><strong>Status Marks:</strong> 🔄 (Retry/Start), ✓ (Thinker Done), ✓✓ (Auditor Verified).</p>
-            <button onClick={() => setShowInfo(false)} style={{ position: 'absolute', top: 10, right: 10, border: 'none', background: 'none', cursor: 'pointer', fontSize: '20px' }}>×</button>
+            <button onClick={() => setShowInfo(false)} style={{ position: 'absolute', top: 10, right: 10, border: 'none', background: 'none', cursor: 'pointer', fontSize: '20px', color: 'var(--text-primary)' }}>×</button>
           </div>
         </div>
       )}

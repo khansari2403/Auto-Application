@@ -250,6 +250,15 @@ export function setupIpcHandlers(): void {
     }
   });
 
+  ipcMain.handle('websites:toggle-active', async (_, data) => {
+    try {
+      await runQuery('UPDATE job_websites', { id: data.id, is_active: data.isActive });
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
   // --- AI MODELS ---
   ipcMain.handle('ai-models:get-all', async () => {
     try {

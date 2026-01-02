@@ -146,6 +146,55 @@ function ManualProfileSection({ userId }: { userId: number }) {
       {/* Personal Info */}
       <div style={sectionStyle}>
         <h4 style={{ marginTop: 0 }}>👤 Personal Information</h4>
+        
+        {/* Photo Upload Section */}
+        <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', alignItems: 'flex-start' }}>
+          <div style={{ 
+            width: '120px', 
+            height: '120px', 
+            borderRadius: '50%', 
+            border: '3px solid #0077b5',
+            background: profile.photo ? `url(${profile.photo}) center/cover` : '#f0f0f0',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '40px',
+            color: '#999',
+            overflow: 'hidden',
+            flexShrink: 0
+          }}>
+            {!profile.photo && '👤'}
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Profile Headshot</label>
+            <p style={{ fontSize: '12px', color: '#666', margin: '0 0 10px 0' }}>
+              Upload a professional headshot for your CV and applications
+            </p>
+            <input 
+              type="file" 
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setProfile({...profile, photo: reader.result as string});
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+              style={{ marginBottom: '8px' }}
+            />
+            <div style={{ fontSize: '11px', color: '#999' }}>Or paste a URL:</div>
+            <input 
+              style={{...inputStyle, marginTop: '4px'}} 
+              value={profile.photo} 
+              onChange={e => setProfile({...profile, photo: e.target.value})} 
+              placeholder="https://example.com/photo.jpg" 
+            />
+          </div>
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
           <div>
             <label style={labelStyle}>Full Name</label>
@@ -170,10 +219,6 @@ function ManualProfileSection({ userId }: { userId: number }) {
           <div>
             <label style={labelStyle}>Website / Portfolio</label>
             <input style={inputStyle} value={profile.website} onChange={e => setProfile({...profile, website: e.target.value})} placeholder="https://yourwebsite.com" />
-          </div>
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={labelStyle}>Profile Photo URL</label>
-            <input style={inputStyle} value={profile.photo} onChange={e => setProfile({...profile, photo: e.target.value})} placeholder="https://example.com/photo.jpg" />
           </div>
           <div style={{ gridColumn: '1 / -1' }}>
             <label style={labelStyle}>Professional Summary</label>

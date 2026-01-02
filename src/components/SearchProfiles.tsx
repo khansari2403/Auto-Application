@@ -423,14 +423,14 @@ export function SearchProfiles({ userId }: { userId: number }) {
               />
               
               {/* Industries - Exclude (Blacklist) */}
-              <label style={{...labelStyle, color: '#f44336'}}>❌ Exclude Industries (Blacklist)</label>
+              <label style={{...labelStyle, color: 'var(--danger)'}}>❌ Exclude Industries (Blacklist)</label>
               <div style={{ 
                 maxHeight: '120px', 
                 overflowY: 'auto', 
                 padding: '8px', 
-                border: '1px solid #ffcdd2', 
+                border: '1px solid var(--danger-light)', 
                 borderRadius: '6px', 
-                background: '#fff8f8' 
+                background: 'var(--danger-light)' 
               }}>
                 {INDUSTRIES.map((ind: string) => (
                   <label key={ind} style={{ 
@@ -440,8 +440,8 @@ export function SearchProfiles({ userId }: { userId: number }) {
                     padding: '4px 0', 
                     cursor: 'pointer',
                     fontSize: '11px',
-                    borderBottom: '1px solid #f0f0f0',
-                    color: excludedIndustries.includes(ind) ? '#f44336' : 'inherit'
+                    borderBottom: '1px solid var(--border-light)',
+                    color: excludedIndustries.includes(ind) ? 'var(--danger)' : 'var(--text-primary)'
                   }}>
                     <input 
                       type="checkbox" 

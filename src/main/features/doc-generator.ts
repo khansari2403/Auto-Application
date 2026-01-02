@@ -531,7 +531,7 @@ Description: ${job.description || 'N/A'}
 Required Skills: ${job.required_skills || 'N/A'}
 
 COMPANY RESEARCH:
-${companyResearch}
+${companyResearch || 'No additional company research available. Focus on what can be inferred from the job description.'}
 
 ${feedback ? `PREVIOUS FEEDBACK FROM AUDITOR: ${feedback}\nPlease fix these issues in the new version.` : ''}
 `;
@@ -548,56 +548,71 @@ REQUIREMENTS:
 4. Keep it ATS-friendly (no tables, columns, graphics)
 5. Include contact information at the top
 6. Language: Match the job description language
+7. Structure: Professional Summary, Work Experience, Education, Skills, Certifications
 
-OUTPUT FORMAT: Return ONLY the CV content in clean text format (not HTML). Use clear headings.`,
+IMPORTANT: Generate a complete, professional CV document. Do NOT include any JSON formatting, markdown code blocks, or meta-commentary. Output ONLY the plain text CV content that can be directly used.
 
-    motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter.
+OUTPUT FORMAT: Return ONLY the CV content in clean text format. Use clear section headings like "PROFESSIONAL SUMMARY", "WORK EXPERIENCE", etc.`,
+
+    motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter that fills ONE FULL PAGE (400-500 words).
 
 ${baseContext}
 
-NEGATIVE PROMPT (DO NOT USE):
-- Clichés: "I am thrilled to apply", "In today's fast-paced world", "I am a passionate professional"
-- AI Structures: Repetitive "I have..." or "My experience..." at the start of every sentence
-- Long hyphens (—), use standard dashes (-) if needed
-- Bullet points - write in paragraph form
+CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
+1. DO NOT start with "Here is the motivation letter:" or any similar meta-text
+2. DO NOT include JSON formatting like { "motivationLetter": ... }
+3. DO NOT mention "I could not find..." or "Research was unavailable"
+4. DO NOT use long em-dashes (—), use regular dashes (-) only
+5. DO NOT use clichés: "I am thrilled", "passionate professional", "fast-paced world"
+6. DO NOT start sentences with "I have..." or "I am..." repeatedly
+7. Output ONLY the letter content, starting with the date and recipient
 
 STRUCTURE (follow exactly):
-1. CLEAR PURPOSE: State intent upfront. Who are you and why are you writing?
-2. RESEARCH: Reference specific facts from the company research (Mission, History, News)
-3. ALIGNMENT: Connect your personal goals to their mission
-4. QUALIFICATIONS: Highlight 2-3 key achievements with METRICS
-5. PASSION: Why this role? Why are you the best candidate?
-6. CLOSING: Professional sign-off, thank the reader
+1. HEADER: Date, Company Address, "Dear Hiring Manager,"
+2. OPENING (1 paragraph): State who you are, what position, and ONE compelling reason why this company
+3. COMPANY CONNECTION (1 paragraph): Reference something specific about the company - their products, services, recent news, or values. If research is limited, focus on what's clear from the job posting
+4. YOUR VALUE (2 paragraphs): 
+   - First: Your most relevant experience with SPECIFIC metrics/achievements
+   - Second: How your skills directly solve their needs mentioned in the job posting
+5. WHY THIS ROLE (1 paragraph): Personal motivation - career goals, growth opportunity, alignment
+6. CLOSING: Thank them, express enthusiasm for an interview, sign off professionally
 
-MUST ANSWER 3 QUESTIONS:
-- Why this company?
-- Why this role?
-- Why am I the best candidate?
+MUST INCLUDE:
+- At least 2 specific achievements with numbers/metrics
+- At least 1 specific reference to the company (product, service, or value)
+- Smooth transitions between paragraphs
+- Professional but warm tone
 
+Length: ONE FULL PAGE (400-500 words minimum). This is a formal document.
 Language: Match the job description language.
-Length: One page maximum (300-400 words).
 
-Return ONLY the motivation letter content.`,
+Return ONLY the motivation letter content, starting directly with the date.`,
 
     cover_letter: `You are an expert Cover Letter writer. Create a concise, professional cover letter.
 
 ${baseContext}
 
+CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
+1. DO NOT include any JSON formatting like { "coverLetter": ... }
+2. DO NOT start with meta-text like "Here is the cover letter:"
+3. DO NOT use long em-dashes (—), use regular dashes (-) only
+4. Output ONLY the letter content, starting with "Dear Hiring Manager" or similar
+
 REQUIREMENTS:
 1. Be concise (250-300 words)
 2. Address the hiring manager professionally
-3. Highlight 2-3 most relevant qualifications
+3. Highlight 2-3 most relevant qualifications with specific examples
 4. Show enthusiasm for the specific role
 5. Include a clear call to action
 6. No clichés or AI-sounding phrases
 7. Language: Match the job description
 
 STRUCTURE:
-- Opening: State the position and where you found it
-- Middle: Your relevant qualifications and why you're a great fit
+- Opening: State the position and express interest (1-2 sentences)
+- Middle (2 paragraphs): Your relevant qualifications and why you're a great fit
 - Closing: Thank them and suggest next steps
 
-Return ONLY the cover letter content.`,
+Return ONLY the cover letter content, starting directly with the greeting.`,
 
     portfolio: `You are a Portfolio Description writer. Create a portfolio summary for this job application.
 

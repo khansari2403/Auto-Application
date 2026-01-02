@@ -4,6 +4,13 @@ var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
 var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __esm = (fn, res) => function __init() {
+  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
+};
+var __export = (target, all) => {
+  for (var name in all)
+    __defProp(target, name, { get: all[name], enumerable: true });
+};
 var __copyProps = (to, from, except, desc) => {
   if (from && typeof from === "object" || typeof from === "function") {
     for (let key of __getOwnPropNames(from))
@@ -20,22 +27,9 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
   isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
   mod
 ));
-
-// electron-main.ts
-var import_electron4 = require("electron");
-var import_path4 = __toESM(require("path"), 1);
-var import_electron_is_dev = __toESM(require("electron-is-dev"), 1);
+var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/main/database.ts
-var import_path = __toESM(require("path"), 1);
-var import_electron = require("electron");
-var import_fs = __toESM(require("fs"), 1);
-var dbData = global.dbData || null;
-var getDbPath = () => {
-  const dataDir = import_path.default.join(import_electron.app.getPath("userData"), "data");
-  if (!import_fs.default.existsSync(dataDir)) import_fs.default.mkdirSync(dataDir, { recursive: true });
-  return import_path.default.join(dataDir, "db.json");
-};
 function getDatabase() {
   if (!dbData) {
     const dbPath = getDbPath();
@@ -56,41 +50,9 @@ function getDatabase() {
   });
   return dbData;
 }
-var getDefaultData = () => ({
-  user_profile: [],
-  email_config: [],
-  job_preferences: [],
-  ai_models: [],
-  job_websites: [],
-  company_monitoring: [],
-  job_listings: [],
-  applications: [],
-  action_logs: [],
-  email_alerts: [],
-  documents: [],
-  search_profiles: [],
-  settings: [],
-  questions: []
-});
-var saveDb = () => {
-  try {
-    import_fs.default.writeFileSync(getDbPath(), JSON.stringify(dbData, null, 2));
-    console.log("DB: Saved to disk");
-  } catch (e) {
-    console.error("DB: Save failed", e);
-  }
-};
 async function initializeDatabase() {
   getDatabase();
 }
-var toSnakeCase = (str) => str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-var mapToSnakeCase = (obj) => {
-  const newObj = {};
-  for (const key in obj) {
-    newObj[toSnakeCase(key)] = obj[key];
-  }
-  return newObj;
-};
 async function runQuery(sql, params = []) {
   const db = getDatabase();
   const sqlUpper = sql.toUpperCase();
@@ -201,15 +163,198 @@ async function logAction(userId, type, desc, status, success) {
   }
   saveDb();
 }
+var import_path, import_electron, import_fs, dbData, getDbPath, getDefaultData, saveDb, toSnakeCase, mapToSnakeCase;
+var init_database = __esm({
+  "src/main/database.ts"() {
+    import_path = __toESM(require("path"), 1);
+    import_electron = require("electron");
+    import_fs = __toESM(require("fs"), 1);
+    dbData = global.dbData || null;
+    getDbPath = () => {
+      const dataDir = import_path.default.join(import_electron.app.getPath("userData"), "data");
+      if (!import_fs.default.existsSync(dataDir)) import_fs.default.mkdirSync(dataDir, { recursive: true });
+      return import_path.default.join(dataDir, "db.json");
+    };
+    getDefaultData = () => ({
+      user_profile: [],
+      email_config: [],
+      job_preferences: [],
+      ai_models: [],
+      job_websites: [],
+      company_monitoring: [],
+      job_listings: [],
+      applications: [],
+      action_logs: [],
+      email_alerts: [],
+      documents: [],
+      search_profiles: [],
+      settings: [],
+      questions: []
+    });
+    saveDb = () => {
+      try {
+        import_fs.default.writeFileSync(getDbPath(), JSON.stringify(dbData, null, 2));
+        console.log("DB: Saved to disk");
+      } catch (e) {
+        console.error("DB: Save failed", e);
+      }
+    };
+    toSnakeCase = (str) => str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+    mapToSnakeCase = (obj) => {
+      const newObj = {};
+      for (const key in obj) {
+        newObj[toSnakeCase(key)] = obj[key];
+      }
+      return newObj;
+    };
+  }
+});
+
+// src/main/features/secretary-service.ts
+async function monitorConfirmations(userId) {
+  const configRes = await getAllQuery("SELECT * FROM email_config");
+  const config = configRes[0];
+  if (!config || !config.email_user || !config.email_password) return;
+  const confirmation = await performImapSearch(config, ["UNSEEN"], (text, subject) => {
+    const keywords = ["application received", "thank you for applying", "confirmation", "received your application"];
+    const combined = (text + " " + subject).toLowerCase();
+    if (keywords.some((k) => combined.includes(k))) {
+      return { subject, snippet: text.substring(0, 200) };
+    }
+    return null;
+  });
+  if (confirmation) {
+    await logAction(userId, "ai_secretary", `\u{1F4EC} Received confirmation: ${confirmation.subject}`, "completed", true);
+    await runQuery("INSERT INTO email_alerts", {
+      user_id: userId,
+      alert_type: "confirmation",
+      subject: confirmation.subject,
+      snippet: confirmation.snippet,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  }
+}
+async function performImapSearch(config, criteria, extractor) {
+  return new Promise((resolve) => {
+    const imap = new import_imap.default({
+      user: config.email_user,
+      password: config.email_password,
+      host: config.imap_host,
+      port: config.imap_port || 993,
+      tls: true,
+      tlsOptions: { rejectUnauthorized: false }
+    });
+    imap.once("ready", () => {
+      imap.openBox("INBOX", false, (err) => {
+        if (err) {
+          console.error("IMAP: Could not open inbox", err);
+          imap.end();
+          resolve(null);
+          return;
+        }
+        imap.search(criteria, (err2, results) => {
+          if (err2 || !results || results.length === 0) {
+            imap.end();
+            resolve(null);
+            return;
+          }
+          const f = imap.fetch(results[results.length - 1], { bodies: "" });
+          f.on("message", (msg) => {
+            msg.on("body", async (stream) => {
+              const parsed = await (0, import_mailparser.simpleParser)(stream);
+              const result = extractor(parsed.text || "", parsed.subject || "");
+              resolve(result);
+            });
+          });
+          f.once("end", () => imap.end());
+        });
+      });
+    });
+    imap.once("error", (err) => {
+      console.error("IMAP Connection Error:", err);
+      resolve(null);
+    });
+    imap.connect();
+  });
+}
+var import_imap, import_mailparser;
+var init_secretary_service = __esm({
+  "src/main/features/secretary-service.ts"() {
+    import_imap = __toESM(require("imap"), 1);
+    import_mailparser = require("mailparser");
+    init_database();
+  }
+});
+
+// src/main/features/scheduler.ts
+var scheduler_exports = {};
+__export(scheduler_exports, {
+  setSchedulerEnabled: () => setSchedulerEnabled,
+  startHuntingScheduler: () => startHuntingScheduler
+});
+function setSchedulerEnabled(enabled) {
+  schedulerEnabled = enabled;
+  console.log(`Scheduler: ${enabled ? "ENABLED" : "DISABLED"}`);
+}
+function startHuntingScheduler(userId, startHunterSearch3, callAI2) {
+  return setInterval(async () => {
+    const db = getDatabase();
+    const settings = db.settings[0];
+    if (!settings || settings.job_hunting_active !== 1) {
+      return;
+    }
+    if (!schedulerEnabled) {
+      console.log("Scheduler: Skipping - not explicitly enabled");
+      return;
+    }
+    const websites = db.job_websites.filter((w) => w.is_active === 1);
+    const now = /* @__PURE__ */ new Date();
+    for (const website of websites) {
+      const lastChecked = website.last_checked ? new Date(website.last_checked) : /* @__PURE__ */ new Date(0);
+      const hoursSinceLastCheck = (now.getTime() - lastChecked.getTime()) / (1e3 * 60 * 60);
+      const frequency = website.site_type === "career_page" ? 24 : website.check_frequency || 4;
+      if (hoursSinceLastCheck >= frequency) {
+        console.log(`Scheduler: Checking ${website.website_name}...`);
+        await startHunterSearch3(userId, callAI2);
+        await runQuery("UPDATE job_websites", { id: website.id, last_checked: now.toISOString() });
+      }
+    }
+    try {
+      await monitorConfirmations(userId);
+    } catch (e) {
+      console.error("Scheduler: Secretary monitoring failed", e);
+    }
+  }, 6e4);
+}
+var schedulerEnabled;
+var init_scheduler = __esm({
+  "src/main/features/scheduler.ts"() {
+    init_database();
+    init_secretary_service();
+    schedulerEnabled = false;
+  }
+});
+
+// electron-main.ts
+var import_electron4 = require("electron");
+var import_path4 = __toESM(require("path"), 1);
+var import_electron_is_dev = __toESM(require("electron-is-dev"), 1);
+init_database();
 
 // src/main/ipc-handlers.ts
+init_database();
 var import_electron3 = require("electron");
 
 // src/main/ai-service.ts
+init_database();
 var import_axios = __toESM(require("axios"), 1);
+
+// src/main/features/Hunter-engine.ts
+init_database();
 
 // src/main/scraper-service.ts
 var import_puppeteer = __toESM(require("puppeteer"), 1);
+init_database();
 var import_path2 = __toESM(require("path"), 1);
 var app2;
 try {
@@ -872,6 +1017,7 @@ Profile: ${profile.job_title} in ${profile.location}`);
 }
 
 // src/main/features/doc-generator.ts
+init_database();
 async function generateTailoredDocs(job, userId, thinker, auditor, options, callAI2) {
   const db = getDatabase();
   const userProfile = db.user_profile.find((p) => p.id === userId) || db.user_profile[0];
@@ -1019,110 +1165,11 @@ Please fix these issues in the new version.` : ""}
   }
 }
 
-// src/main/features/secretary-service.ts
-var import_imap = __toESM(require("imap"), 1);
-var import_mailparser = require("mailparser");
-async function monitorConfirmations(userId) {
-  const configRes = await getAllQuery("SELECT * FROM email_config");
-  const config = configRes[0];
-  if (!config || !config.email_user || !config.email_password) return;
-  const confirmation = await performImapSearch(config, ["UNSEEN"], (text, subject) => {
-    const keywords = ["application received", "thank you for applying", "confirmation", "received your application"];
-    const combined = (text + " " + subject).toLowerCase();
-    if (keywords.some((k) => combined.includes(k))) {
-      return { subject, snippet: text.substring(0, 200) };
-    }
-    return null;
-  });
-  if (confirmation) {
-    await logAction(userId, "ai_secretary", `\u{1F4EC} Received confirmation: ${confirmation.subject}`, "completed", true);
-    await runQuery("INSERT INTO email_alerts", {
-      user_id: userId,
-      alert_type: "confirmation",
-      subject: confirmation.subject,
-      snippet: confirmation.snippet,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    });
-  }
-}
-async function performImapSearch(config, criteria, extractor) {
-  return new Promise((resolve) => {
-    const imap = new import_imap.default({
-      user: config.email_user,
-      password: config.email_password,
-      host: config.imap_host,
-      port: config.imap_port || 993,
-      tls: true,
-      tlsOptions: { rejectUnauthorized: false }
-    });
-    imap.once("ready", () => {
-      imap.openBox("INBOX", false, (err) => {
-        if (err) {
-          console.error("IMAP: Could not open inbox", err);
-          imap.end();
-          resolve(null);
-          return;
-        }
-        imap.search(criteria, (err2, results) => {
-          if (err2 || !results || results.length === 0) {
-            imap.end();
-            resolve(null);
-            return;
-          }
-          const f = imap.fetch(results[results.length - 1], { bodies: "" });
-          f.on("message", (msg) => {
-            msg.on("body", async (stream) => {
-              const parsed = await (0, import_mailparser.simpleParser)(stream);
-              const result = extractor(parsed.text || "", parsed.subject || "");
-              resolve(result);
-            });
-          });
-          f.once("end", () => imap.end());
-        });
-      });
-    });
-    imap.once("error", (err) => {
-      console.error("IMAP Connection Error:", err);
-      resolve(null);
-    });
-    imap.connect();
-  });
-}
-
-// src/main/features/scheduler.ts
-var schedulerEnabled = false;
-function startHuntingScheduler(userId, startHunterSearch3, callAI2) {
-  return setInterval(async () => {
-    const db = getDatabase();
-    const settings = db.settings[0];
-    if (!settings || settings.job_hunting_active !== 1) {
-      return;
-    }
-    if (!schedulerEnabled) {
-      console.log("Scheduler: Skipping - not explicitly enabled");
-      return;
-    }
-    const websites = db.job_websites.filter((w) => w.is_active === 1);
-    const now = /* @__PURE__ */ new Date();
-    for (const website of websites) {
-      const lastChecked = website.last_checked ? new Date(website.last_checked) : /* @__PURE__ */ new Date(0);
-      const hoursSinceLastCheck = (now.getTime() - lastChecked.getTime()) / (1e3 * 60 * 60);
-      const frequency = website.site_type === "career_page" ? 24 : website.check_frequency || 4;
-      if (hoursSinceLastCheck >= frequency) {
-        console.log(`Scheduler: Checking ${website.website_name}...`);
-        await startHunterSearch3(userId, callAI2);
-        await runQuery("UPDATE job_websites", { id: website.id, last_checked: now.toISOString() });
-      }
-    }
-    try {
-      await monitorConfirmations(userId);
-    } catch (e) {
-      console.error("Scheduler: Secretary monitoring failed", e);
-    }
-  }, 6e4);
-}
+// src/main/ai-service.ts
+init_scheduler();
 
 // src/main/features/application-submitter.ts
+init_database();
 var import_puppeteer2 = __toESM(require("puppeteer"), 1);
 var import_path3 = __toESM(require("path"), 1);
 var import_electron2 = require("electron");
@@ -1628,6 +1675,28 @@ function setupIpcHandlers() {
     try {
       const data = await getAllQuery("SELECT * FROM applications");
       return { success: true, data };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("scheduler:toggle", async (_, enabled) => {
+    try {
+      const { setSchedulerEnabled: setSchedulerEnabled2 } = (init_scheduler(), __toCommonJS(scheduler_exports));
+      setSchedulerEnabled2(enabled);
+      await runQuery("UPDATE settings", { job_hunting_active: enabled ? 1 : 0 });
+      return { success: true, enabled };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("scheduler:get-status", async () => {
+    try {
+      const db = getDatabase();
+      const settings = db.settings[0];
+      return {
+        success: true,
+        enabled: (settings == null ? void 0 : settings.job_hunting_active) === 1
+      };
     } catch (e) {
       return { success: false, error: e.message };
     }

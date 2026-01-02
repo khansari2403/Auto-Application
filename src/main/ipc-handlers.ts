@@ -381,7 +381,33 @@ export function setupIpcHandlers(): void {
     }
   });
 
-  // Start scheduler
+  // --- SCHEDULER CONTROL ---
+  ipcMain.handle('scheduler:toggle', async (_, enabled) => {
+    try {
+      const { setSchedulerEnabled } = require('./features/scheduler');
+      setSchedulerEnabled(enabled);
+      // Also update settings in database
+      await runQuery('UPDATE settings', { job_hunting_active: enabled ? 1 : 0 });
+      return { success: true, enabled };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('scheduler:get-status', async () => {
+    try {
+      const db = getDatabase();
+      const settings = db.settings[0];
+      return { 
+        success: true, 
+        enabled: settings?.job_hunting_active === 1 
+      };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // Start scheduler (but disabled by default)
   aiService.startHuntingScheduler(1);
   
   console.log('✅ IPC Handlers registered successfully');

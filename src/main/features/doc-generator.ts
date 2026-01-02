@@ -562,18 +562,31 @@ ${feedback ? `PREVIOUS FEEDBACK FROM AUDITOR: ${feedback}\nPlease fix these issu
 
 ${baseContext}
 
+CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
+1. DO NOT fabricate or hallucinate any information - use ONLY data from the provided profile
+2. DO NOT invent job titles, companies, dates, or achievements not in the profile
+3. DO NOT include any JSON formatting or markdown code blocks
+4. DO NOT add meta-commentary like "Here is your CV"
+
 REQUIREMENTS:
 1. Tailor the CV specifically to the job requirements
-2. Highlight relevant experiences and skills that match the job description
-3. Use action verbs and quantify achievements where possible
+2. Highlight relevant experiences and skills that match the job description - but ONLY from the provided profile
+3. Use action verbs and quantify achievements where the data exists in the profile
 4. Keep it ATS-friendly (no tables, columns, graphics)
-5. Include contact information at the top
+5. Include contact information at the top (from the profile)
 6. Language: Match the job description language
-7. Structure: Professional Summary, Work Experience, Education, Skills, Certifications
+7. Structure: Contact Info, Professional Summary, Work Experience, Education, Skills, Certifications, Languages
 
-IMPORTANT: Generate a complete, professional CV document. Do NOT include any JSON formatting, markdown code blocks, or meta-commentary. Output ONLY the plain text CV content that can be directly used.
+STRUCTURE:
+- CONTACT: Name, Title, Email, Phone, Location (from profile)
+- PROFESSIONAL SUMMARY: 3-4 sentences summarizing experience relevant to this role
+- WORK EXPERIENCE: List jobs from profile with title, company, dates, and bullet points
+- EDUCATION: List degrees from profile
+- SKILLS: List skills from profile, prioritizing those matching job requirements
+- CERTIFICATIONS: List certifications from profile
+- LANGUAGES: List languages from profile
 
-OUTPUT FORMAT: Return ONLY the CV content in clean text format. Use clear section headings like "PROFESSIONAL SUMMARY", "WORK EXPERIENCE", etc.`,
+OUTPUT FORMAT: Return ONLY the CV content in clean text format. Use clear section headings.`,
 
     motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter that fills ONE FULL PAGE (400-500 words).
 

@@ -427,27 +427,10 @@ function LinkedInSection({ userId }: { userId: number }) {
         
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button 
-            onClick={handleOpenLinkedIn} 
-            style={{ padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', border: '1px solid #0077b5', background: 'var(--card-bg)', color: '#0077b5' }}
-          >
-            1. Open LinkedIn
-          </button>
-          <button 
-            onClick={handleCaptureProfile}
-            disabled={isScraping}
-            style={{ 
-              padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', 
-              border: 'none', background: '#0077b5', color: '#fff', fontWeight: 'bold',
-              opacity: isScraping ? 0.7 : 1
-            }}
-          >
-            {isScraping ? '⏳ Capturing...' : '2. Capture Profile Data'}
-          </button>
-          <button 
             onClick={() => setIsReviewing(true)}
-            style={{ padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text-primary)' }}
+            style={{ padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', border: 'none', background: '#0077b5', color: '#fff', fontWeight: 'bold' }}
           >
-            ✏️ Manual Entry
+            ✏️ Edit Profile
           </button>
         </div>
       </div>

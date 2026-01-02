@@ -81,32 +81,6 @@ export function setupIpcHandlers(): void {
     }
   });
 
-  ipcMain.handle('user:capture-linkedin', async () => {
-    try {
-      // This will attempt to capture LinkedIn data from the active browser
-      // For now, return a mock structure that the user can fill in manually
-      // Full implementation would require Playwright/Puppeteer
-      return { 
-        success: true, 
-        data: {
-          name: '',
-          title: '',
-          location: '',
-          photo: '',
-          summary: '',
-          experienceList: [],
-          educationList: [],
-          skillList: [],
-          licenseList: [],
-          languageList: []
-        },
-        message: 'LinkedIn capture requires browser automation. Please use manual entry for now.'
-      };
-    } catch (e: any) {
-      return { success: false, error: e.message };
-    }
-  });
-
   // --- SEARCH PROFILES ---
   ipcMain.handle('profiles:get-all', async () => {
     try {

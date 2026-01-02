@@ -2850,28 +2850,6 @@ function setupIpcHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron3.ipcMain.handle("user:capture-linkedin", async () => {
-    try {
-      return {
-        success: true,
-        data: {
-          name: "",
-          title: "",
-          location: "",
-          photo: "",
-          summary: "",
-          experienceList: [],
-          educationList: [],
-          skillList: [],
-          licenseList: [],
-          languageList: []
-        },
-        message: "LinkedIn capture requires browser automation. Please use manual entry for now."
-      };
-    } catch (e) {
-      return { success: false, error: e.message };
-    }
-  });
   import_electron3.ipcMain.handle("profiles:get-all", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM search_profiles");

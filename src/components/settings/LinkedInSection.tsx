@@ -359,24 +359,18 @@ function LinkedInSection({ userId }: { userId: number }) {
         </p>
       </div>
 
-      <div style={{ background: '#f5f5f5', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
+      <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
         <label style={labelStyle}>LinkedIn Profile URL</label>
         <input 
           type="text" 
           value={url} 
           onChange={e => setUrl(e.target.value)} 
-          style={{ width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc' }} 
+          style={{ width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)' }} 
           placeholder="https://linkedin.com/in/your-profile" 
         />
         <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button onClick={() => (window as any).electron.invoke('user:open-linkedin', url)} style={{ padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', border: '1px solid #0077b5', background: '#fff', color: '#0077b5' }}>
-            1. Open LinkedIn
-          </button>
-          <button onClick={handleCapture} style={{ padding: '12px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-            2. Capture & Import Profile
-          </button>
-          <button onClick={() => setIsReviewing(true)} style={{ padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', border: '1px solid #666', background: '#fff', color: '#666' }}>
-            ✏️ Manual Entry / Edit Profile
+          <button onClick={() => (window as any).electron.invoke('user:open-linkedin', url)} style={{ padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', border: '1px solid #0077b5', background: 'var(--card-bg)', color: '#0077b5' }}>
+            Open LinkedIn
           </button>
         </div>
       </div>

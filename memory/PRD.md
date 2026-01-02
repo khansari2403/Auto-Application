@@ -137,6 +137,11 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [x] New "Interview Insider" tab with HR AI
 - [x] Girlish themes added (Rose Petal, Lavender Dream)
 - [x] Headshot upload in Manual Profile
+- [x] **Job Hunting Timer** - Schedule start/end time for auto hunting
+- [x] **Auto-Apply Criteria** - Set minimum compatibility (Yellow/Green/Gold)
+- [x] **Compatibility Score Dial** - Vertical gauge on Job Search (Red→Yellow→Green→Gold)
+- [x] **Document Rejection Explanation** - Shows why auditor rejected and tips
+- [x] **Interview Social Decorum** - Online/In-person etiquette, body language, dress code tips
 
 ### P1 - High Priority (Testing Needed)
 - [ ] End-to-end test of Smart Apply flow
@@ -147,7 +152,6 @@ Settings are stored in `settings.secretary_settings` as JSON:
 ### P2 - Medium Priority
 - [ ] Secretary Authentication Flow
 - [ ] Storage directory structure (Company/Position/Files)
-- [ ] Compatibility score dial on Job Search
 
 ### P3 - Low Priority
 - [ ] Full email integration (SMTP/IMAP)
@@ -155,6 +159,29 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [ ] Email verification flow completion
 
 ## Changes Made - December 2025
+
+### Session 4 - Job Hunting Controls & Interview Decorum
+1. **Job Hunting Control Center** - New component with:
+   - Schedule Timer: Set start/end time (e.g., 9:00-14:00) for hunting
+   - Auto-Apply Criteria: Choose minimum compatibility level (Yellow/Green/Gold)
+   - Visual status indicator when hunting is active
+2. **Compatibility Score Dial** - Vertical gauge showing match level:
+   - Red (0-25%): Poor match
+   - Yellow (26-50%): Fair match
+   - Green (51-75%): Good match
+   - Gold (76-100%): Perfect match
+3. **Document Rejection Explanation** - When auditor rejects a document:
+   - Shows warning icon (⚠) on document
+   - Click to see rejection reason
+   - Explains why (profile mismatch, missing data, etc.)
+   - Tips on how to improve
+4. **Interview Social Decorum Section** - Added to Interview Insider:
+   - Online Interview Tips (tech, background, lighting)
+   - In-Person Interview Tips (arrival, greeting, posture)
+   - Body Language (eye contact, smile, open posture)
+   - Dress Code Guide (research, colors, grooming)
+   - Making a Great Impression (authenticity, enthusiasm)
+   - Communication Tips (clarity, conciseness, pausing)
 
 ### Session 3 - New Features
 1. **Theme Dropdown Fix** - Added useRef and useEffect for proper click-outside handling

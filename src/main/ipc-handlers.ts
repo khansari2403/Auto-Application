@@ -12,7 +12,7 @@ export function setupIpcHandlers(): void {
     'hunter:start-search', 'ai:process-application', 'ai:generate-tailored-docs',
     'ai:fetch-models',
     'docs:get-all', 'docs:save', 'docs:open-file',
-    'websites:get-all', 'websites:add', 'websites:delete',
+    'websites:get-all', 'websites:add', 'websites:delete', 'websites:toggle-active',
     'ai-models:get-all', 'ai-models:add', 'ai-models:update', 'ai-models:delete',
     'logs:get-recent-actions', 'apps:get-all'
   ];

@@ -20,7 +20,6 @@ export const availableLanguages: { code: Language; name: string; nativeName: str
   { code: 'zh', name: 'Chinese', nativeName: '中文' },
   { code: 'ja', name: 'Japanese', nativeName: '日本語' },
   { code: 'ko', name: 'Korean', nativeName: '한국어' },
-  { code: 'ar', name: 'Arabic', nativeName: 'العربية' },
 ];
 
 export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

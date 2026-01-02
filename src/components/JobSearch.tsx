@@ -75,22 +75,116 @@ export function JobSearch({ userId }: { userId: number }) {
 
   useEffect(() => { loadData(); const i = setInterval(loadData, 5000); return () => clearInterval(i); }, [userId]);
 
-  const handleApply = async (jobId: number) => {
+  // Smart Apply - uses AI to fill forms and handle questions
+  const handleSmartApply = async (jobId: number) => {
     const job = jobs.find(j => j.id === jobId);
-    if (docOptions.manualReview && !job.user_confirmed_docs) {
-      alert("Please review and confirm you are happy with the custom files before applying.");
-      return;
+    
+    // Check if documents are ready
+    const hasAllDocs = (!docOptions.cv || job.cv_status === 'auditor_done') &&
+                       (!docOptions.motivationLetter || job.motivation_letter_status === 'auditor_done') &&
+                       (!docOptions.coverLetter || job.cover_letter_status === 'auditor_done');
+    
+    if (!hasAllDocs) {
+      const confirmGen = confirm('Some documents are not ready. Generate them first?');
+      if (confirmGen) {
+        await handleGenerateDocs(jobId);
+        return;
+      }
     }
+    
     setProcessingId(jobId);
+    setActiveJobId(jobId);
+    
     try {
-      const result = await (window as any).electron.invoke('ai:process-application', jobId, userId);
-      if (!result.success) alert('Application Failed: ' + result.error);
+      const result = await (window as any).electron.invoke('ai:smart-apply', { jobId, userId });
+      
+      if (result.status === 'questions_pending' && result.pendingQuestions?.length > 0) {
+        // Show Q&A modal with pending questions
+        setPendingQuestions(result.pendingQuestions);
+        setShowQAModal(true);
+      } else if (result.status === 'submitted') {
+        alert('🎉 Application submitted successfully!');
+      } else if (result.status === 'review_needed') {
+        alert('Please review the form in the browser window and submit manually.');
+      } else if (!result.success) {
+        alert('Application Error: ' + result.error);
+      }
     } catch (e: any) {
       alert('Application Error: ' + e.message);
     } finally {
       setProcessingId(null);
       loadData();
     }
+  };
+
+  // Handle answers from Q&A modal
+  const handleAnswersSubmit = async (answers: Array<{ field: string; answer: string; saveForLater: boolean }>) => {
+    if (!activeJobId) return;
+    
+    setShowQAModal(false);
+    setProcessingId(activeJobId);
+    
+    try {
+      const result = await (window as any).electron.invoke('ai:continue-application', {
+        jobId: activeJobId,
+        userId,
+        answers
+      });
+      
+      if (result.status === 'questions_pending' && result.pendingQuestions?.length > 0) {
+        setPendingQuestions(result.pendingQuestions);
+        setShowQAModal(true);
+      } else if (result.status === 'submitted') {
+        alert('🎉 Application submitted successfully!');
+        setPendingQuestions([]);
+        setActiveJobId(null);
+      } else if (!result.success) {
+        alert('Error: ' + result.error);
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      setProcessingId(null);
+      loadData();
+    }
+  };
+
+  // Cancel active application
+  const handleCancelApplication = async () => {
+    if (activeJobId) {
+      await (window as any).electron.invoke('ai:cancel-application', activeJobId);
+    }
+    setShowQAModal(false);
+    setPendingQuestions([]);
+    setActiveJobId(null);
+    setProcessingId(null);
+  };
+
+  // Convert documents to PDF
+  const handleConvertToPdf = async (jobId: number) => {
+    setProcessingId(jobId);
+    try {
+      const result = await (window as any).electron.invoke('docs:convert-all-pdf', { jobId, userId });
+      if (result.success) {
+        alert(`✅ ${result.pdfs.length} PDF(s) created successfully!`);
+      } else {
+        alert('PDF conversion failed: ' + (result.errors?.join(', ') || 'Unknown error'));
+      }
+    } catch (e: any) {
+      alert('Error: ' + e.message);
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleApply = async (jobId: number) => {
+    const job = jobs.find(j => j.id === jobId);
+    if (docOptions.manualReview && !job.user_confirmed_docs) {
+      alert("Please review and confirm you are happy with the custom files before applying.");
+      return;
+    }
+    // Use smart apply instead of old apply
+    await handleSmartApply(jobId);
   };
 
   const handleGenerateDocs = async (jobId: number) => {

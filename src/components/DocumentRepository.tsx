@@ -55,9 +55,11 @@ export function DocumentRepository({ userId }: { userId: number }) {
   };
 
   const renderPreview = (doc: any) => {
-    if (!doc.content) return <div style={{ padding: '60px', textAlign: 'center', color: '#666' }}>No content available.</div>;
+    if (!doc || !doc.content) return <div style={{ padding: '60px', textAlign: 'center', color: 'var(--text-tertiary)' }}>No content available.</div>;
 
-    if (doc.file_type.includes('image')) {
+    const fileType = doc.file_type || '';
+    
+    if (fileType.includes('image')) {
       return <img src={doc.content} style={{ maxWidth: '100%', borderRadius: '8px' }} />;
     }
 

@@ -579,35 +579,35 @@ export function SearchProfiles({ userId }: { userId: number }) {
         </div>
         
         <div style={{ textAlign: 'center', marginTop: '15px' }}>
-          <button onClick={() => setEditing(null)} style={{ padding: '10px 30px', background: '#ccc', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+          <button onClick={() => setEditing(null)} style={{ padding: '10px 30px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h2>🔍 Search Profiles</h2>
+    <div style={{ padding: '20px', background: 'var(--bg-primary)' }}>
+      <h2 style={{ color: 'var(--text-primary)' }}>🔍 Search Profiles</h2>
       <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-        <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="New Profile Name..." style={{ padding: '10px', borderRadius: '8px', border: '1px solid #ccc', flex: 1 }} />
+        <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="New Profile Name..." style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border)', flex: 1, background: 'var(--input-bg)', color: 'var(--text-primary)' }} />
         <button onClick={async () => { 
           if(!newName) return; 
           await (window as any).electron.invoke('profiles:save', { userId, profileName: newName, is_active: 1 }); 
           setNewName(''); 
           loadProfiles(); 
-        }} style={{ padding: '10px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Create Profile</button>
+        }} style={{ padding: '10px 20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>+ Create Profile</button>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '15px' }}>
         {profiles.map(p => (
-          <div key={p.id} style={{ padding: '20px', border: '1px solid #ddd', borderRadius: '12px', background: p.is_speculative ? '#fffde7' : '#fff', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-            <div style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '10px' }}>{p.profile_name} {p.is_speculative && '🚀'}</div>
-            <div style={{ fontSize: '12px', color: '#666', marginBottom: '15px' }}>
+          <div key={p.id} style={{ padding: '20px', border: '1px solid var(--border)', borderRadius: '12px', background: p.is_speculative ? 'var(--warning-light)' : 'var(--card-bg)', boxShadow: 'var(--shadow-sm)' }}>
+            <div style={{ fontWeight: 'bold', fontSize: '16px', marginBottom: '10px', color: 'var(--text-primary)' }}>{p.profile_name} {p.is_speculative && '🚀'}</div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '15px' }}>
               📍 {p.location || 'Any'} | 🏢 {p.industry || 'Any'}
             </div>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setEditing(p)} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid #0077b5', color: '#0077b5', background: '#fff', cursor: 'pointer' }}>⚙️ Configure</button>
-              <button onClick={async () => { await (window as any).electron.invoke('profiles:update', { ...p, is_active: p.is_active ? 0 : 1 }); loadProfiles(); }} style={{ padding: '8px 15px', borderRadius: '6px', border: 'none', background: p.is_active ? '#4CAF50' : '#ccc', color: '#fff', cursor: 'pointer' }}>{p.is_active ? 'ON' : 'OFF'}</button>
-              {!p.is_speculative && <button onClick={async () => { if(confirm("Delete this profile?")) { await (window as any).electron.invoke('profiles:delete', p.id); loadProfiles(); } }} style={{ padding: '8px', borderRadius: '6px', border: '1px solid #f44336', color: '#f44336', background: '#fff', cursor: 'pointer' }}>🗑️</button>}
+              <button onClick={() => setEditing(p)} style={{ flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--primary)', color: 'var(--primary)', background: 'var(--card-bg)', cursor: 'pointer' }}>⚙️ Configure</button>
+              <button onClick={async () => { await (window as any).electron.invoke('profiles:update', { ...p, is_active: p.is_active ? 0 : 1 }); loadProfiles(); }} style={{ padding: '8px 15px', borderRadius: '6px', border: 'none', background: p.is_active ? 'var(--success)' : 'var(--text-tertiary)', color: '#fff', cursor: 'pointer' }}>{p.is_active ? 'ON' : 'OFF'}</button>
+              {!p.is_speculative && <button onClick={async () => { if(confirm("Delete this profile?")) { await (window as any).electron.invoke('profiles:delete', p.id); loadProfiles(); } }} style={{ padding: '8px', borderRadius: '6px', border: '1px solid var(--danger)', color: 'var(--danger)', background: 'var(--card-bg)', cursor: 'pointer' }}>🗑️</button>}
             </div>
           </div>
         ))}

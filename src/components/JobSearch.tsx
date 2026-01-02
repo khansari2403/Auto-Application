@@ -197,22 +197,22 @@ export function JobSearch({ userId }: { userId: number }) {
         </div>
       </div>
 
-      <h2>🎯 Found Jobs</h2>
-      <div style={{ overflowX: 'auto', background: '#fff', borderRadius: '12px', border: '1px solid #eee' }}>
+      <h2 style={{ color: 'var(--text-primary)' }}>🎯 Found Jobs</h2>
+      <div style={{ overflowX: 'auto', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead>
-            <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #eee' }}>
-              <th style={{ padding: '10px', textAlign: 'center', background: '#e3f2fd', color: '#0d47a1', width: '120px' }}>DOCs</th>
+            <tr style={{ background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border)' }}>
+              <th style={{ padding: '12px', textAlign: 'center', background: 'var(--info-light)', color: 'var(--info)', width: '120px' }}>DOCs</th>
               {allColumns.filter(c => visibleColumns.includes(c.id)).map(col => (
-                <th key={col.id} style={{ padding: '10px', textAlign: 'left', whiteSpace: 'nowrap' }}>{col.label}</th>
+                <th key={col.id} style={{ padding: '12px', textAlign: 'left', whiteSpace: 'nowrap', color: 'var(--text-primary)' }}>{col.label}</th>
               ))}
-              <th style={{ padding: '10px', textAlign: 'center' }}>Actions</th>
+              <th style={{ padding: '12px', textAlign: 'center', color: 'var(--text-primary)' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {jobs.map(job => (
-              <tr key={job.id} style={{ borderBottom: '1px solid #eee', background: job.status === 'ghost_job_detected' ? '#fff3e0' : 'transparent' }}>
-                <td style={{ padding: '10px', background: '#f9fcff' }}>
+              <tr key={job.id} style={{ borderBottom: '1px solid var(--border)', background: job.status === 'ghost_job_detected' ? 'var(--warning-light)' : 'transparent' }}>
+                <td style={{ padding: '12px', background: 'var(--bg-tertiary)' }}>
                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                     {docOptions.cv && renderDocIcon(job, 'cv', 'CV', 'CV')}
                     {docOptions.motivationLetter && renderDocIcon(job, 'motivation_letter', 'Motivation Letter', 'ML')}
@@ -222,30 +222,30 @@ export function JobSearch({ userId }: { userId: number }) {
                   </div>
                 </td>
                 {visibleColumns.includes('job_title') && (
-                  <td style={{ padding: '10px' }}>
+                  <td style={{ padding: '12px' }}>
                     <a href={job.url} target='_blank' rel='noreferrer' style={{ color: '#0077b5', textDecoration: 'none', fontWeight: 'bold' }}>{job.job_title} 🔗</a>
-                    {job.status === 'ghost_job_detected' && <div style={{ fontSize: '9px', color: '#ef6c00', fontWeight: 'bold' }}>👻 GHOST JOB DETECTED</div>}
+                    {job.status === 'ghost_job_detected' && <div style={{ fontSize: '9px', color: 'var(--warning)', fontWeight: 'bold' }}>👻 GHOST JOB DETECTED</div>}
                   </td>
                 )}
                 {allColumns.filter(c => visibleColumns.includes(c.id) && c.id !== 'job_title').map(col => (
-                  <td key={col.id} style={{ padding: '10px' }}>{job[col.id] || 'N/A'}</td>
+                  <td key={col.id} style={{ padding: '12px', color: 'var(--text-secondary)' }}>{job[col.id] || 'N/A'}</td>
                 ))}
-                <td style={{ padding: '10px', textAlign: 'center' }}>
+                <td style={{ padding: '12px', textAlign: 'center' }}>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', alignItems: 'center' }}>
                     {job.status === 'ghost_job_detected' ? (
-                      <button onClick={() => handleGenerateDocs(job.id)} style={{ padding: '5px 10px', background: '#ef6c00', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}>Make Documents for this Position</button>
+                      <button onClick={() => handleGenerateDocs(job.id)} style={{ padding: '6px 12px', background: 'var(--warning)', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '10px', cursor: 'pointer', fontWeight: 'bold' }}>Make Documents for this Position</button>
                     ) : (
                       <>
                         {docOptions.manualReview && (
-                          <label style={{ fontSize: '9px', color: '#666', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <label style={{ fontSize: '9px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
                             <input type="checkbox" checked={!!job.user_confirmed_docs} onChange={(e) => (window as any).electron.invoke('jobs:update-doc-confirmation', { jobId: job.id, confirmed: e.target.checked ? 1 : 0 }).then(loadData)} /> Happy with files?
                           </label>
                         )}
                         <div style={{ display: 'flex', gap: '4px' }}>
-                          <button onClick={() => handleApply(job.id)} disabled={processingId === job.id || (docOptions.manualReview && !job.user_confirmed_docs)} style={{ padding: '5px 15px', background: job.status === 'applied' ? '#999' : '#4CAF50', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
+                          <button onClick={() => handleApply(job.id)} disabled={processingId === job.id || (docOptions.manualReview && !job.user_confirmed_docs)} style={{ padding: '6px 16px', background: job.status === 'applied' ? 'var(--text-tertiary)' : 'var(--success)', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
                             {processingId === job.id ? '...' : job.status === 'applied' ? 'Applied' : 'Apply'}
                           </button>
-                          <button onClick={() => (window as any).electron.invoke('jobs:delete', job.id).then(loadData)} style={{ padding: '5px', background: '#fff', color: '#f44336', border: '1px solid #ffcdd2', borderRadius: '4px', cursor: 'pointer' }}>🗑️</button>
+                          <button onClick={() => (window as any).electron.invoke('jobs:delete', job.id).then(loadData)} style={{ padding: '6px 8px', background: 'var(--card-bg)', color: 'var(--danger)', border: '1px solid var(--danger-light)', borderRadius: '4px', cursor: 'pointer' }}>🗑️</button>
                         </div>
                       </>
                     )}

@@ -14,9 +14,10 @@ import { DocumentRepository } from './components/DocumentRepository';
 import { SearchProfiles } from './components/SearchProfiles';
 import { JobSearch } from './components/JobSearch';
 import { ApplicationInbox } from './components/ApplicationInbox';
+import { InterviewInsider } from './components/InterviewInsider';
 import JobWebsitesSection from './components/settings/JobWebsitesSection';
 
-type TabType = 'settings' | 'documents' | 'websites' | 'profiles' | 'search' | 'applications' | 'inbox' | 'alerts' | 'logs';
+type TabType = 'settings' | 'documents' | 'websites' | 'profiles' | 'search' | 'applications' | 'inbox' | 'alerts' | 'logs' | 'interview';
 
 const tabNames: Record<TabType, string> = {
   settings: 'Settings',
@@ -28,6 +29,7 @@ const tabNames: Record<TabType, string> = {
   inbox: 'Inbox',
   alerts: 'Alerts',
   logs: 'Logs',
+  interview: 'Interview Insider',
 };
 
 /**
@@ -54,6 +56,7 @@ function AppContent() {
     { tab: 'websites', labelKey: 'jobWebsites' },
     { tab: 'profiles', labelKey: 'searchProfiles' },
     { tab: 'search', labelKey: 'jobSearch' },
+    { tab: 'interview', labelKey: 'interviewInsider' },
     { tab: 'applications', labelKey: 'applications' },
     { tab: 'inbox', labelKey: 'inbox' },
     { tab: 'alerts', labelKey: 'alerts' },
@@ -76,32 +79,36 @@ function AppContent() {
       </header>
 
       <nav className="app-nav" data-testid="app-nav">
-        {navItems.map(({ tab, labelKey }) => (
-          <button
-            key={tab}
-            className={`nav-button ${currentTab === tab ? 'active' : ''}`}
-            onClick={() => setCurrentTab(tab)}
-            data-testid={`nav-${tab}`}
-          >
-            {t(labelKey)}
-          </button>
-        ))}
+        <div className="nav-main">
+          {navItems.map(({ tab, labelKey }) => (
+            <button
+              key={tab}
+              className={`nav-button ${currentTab === tab ? 'active' : ''}`}
+              onClick={() => setCurrentTab(tab)}
+              data-testid={`nav-${tab}`}
+            >
+              {t(labelKey)}
+            </button>
+          ))}
+        </div>
         
-        {/* External Links */}
-        <button 
-          className="nav-button secondary" 
-          onClick={() => openExternalLink('tutorial')}
-          data-testid="nav-tutorial"
-        >
-          {t('tutorial')}
-        </button>
-        <button 
-          className="nav-button secondary" 
-          onClick={() => openExternalLink('why_free')}
-          data-testid="nav-why-free"
-        >
-          {t('whyFree')}
-        </button>
+        {/* External Links - Right Side */}
+        <div className="nav-secondary">
+          <button 
+            className="nav-button secondary" 
+            onClick={() => openExternalLink('tutorial')}
+            data-testid="nav-tutorial"
+          >
+            {t('tutorial')}
+          </button>
+          <button 
+            className="nav-button secondary" 
+            onClick={() => openExternalLink('why_free')}
+            data-testid="nav-why-free"
+          >
+            {t('whyFree')}
+          </button>
+        </div>
       </nav>
 
       <main className="app-main" data-testid="app-main">
@@ -110,6 +117,7 @@ function AppContent() {
         {currentTab === 'websites' && <JobWebsitesSection userId={userId} />}
         {currentTab === 'profiles' && <SearchProfiles userId={userId} />}
         {currentTab === 'search' && <JobSearch userId={userId} />}
+        {currentTab === 'interview' && <InterviewInsider userId={userId} />}
         {currentTab === 'applications' && <ApplicationsPanel userId={userId} />}
         {currentTab === 'inbox' && <ApplicationInbox userId={userId} />}
         {currentTab === 'alerts' && <EmailAlertsPanel userId={userId} />}

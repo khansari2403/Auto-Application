@@ -325,7 +325,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
               {/* Job Titles Multi-Select */}
               <label style={labelStyle}>Job Titles (Multiple Selection)</label>
               <TagsDisplay items={selectedJobTitles} onRemove={(t) => setSelectedJobTitles(selectedJobTitles.filter(i => i !== t))} />
-              <div style={{ position: 'relative' }}>
+              <div style={{ position: 'relative', zIndex: 100 }}>
                 <input 
                   style={inputStyle}
                   value={jobTitleSearch}
@@ -335,7 +335,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
                 />
                 <button 
                   onClick={addCustomJobTitle}
-                  style={{ position: 'absolute', right: '5px', top: '5px', padding: '4px 8px', fontSize: '10px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                  style={{ position: 'absolute', right: '5px', top: '5px', padding: '4px 8px', fontSize: '10px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
                 >
                   + Add
                 </button>
@@ -345,10 +345,10 @@ export function SearchProfiles({ userId }: { userId: number }) {
                     top: '100%', 
                     left: 0, 
                     right: 0, 
-                    background: '#fff', 
-                    border: '1px solid #ccc', 
+                    background: 'var(--card-bg)', 
+                    border: '1px solid var(--border)', 
                     borderRadius: '6px', 
-                    zIndex: 100, 
+                    zIndex: 9999, 
                     maxHeight: '200px', 
                     overflowY: 'auto',
                     boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
@@ -366,8 +366,9 @@ export function SearchProfiles({ userId }: { userId: number }) {
                           padding: '8px 12px', 
                           cursor: 'pointer', 
                           fontSize: '12px',
-                          borderBottom: '1px solid #f0f0f0',
-                          background: selectedJobTitles.includes(title) ? '#e3f2fd' : 'transparent'
+                          borderBottom: '1px solid var(--border-light)',
+                          background: selectedJobTitles.includes(title) ? 'var(--info-light)' : 'transparent',
+                          color: 'var(--text-primary)'
                         }}
                       >
                         {title} {selectedJobTitles.includes(title) && '✓'}
@@ -375,7 +376,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
                     ))}
                     <div 
                       onClick={() => setShowJobTitleDropdown(false)}
-                      style={{ padding: '8px', textAlign: 'center', fontSize: '11px', color: '#666', cursor: 'pointer', background: '#f5f5f5' }}
+                      style={{ padding: '8px', textAlign: 'center', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer', background: 'var(--bg-secondary)' }}
                     >
                       Close ▲
                     </div>

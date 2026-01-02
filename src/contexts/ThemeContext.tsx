@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
-export type ThemeStyle = 'minimalism' | 'material' | 'glassmorphism' | 'neumorphism';
+export type ThemeStyle = 'minimalism' | 'material' | 'glassmorphism' | 'neumorphism' | 'rosePetal' | 'lavenderDream';
 export type ThemeMode = 'light' | 'dark';
 
 interface ThemeContextType {

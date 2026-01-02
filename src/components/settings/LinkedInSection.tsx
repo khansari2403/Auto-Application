@@ -252,11 +252,11 @@ function LinkedInSection({ userId }: { userId: number }) {
         {/* Experience */}
         <div style={sectionStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <h4 style={{ margin: 0 }}>💼 Work Experience</h4>
-            <button onClick={() => setProfile({...profile, experiences: [{company: '', title: '', location: '', startDate: '', endDate: '', description: ''}, ...profile.experiences]})} style={{ padding: '5px 15px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>+ Add</button>
+            <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>💼 Work Experience</h4>
+            <button onClick={() => setProfile({...profile, experiences: [{company: '', title: '', location: '', startDate: '', endDate: '', description: ''}, ...profile.experiences]})} style={{ padding: '5px 15px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>+ Add</button>
           </div>
           {profile.experiences.map((exp, i) => (
-            <div key={i} style={{ padding: '12px', border: '1px solid #ddd', borderRadius: '8px', marginBottom: '10px', background: '#fff' }}>
+            <div key={i} style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '10px', background: 'var(--card-bg)' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <input style={inputStyle} placeholder="Job Title" value={exp.title} onChange={e => { const newExp = [...profile.experiences]; newExp[i].title = e.target.value; setProfile({...profile, experiences: newExp}); }} />
                 <input style={inputStyle} placeholder="Company" value={exp.company} onChange={e => { const newExp = [...profile.experiences]; newExp[i].company = e.target.value; setProfile({...profile, experiences: newExp}); }} />
@@ -267,7 +267,7 @@ function LinkedInSection({ userId }: { userId: number }) {
                 </div>
               </div>
               <textarea style={{...inputStyle, height: '60px'}} placeholder="Description of role and achievements..." value={exp.description} onChange={e => { const newExp = [...profile.experiences]; newExp[i].description = e.target.value; setProfile({...profile, experiences: newExp}); }} />
-              <button onClick={() => setProfile({...profile, experiences: profile.experiences.filter((_, idx) => idx !== i)})} style={{ background: '#f44336', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Remove</button>
+              <button onClick={() => setProfile({...profile, experiences: profile.experiences.filter((_, idx) => idx !== i)})} style={{ background: 'var(--danger)', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Remove</button>
             </div>
           ))}
         </div>
@@ -275,11 +275,11 @@ function LinkedInSection({ userId }: { userId: number }) {
         {/* Education */}
         <div style={sectionStyle}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-            <h4 style={{ margin: 0 }}>🎓 Education</h4>
-            <button onClick={() => setProfile({...profile, educations: [{school: '', degree: '', field: '', startYear: '', endYear: '', description: ''}, ...profile.educations]})} style={{ padding: '5px 15px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>+ Add</button>
+            <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>🎓 Education</h4>
+            <button onClick={() => setProfile({...profile, educations: [{school: '', degree: '', field: '', startYear: '', endYear: '', description: ''}, ...profile.educations]})} style={{ padding: '5px 15px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '12px' }}>+ Add</button>
           </div>
           {profile.educations.map((edu, i) => (
-            <div key={i} style={{ padding: '12px', border: '1px solid #ddd', borderRadius: '8px', marginBottom: '10px', background: '#fff' }}>
+            <div key={i} style={{ padding: '12px', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '10px', background: 'var(--card-bg)' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <input style={inputStyle} placeholder="School/University" value={edu.school} onChange={e => { const newEdu = [...profile.educations]; newEdu[i].school = e.target.value; setProfile({...profile, educations: newEdu}); }} />
                 <input style={inputStyle} placeholder="Degree" value={edu.degree} onChange={e => { const newEdu = [...profile.educations]; newEdu[i].degree = e.target.value; setProfile({...profile, educations: newEdu}); }} />
@@ -289,59 +289,59 @@ function LinkedInSection({ userId }: { userId: number }) {
                   <input style={{...inputStyle, flex: 1}} placeholder="End Year" value={edu.endYear} onChange={e => { const newEdu = [...profile.educations]; newEdu[i].endYear = e.target.value; setProfile({...profile, educations: newEdu}); }} />
                 </div>
               </div>
-              <button onClick={() => setProfile({...profile, educations: profile.educations.filter((_, idx) => idx !== i)})} style={{ background: '#f44336', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Remove</button>
+              <button onClick={() => setProfile({...profile, educations: profile.educations.filter((_, idx) => idx !== i)})} style={{ background: 'var(--danger)', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Remove</button>
             </div>
           ))}
         </div>
 
         {/* Skills */}
         <div style={sectionStyle}>
-          <h4>🛠️ Skills</h4>
+          <h4 style={{ color: 'var(--text-primary)' }}>🛠️ Skills</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '10px' }}>
             {profile.skills.map((skill, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: '#e3f2fd', borderRadius: '12px', fontSize: '12px' }}>
+              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--info-light)', borderRadius: '12px', fontSize: '12px', color: 'var(--text-primary)' }}>
                 {skill}
-                <button onClick={() => setProfile({...profile, skills: profile.skills.filter((_, idx) => idx !== i)})} style={{ background: 'none', border: 'none', color: '#f44336', cursor: 'pointer', padding: 0 }}>×</button>
+                <button onClick={() => setProfile({...profile, skills: profile.skills.filter((_, idx) => idx !== i)})} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: 0 }}>×</button>
               </span>
             ))}
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <input id="newSkill" style={{...inputStyle, marginBottom: 0, flex: 1}} placeholder="Add new skill..." onKeyPress={e => { if (e.key === 'Enter') { const val = (e.target as HTMLInputElement).value; if (val) { setProfile({...profile, skills: [...profile.skills, val]}); (e.target as HTMLInputElement).value = ''; }}}} />
-            <button onClick={() => { const input = document.getElementById('newSkill') as HTMLInputElement; if (input.value) { setProfile({...profile, skills: [...profile.skills, input.value]}); input.value = ''; }}} style={{ padding: '10px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Add</button>
+            <button onClick={() => { const input = document.getElementById('newSkill') as HTMLInputElement; if (input.value) { setProfile({...profile, skills: [...profile.skills, input.value]}); input.value = ''; }}} style={{ padding: '10px 20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Add</button>
           </div>
         </div>
 
         {/* Certifications */}
         <div style={sectionStyle}>
-          <h4>📜 Licenses & Certifications</h4>
+          <h4 style={{ color: 'var(--text-primary)' }}>📜 Licenses & Certifications</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '10px' }}>
             {profile.licenses.map((lic, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: '#fff3e0', borderRadius: '12px', fontSize: '12px' }}>
+              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--warning-light)', borderRadius: '12px', fontSize: '12px', color: 'var(--text-primary)' }}>
                 {lic}
-                <button onClick={() => setProfile({...profile, licenses: profile.licenses.filter((_, idx) => idx !== i)})} style={{ background: 'none', border: 'none', color: '#f44336', cursor: 'pointer', padding: 0 }}>×</button>
+                <button onClick={() => setProfile({...profile, licenses: profile.licenses.filter((_, idx) => idx !== i)})} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: 0 }}>×</button>
               </span>
             ))}
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <input id="newLicense" style={{...inputStyle, marginBottom: 0, flex: 1}} placeholder="Add certification..." onKeyPress={e => { if (e.key === 'Enter') { const val = (e.target as HTMLInputElement).value; if (val) { setProfile({...profile, licenses: [...profile.licenses, val]}); (e.target as HTMLInputElement).value = ''; }}}} />
-            <button onClick={() => { const input = document.getElementById('newLicense') as HTMLInputElement; if (input.value) { setProfile({...profile, licenses: [...profile.licenses, input.value]}); input.value = ''; }}} style={{ padding: '10px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Add</button>
+            <button onClick={() => { const input = document.getElementById('newLicense') as HTMLInputElement; if (input.value) { setProfile({...profile, licenses: [...profile.licenses, input.value]}); input.value = ''; }}} style={{ padding: '10px 20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Add</button>
           </div>
         </div>
 
         {/* Languages */}
         <div style={sectionStyle}>
-          <h4>🌐 Languages</h4>
+          <h4 style={{ color: 'var(--text-primary)' }}>🌐 Languages</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '10px' }}>
             {profile.languages.map((lang, i) => (
-              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: '#e8f5e9', borderRadius: '12px', fontSize: '12px' }}>
+              <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--success-light)', borderRadius: '12px', fontSize: '12px', color: 'var(--text-primary)' }}>
                 {lang}
-                <button onClick={() => setProfile({...profile, languages: profile.languages.filter((_, idx) => idx !== i)})} style={{ background: 'none', border: 'none', color: '#f44336', cursor: 'pointer', padding: 0 }}>×</button>
+                <button onClick={() => setProfile({...profile, languages: profile.languages.filter((_, idx) => idx !== i)})} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: 0 }}>×</button>
               </span>
             ))}
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
             <input id="newLang" style={{...inputStyle, marginBottom: 0, flex: 1}} placeholder="Add language..." onKeyPress={e => { if (e.key === 'Enter') { const val = (e.target as HTMLInputElement).value; if (val) { setProfile({...profile, languages: [...profile.languages, val]}); (e.target as HTMLInputElement).value = ''; }}}} />
-            <button onClick={() => { const input = document.getElementById('newLang') as HTMLInputElement; if (input.value) { setProfile({...profile, languages: [...profile.languages, input.value]}); input.value = ''; }}} style={{ padding: '10px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Add</button>
+            <button onClick={() => { const input = document.getElementById('newLang') as HTMLInputElement; if (input.value) { setProfile({...profile, languages: [...profile.languages, input.value]}); input.value = ''; }}} style={{ padding: '10px 20px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Add</button>
           </div>
         </div>
       </div>

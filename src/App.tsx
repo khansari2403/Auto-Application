@@ -1,5 +1,11 @@
 import { useState } from 'react';
+import './styles/app.css';
 import './App.css';
+import { ThemeProvider, useTheme } from './contexts/ThemeContext';
+import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
+import { ThemeSelector } from './components/common/ThemeSelector';
+import { LanguageSelector } from './components/common/LanguageSelector';
+import { BugReportModal } from './components/common/BugReportModal';
 import SettingsPanel from './components/SettingsPanel';
 import ActionLog from './components/ActionLog';
 import EmailAlertsPanel from './components/EmailAlertsPanel';
@@ -10,16 +16,30 @@ import { JobSearch } from './components/JobSearch';
 import { ApplicationInbox } from './components/ApplicationInbox';
 import JobWebsitesSection from './components/settings/JobWebsitesSection';
 
-/**
- * Main Application Component
- * Navigation updated for Phase 3.6 with Tutorial and Info tabs.
- * CRITICAL: All high-intelligence features preserved.
- */
-function App() {
-  const [userId] = useState<number>(1);
-  const [currentTab, setCurrentTab] = useState<'settings' | 'documents' | 'websites' | 'profiles' | 'search' | 'applications' | 'inbox' | 'alerts' | 'logs'>('settings');
+type TabType = 'settings' | 'documents' | 'websites' | 'profiles' | 'search' | 'applications' | 'inbox' | 'alerts' | 'logs';
 
-  // Function to handle external jumps for the new tabs
+const tabNames: Record<TabType, string> = {
+  settings: 'Settings',
+  documents: 'Documents',
+  websites: 'Job Websites',
+  profiles: 'Search Profiles',
+  search: 'Job Search',
+  applications: 'Applications',
+  inbox: 'Inbox',
+  alerts: 'Alerts',
+  logs: 'Logs',
+};
+
+/**
+ * Main App Content Component
+ */
+function AppContent() {
+  const [userId] = useState<number>(1);
+  const [currentTab, setCurrentTab] = useState<TabType>('settings');
+  const [showBugReport, setShowBugReport] = useState(false);
+  const { t } = useLanguage();
+  const { style, mode } = useTheme();
+
   const openExternalLink = (url: string) => {
     if (url === 'tutorial') {
       window.open('https://your-tutorial-website.com', '_blank');
@@ -28,32 +48,63 @@ function App() {
     }
   };
 
+  const navItems: { tab: TabType; labelKey: keyof typeof t }[] = [
+    { tab: 'settings', labelKey: 'settings' },
+    { tab: 'documents', labelKey: 'documents' },
+    { tab: 'websites', labelKey: 'jobWebsites' },
+    { tab: 'profiles', labelKey: 'searchProfiles' },
+    { tab: 'search', labelKey: 'jobSearch' },
+    { tab: 'applications', labelKey: 'applications' },
+    { tab: 'inbox', labelKey: 'inbox' },
+    { tab: 'alerts', labelKey: 'alerts' },
+    { tab: 'logs', labelKey: 'logs' },
+  ];
+
   return (
-    <div className="app-container">
-      <header className="app-header">
+    <div className="app-container" data-testid="app-container">
+      <header className="app-header" data-testid="app-header">
         <div className="header-content">
-          <h1>🚀 Job Application Automation</h1>
-          <p>Automate your job search and application process</p>
+          <div className="header-title">
+            <h1>{t('appTitle')}</h1>
+            <p>{t('appSubtitle')}</p>
+          </div>
+          <div className="header-controls">
+            <ThemeSelector />
+            <LanguageSelector />
+          </div>
         </div>
       </header>
 
-      <nav className="app-nav">
-        <button className={`nav-button ${currentTab === 'settings' ? 'active' : ''}`} onClick={() => setCurrentTab('settings')}>⚙️ Settings</button>
-        <button className={`nav-button ${currentTab === 'documents' ? 'active' : ''}`} onClick={() => setCurrentTab('documents')}>📂 Documents</button>
-        <button className={`nav-button ${currentTab === 'websites' ? 'active' : ''}`} onClick={() => setCurrentTab('websites')}>🌐 Job Websites</button>
-        <button className={`nav-button ${currentTab === 'profiles' ? 'active' : ''}`} onClick={() => setCurrentTab('profiles')}>🔍 Search Profiles</button>
-        <button className={`nav-button ${currentTab === 'search' ? 'active' : ''}`} onClick={() => setCurrentTab('search')}>🎯 Job Search</button>
-        <button className={`nav-button ${currentTab === 'applications' ? 'active' : ''}`} onClick={() => setCurrentTab('applications')}>📋 Applications</button>
-        <button className={`nav-button ${currentTab === 'inbox' ? 'active' : ''}`} onClick={() => setCurrentTab('inbox')}>📬 Inbox</button>
-        <button className={`nav-button ${currentTab === 'alerts' ? 'active' : ''}`} onClick={() => setCurrentTab('alerts')}>🔔 Alerts</button>
-        <button className={`nav-button ${currentTab === 'logs' ? 'active' : ''}`} onClick={() => setCurrentTab('logs')}>📊 Logs</button>
+      <nav className="app-nav" data-testid="app-nav">
+        {navItems.map(({ tab, labelKey }) => (
+          <button
+            key={tab}
+            className={`nav-button ${currentTab === tab ? 'active' : ''}`}
+            onClick={() => setCurrentTab(tab)}
+            data-testid={`nav-${tab}`}
+          >
+            {t(labelKey)}
+          </button>
+        ))}
         
-        {/* NEW TABS FOR PHASE 3.6 */}
-        <button className="nav-button secondary" onClick={() => openExternalLink('tutorial')}>📖 Tutorial</button>
-        <button className="nav-button secondary" onClick={() => openExternalLink('why_free')}>❓ Why Free?</button>
+        {/* External Links */}
+        <button 
+          className="nav-button secondary" 
+          onClick={() => openExternalLink('tutorial')}
+          data-testid="nav-tutorial"
+        >
+          {t('tutorial')}
+        </button>
+        <button 
+          className="nav-button secondary" 
+          onClick={() => openExternalLink('why_free')}
+          data-testid="nav-why-free"
+        >
+          {t('whyFree')}
+        </button>
       </nav>
 
-      <main className="app-main">
+      <main className="app-main" data-testid="app-main">
         {currentTab === 'settings' && <SettingsPanel userId={userId} />}
         {currentTab === 'documents' && <DocumentRepository userId={userId} />}
         {currentTab === 'websites' && <JobWebsitesSection userId={userId} />}
@@ -64,7 +115,37 @@ function App() {
         {currentTab === 'alerts' && <EmailAlertsPanel userId={userId} />}
         {currentTab === 'logs' && <ActionLog userId={userId} />}
       </main>
+
+      {/* Bug Report Button */}
+      <button
+        className="bug-report-btn"
+        onClick={() => setShowBugReport(true)}
+        data-testid="bug-report-btn"
+      >
+        <span>🐛</span>
+        {t('reportBug')}
+      </button>
+
+      {/* Bug Report Modal */}
+      <BugReportModal
+        isOpen={showBugReport}
+        onClose={() => setShowBugReport(false)}
+        pageName={tabNames[currentTab]}
+      />
     </div>
+  );
+}
+
+/**
+ * Main Application Component with Providers
+ */
+function App() {
+  return (
+    <ThemeProvider>
+      <LanguageProvider>
+        <AppContent />
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 

@@ -696,13 +696,15 @@ ${content}
 EVALUATION CRITERIA:
 1. LANGUAGE: Is it in the same language as the job description?
 2. HUMAN-LIKE: Does it avoid AI clichés (thrilled, passionate, fast-paced world)?
-3. NO LONG HYPHENS: Are there any — characters? (Should use - instead)
-4. CONTACT INFO: Is the applicant's contact info included?
+3. NO LONG HYPHENS: Are there any — or – characters? (Should use - instead)
+4. CONTACT INFO: Is the applicant's contact info included (for CV) or proper greeting (for letters)?
 5. ATS FRIENDLY: Is the structure clear and professional?
-6. TAILORED: Does it specifically reference the company and role?
+6. TAILORED: Does it specifically reference the company or role?
 7. QUANTIFIED: Are achievements quantified where possible?
 8. NO PLACEHOLDERS: Are there any "[Insert...]", "XYZ", or "N/A" in critical fields?
-9. LENGTH: Is it appropriate (motivation/cover letters: 1 page)?
+9. LENGTH: Is it appropriate? (Motivation letter: 400-500 words, Cover letter: 250-300 words)
+10. NO JSON/META: Does it start cleanly without JSON formatting or meta-text like "Here is..."?
+11. NO APOLOGIES: Does it avoid phrases like "I could not find", "research unavailable"?
 
 RESPONSE FORMAT:
 If it passes ALL criteria, respond with exactly: "APPROVED"

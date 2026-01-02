@@ -456,7 +456,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
             </div>
 
             <div style={groupStyle}>
-              <h4 style={{ marginTop: 0, marginBottom: '12px' }}>🛠️ Skills & Education</h4>
+              <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🛠️ Skills & Education</h4>
               
               <label style={labelStyle}>Required Skills</label>
               <textarea style={{ ...inputStyle, height: '50px' }} value={editing.required_skills || ''} onChange={e => setEditing({...editing, required_skills: e.target.value})} placeholder="e.g., Python, JavaScript, SQL..." />

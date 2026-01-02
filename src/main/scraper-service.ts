@@ -1,7 +1,7 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
-import { logAction } from './database';
+import { logAction, getDatabase } from './database';
 import path from 'path';
-import { app } from 'electron';
+let app: any; try { app = require('electron').app; } catch (e) { app = (global as any).electronApp; }
 
 let activeBrowser: Browser | null = null;
 
@@ -9,6 +9,49 @@ let activeBrowser: Browser | null = null;
 const getUserDataDir = () => {
   return path.join(app.getPath('userData'), 'browser_data');
 };
+
+/**
+ * HELPER: LAUNCH BROWSER WITH PROXY SUPPORT
+ * Automatically pulls proxy_url from the settings table.
+ */
+async function launchBrowser(options: { headless?: boolean | 'new', userDataDir?: string, args?: string[] } = {}): Promise<Browser> {
+  const db = getDatabase();
+  const settings = db.settings[0] || {};
+  const proxyServer = settings.proxy_url;
+
+  const defaultArgs = [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-blink-features=AutomationControlled',
+    '--disable-infobars',
+    '--window-size=1280,800'
+  ];
+
+  if (proxyServer) {
+    console.log(`Scraper: Using proxy server: ${proxyServer}`);
+    defaultArgs.push(`--proxy-server=${proxyServer}`);
+  }
+
+  const launchOptions: any = {
+    headless: options.headless !== undefined ? options.headless : false,
+    userDataDir: options.userDataDir || getUserDataDir(),
+    args: [...defaultArgs, ...(options.args || [])]
+  };
+
+  const browser = await puppeteer.launch(launchOptions);
+
+  // Handle proxy authentication if credentials are provided in the URL
+  if (proxyServer && proxyServer.includes('@')) {
+    const authPart = proxyServer.split('@')[0].replace('http://', '').replace('https://', '');
+    const [username, password] = authPart.split(':');
+    if (username && password) {
+      const page = (await browser.pages())[0] || await browser.newPage();
+      await page.authenticate({ username, password });
+    }
+  }
+
+  return browser;
+}
 
 /**
  * Random delay to simulate human behavior
@@ -100,17 +143,7 @@ export async function getJobPageContent(url: string, userId: number, callAI: Fun
   try {
     console.log(`Scraper: Opening ${url}`);
     
-    browser = await puppeteer.launch({ 
-      headless: false,
-      userDataDir: getUserDataDir(),
-      args: [
-        '--no-sandbox', 
-        '--disable-setuid-sandbox', 
-        '--disable-blink-features=AutomationControlled',
-        '--disable-infobars',
-        '--window-size=1280,800'
-      ] 
-    });
+    browser = await launchBrowser({ headless: false });
     
     const page = await browser.newPage();
     
@@ -245,17 +278,7 @@ export async function scrapeJobs(baseUrl: string, query: string, location: strin
   try {
     console.log(`Scraper: Searching for "${query}" in "${location}" on ${baseUrl}`);
     
-    browser = await puppeteer.launch({ 
-      headless: false, 
-      userDataDir: getUserDataDir(),
-      args: [
-        '--no-sandbox', 
-        '--disable-setuid-sandbox', 
-        '--disable-blink-features=AutomationControlled',
-        '--disable-infobars',
-        '--start-maximized'
-      ] 
-    });
+    browser = await launchBrowser({ headless: false, args: ['--start-maximized'] });
     
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
@@ -369,13 +392,133 @@ export async function scrapeJobs(baseUrl: string, query: string, location: strin
  * Open browser for manual login warm-up
  */
 export async function openLinkedIn(userId: number, url: string) {
-  activeBrowser = await puppeteer.launch({ 
-    headless: false, 
-    userDataDir: getUserDataDir(),
-    defaultViewport: null, 
-    args: ['--start-maximized'] 
-  });
+  activeBrowser = await launchBrowser({ headless: false, args: ['--start-maximized'] });
   const page = await activeBrowser.newPage();
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   return { success: true };
+}
+
+/**
+ * SEARCH AND SCRAPE COMPANY INFO
+ */
+export async function getCompanyInfo(companyName: string, userId: number, callAI: Function): Promise<string> {
+  let browser: Browser | null = null;
+  try {
+    console.log(`Scraper: Researching company: ${companyName}`);
+    await logAction(userId, 'ai_observer', `🔍 Researching company: ${companyName}`, 'in_progress');
+
+    browser = await launchBrowser({ headless: true });
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+
+    // Step 1: Find official website
+    const siteSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(companyName + " official website")}`;
+    await page.goto(siteSearchUrl, { waitUntil: 'networkidle2' });
+    const officialSite = await page.evaluate(() => document.querySelector('div.g a')?.getAttribute('href'));
+    
+    // Step 2: Search for mission/about
+    const searchUrl = officialSite 
+      ? `https://www.google.com/search?q=site:${new URL(officialSite).hostname} mission history about`
+      : `https://www.google.com/search?q=${encodeURIComponent(companyName + " company mission history news")}`;
+
+    await page.goto(searchUrl, { waitUntil: 'networkidle2' });
+
+    // Get the first few organic results
+    const links = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll('div.g a'))
+        .map(a => (a as HTMLAnchorElement).href)
+        .filter(href => href && !href.includes('google.com'))
+        .slice(0, 2);
+    });
+
+    let combinedInfo = "";
+    for (const link of links) {
+      try {
+        await page.goto(link, { waitUntil: 'networkidle2', timeout: 30000 });
+        const text = await page.evaluate(() => {
+          const body = document.body.innerText;
+          return body.substring(0, 5000).replace(/\s+/g, ' ').trim();
+        });
+        combinedInfo += `\n--- Source: ${link} ---\n${text}\n`;
+      } catch (e) {
+        console.log(`Failed to scrape ${link}:`, e);
+      }
+    }
+
+    return combinedInfo || "No specific company info found.";
+  } catch (error: any) {
+    console.error('Company Research Error:', error.message);
+    return "Error researching company: " + error.message;
+  } finally {
+    if (browser) await browser.close();
+  }
+}
+
+/**
+ * CAPTURE SCREENSHOT FOR AI OBSERVER
+ */
+export async function capturePageScreenshot(page: Page): Promise<string> {
+  const screenshot = await page.screenshot({ encoding: 'base64' });
+  return `data:image/png;base64,${screenshot}`;
+}
+
+/**
+ * EXECUTE MOUSE ACTION BASED ON COORDINATES
+ */
+export async function executeMouseAction(page: Page, action: { type: 'click' | 'type' | 'upload', x: number, y: number, text?: string, filePath?: string }) {
+  console.log(`AI Mouse: Executing ${action.type} at (${action.x}, ${action.y})`);
+  
+  // Move mouse with jitter
+  await page.mouse.move(action.x + Math.random() * 5, action.y + Math.random() * 5, { steps: 10 });
+  await randomDelay(200, 500);
+
+  if (action.type === 'click') {
+    await page.mouse.click(action.x, action.y);
+  } else if (action.type === 'type' && action.text) {
+    await page.mouse.click(action.x, action.y);
+    await randomDelay(100, 300);
+    await page.keyboard.type(action.text, { delay: Math.random() * 100 + 50 });
+  } else if (action.type === 'upload' && action.filePath) {
+    // For upload, we often need to click the button first to trigger the file picker, 
+    // but Puppeteer's fileChooser is more reliable if we can find the input.
+    // Fallback: click the coordinates and hope for the best, or use fileChooser.
+    const [fileChooser] = await Promise.all([
+      page.waitForFileChooser(),
+      page.mouse.click(action.x, action.y),
+    ]);
+    await fileChooser.accept([action.filePath]);
+  }
+}
+
+/**
+ * GET FORM COORDINATES VIA AI OBSERVER
+ */
+export async function getFormCoordinates(page: Page, userId: number, observerModel: any, callAI: Function): Promise<any[]> {
+  await logAction(userId, 'ai_observer', '📸 Analyzing page layout visually...', 'in_progress');
+  
+  const screenshot = await capturePageScreenshot(page);
+  const prompt = `
+    Analyze this screenshot of a job application form. 
+    Identify the (x, y) coordinates for the following fields:
+    - First Name
+    - Last Name
+    - Email
+    - Phone Number
+    - Upload CV/Resume button
+    - Submit button
+    
+    Return ONLY a JSON array of objects:
+    [{"field": "first_name", "x": 123, "y": 456}, ...]
+    
+    The coordinates should be relative to the top-left of the image (1280x800).
+  `;
+
+  const response = await callAI(observerModel, prompt, screenshot);
+  try {
+    const cleaned = response.replace(/```json/gi, '').replace(/```/g, '').trim();
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.error("Failed to parse observer response:", e);
+    return [];
+  }
 }

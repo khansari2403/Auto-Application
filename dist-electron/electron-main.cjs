@@ -23,7 +23,7 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 
 // electron-main.ts
 var import_electron4 = require("electron");
-var import_path3 = __toESM(require("path"), 1);
+var import_path4 = __toESM(require("path"), 1);
 var import_electron_is_dev = __toESM(require("electron-is-dev"), 1);
 
 // src/main/database.ts
@@ -213,10 +213,46 @@ var import_axios = __toESM(require("axios"), 1);
 // src/main/scraper-service.ts
 var import_puppeteer = __toESM(require("puppeteer"), 1);
 var import_path2 = __toESM(require("path"), 1);
-var import_electron2 = require("electron");
+var app2;
+try {
+  app2 = require("electron").app;
+} catch (e) {
+  app2 = global.electronApp;
+}
 var getUserDataDir = () => {
-  return import_path2.default.join(import_electron2.app.getPath("userData"), "browser_data");
+  return import_path2.default.join(app2.getPath("userData"), "browser_data");
 };
+async function launchBrowser(options = {}) {
+  const db = getDatabase();
+  const settings = db.settings[0] || {};
+  const proxyServer = settings.proxy_url;
+  const defaultArgs = [
+    "--no-sandbox",
+    "--disable-setuid-sandbox",
+    "--disable-blink-features=AutomationControlled",
+    "--disable-infobars",
+    "--window-size=1280,800"
+  ];
+  if (proxyServer) {
+    console.log(`Scraper: Using proxy server: ${proxyServer}`);
+    defaultArgs.push(`--proxy-server=${proxyServer}`);
+  }
+  const launchOptions = {
+    headless: options.headless !== void 0 ? options.headless : false,
+    userDataDir: options.userDataDir || getUserDataDir(),
+    args: [...defaultArgs, ...options.args || []]
+  };
+  const browser = await import_puppeteer.default.launch(launchOptions);
+  if (proxyServer && proxyServer.includes("@")) {
+    const authPart = proxyServer.split("@")[0].replace("http://", "").replace("https://", "");
+    const [username, password] = authPart.split(":");
+    if (username && password) {
+      const page = (await browser.pages())[0] || await browser.newPage();
+      await page.authenticate({ username, password });
+    }
+  }
+  return browser;
+}
 function randomDelay(min, max) {
   const delay = Math.floor(Math.random() * (max - min + 1)) + min;
   return new Promise((resolve) => setTimeout(resolve, delay));
@@ -287,17 +323,7 @@ async function getJobPageContent(url, userId, callAI2) {
   let browser = null;
   try {
     console.log(`Scraper: Opening ${url}`);
-    browser = await import_puppeteer.default.launch({
-      headless: false,
-      userDataDir: getUserDataDir(),
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-blink-features=AutomationControlled",
-        "--disable-infobars",
-        "--window-size=1280,800"
-      ]
-    });
+    browser = await launchBrowser({ headless: false });
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
@@ -395,17 +421,7 @@ async function scrapeJobs(baseUrl, query, location, credentials, userId, callAI2
   const jobUrls = [];
   try {
     console.log(`Scraper: Searching for "${query}" in "${location}" on ${baseUrl}`);
-    browser = await import_puppeteer.default.launch({
-      headless: false,
-      userDataDir: getUserDataDir(),
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-        "--disable-blink-features=AutomationControlled",
-        "--disable-infobars",
-        "--start-maximized"
-      ]
-    });
+    browser = await launchBrowser({ headless: false, args: ["--start-maximized"] });
     const page = await browser.newPage();
     await page.setViewport({ width: 1280, height: 800 });
     await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
@@ -486,6 +502,99 @@ async function scrapeJobs(baseUrl, query, location, credentials, userId, callAI2
     }
   }
   return jobUrls;
+}
+async function getCompanyInfo(companyName, userId, callAI2) {
+  let browser = null;
+  try {
+    console.log(`Scraper: Researching company: ${companyName}`);
+    await logAction(userId, "ai_observer", `\u{1F50D} Researching company: ${companyName}`, "in_progress");
+    browser = await launchBrowser({ headless: true });
+    const page = await browser.newPage();
+    await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+    const siteSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(companyName + " official website")}`;
+    await page.goto(siteSearchUrl, { waitUntil: "networkidle2" });
+    const officialSite = await page.evaluate(() => {
+      var _a;
+      return (_a = document.querySelector("div.g a")) == null ? void 0 : _a.getAttribute("href");
+    });
+    const searchUrl = officialSite ? `https://www.google.com/search?q=site:${new URL(officialSite).hostname} mission history about` : `https://www.google.com/search?q=${encodeURIComponent(companyName + " company mission history news")}`;
+    await page.goto(searchUrl, { waitUntil: "networkidle2" });
+    const links = await page.evaluate(() => {
+      return Array.from(document.querySelectorAll("div.g a")).map((a) => a.href).filter((href) => href && !href.includes("google.com")).slice(0, 2);
+    });
+    let combinedInfo = "";
+    for (const link of links) {
+      try {
+        await page.goto(link, { waitUntil: "networkidle2", timeout: 3e4 });
+        const text = await page.evaluate(() => {
+          const body = document.body.innerText;
+          return body.substring(0, 5e3).replace(/\s+/g, " ").trim();
+        });
+        combinedInfo += `
+--- Source: ${link} ---
+${text}
+`;
+      } catch (e) {
+        console.log(`Failed to scrape ${link}:`, e);
+      }
+    }
+    return combinedInfo || "No specific company info found.";
+  } catch (error) {
+    console.error("Company Research Error:", error.message);
+    return "Error researching company: " + error.message;
+  } finally {
+    if (browser)
+      await browser.close();
+  }
+}
+async function capturePageScreenshot(page) {
+  const screenshot = await page.screenshot({ encoding: "base64" });
+  return `data:image/png;base64,${screenshot}`;
+}
+async function executeMouseAction(page, action) {
+  console.log(`AI Mouse: Executing ${action.type} at (${action.x}, ${action.y})`);
+  await page.mouse.move(action.x + Math.random() * 5, action.y + Math.random() * 5, { steps: 10 });
+  await randomDelay(200, 500);
+  if (action.type === "click") {
+    await page.mouse.click(action.x, action.y);
+  } else if (action.type === "type" && action.text) {
+    await page.mouse.click(action.x, action.y);
+    await randomDelay(100, 300);
+    await page.keyboard.type(action.text, { delay: Math.random() * 100 + 50 });
+  } else if (action.type === "upload" && action.filePath) {
+    const [fileChooser] = await Promise.all([
+      page.waitForFileChooser(),
+      page.mouse.click(action.x, action.y)
+    ]);
+    await fileChooser.accept([action.filePath]);
+  }
+}
+async function getFormCoordinates(page, userId, observerModel, callAI2) {
+  await logAction(userId, "ai_observer", "\u{1F4F8} Analyzing page layout visually...", "in_progress");
+  const screenshot = await capturePageScreenshot(page);
+  const prompt = `
+    Analyze this screenshot of a job application form. 
+    Identify the (x, y) coordinates for the following fields:
+    - First Name
+    - Last Name
+    - Email
+    - Phone Number
+    - Upload CV/Resume button
+    - Submit button
+    
+    Return ONLY a JSON array of objects:
+    [{"field": "first_name", "x": 123, "y": 456}, ...]
+    
+    The coordinates should be relative to the top-left of the image (1280x800).
+  `;
+  const response = await callAI2(observerModel, prompt, screenshot);
+  try {
+    const cleaned = response.replace(/```json/gi, "").replace(/```/g, "").trim();
+    return JSON.parse(cleaned);
+  } catch (e) {
+    console.error("Failed to parse observer response:", e);
+    return [];
+  }
 }
 
 // src/main/features/Hunter-engine.ts
@@ -767,7 +876,9 @@ Profile: ${profile.job_title} in ${profile.location}`);
 }
 
 // src/main/features/doc-generator.ts
-async function generateTailoredDocs(job, thinker, auditor, options, callAI2) {
+async function generateTailoredDocs(job, userId, thinker, auditor, options, callAI2) {
+  const db = getDatabase();
+  const userProfile = db.user_profile.find((p) => p.id === userId) || db.user_profile[0];
   const docTypes = [
     { key: "cv", label: "CV" },
     { key: "motivation_letter", label: "Motivation Letter" },
@@ -775,44 +886,303 @@ async function generateTailoredDocs(job, thinker, auditor, options, callAI2) {
     { key: "proposal", label: "Proposal" },
     { key: "cover_letter", label: "Cover Letter" }
   ];
+  let companyResearch = "";
+  try {
+    await logAction(userId, "ai_thinker", `\u{1F50D} Researching ${job.company_name} mission and history...`, "in_progress");
+    companyResearch = await getCompanyInfo(job.company_name, userId, callAI2);
+  } catch (e) {
+    console.error("Research failed:", e);
+    companyResearch = "Research unavailable.";
+  }
   for (const type of docTypes) {
     const optionKey = type.key === "motivation_letter" ? "motivationLetter" : type.key;
     if (options[optionKey]) {
       try {
+        await logAction(userId, "ai_thinker", `\u270D\uFE0F Generating tailored ${type.label} for ${job.company_name}`, "in_progress");
         await runQuery("UPDATE job_listings", { id: job.id, [`${type.key}_status`]: "generating" });
-        const genPrompt = `Generate a tailored ${type.label} for: ${job.job_title} at ${job.company_name}. 
-Job Description: ${job.description}`;
-        const content = await callAI2(thinker, genPrompt);
-        await runQuery("UPDATE job_listings", { id: job.id, [`${type.key}_status`]: "thinker_done" });
-        const auditResult = await callAI2(auditor, `Review this ${type.label}: ${content}. Answer APPROVED or REJECT.`);
-        if (auditResult.toUpperCase().includes("APPROVED")) {
+        let attempts = 0;
+        let approved = false;
+        let content = "";
+        let feedback = "";
+        while (attempts < 2 && !approved) {
+          attempts++;
+          const thinkerPrompt = `
+            You are the "Thinker" agent. Your task is to generate a highly tailored ${type.label} that sounds 100% HUMAN with some common writing mistakes randomly.
+            
+            NEGATIVE PROMPT (DO NOT USE):
+            - Clich\xE9s: "I am thrilled to apply", "In today's fast-paced world", "I am a passionate professional", "I believe I am a perfect fit".
+            - AI Structures: Repetitive "I have..." or "My experience..." at the start of every sentence.
+            - Formatting: No long hyphens (\u2014), use standard dashes (-) if needed. No bullet points. Do not exceed more than one full page for motivation letters.
+            
+            STRICT 6-POINT STRUCTURE:
+            1. CLEAR PURPOSE: State intent upfront. Who are you and why are you writing?
+            2. RESEARCH: Reference specific facts from the company research below (Mission, History, News). Show you've done your homework.
+            3. ALIGNMENT: Connect your personal goals to their mission. Why this company specifically?
+            4. QUALIFICATIONS: Highlight 2-3 key achievements. Use METRICS (e.g., "increased efficiency by 20%").
+            5. PASSION: Why this role? Why are you the best candidate? Convey genuine enthusiasm.
+            6. CLOSING: Professional sign-off, thank the reader, and suggest next steps.
+            
+            LANGUAGE: Must match the Job Description language.
+            CONTACT INFO: Include applicant's info at the very top.
+            ATS FRIENDLY: Use clear headings no bullet points, and standard formatting. use keywoards from the job description.
+            
+          
+
+            LANGUAGE REQUIREMENT:
+            The output MUST be in the same language as the Job Description provided below.
+            
+            USER PROFILE:
+            Name: ${userProfile == null ? void 0 : userProfile.name}
+            Title: ${userProfile == null ? void 0 : userProfile.title}
+            Experiences: ${userProfile == null ? void 0 : userProfile.experiences}
+            Skills: ${userProfile == null ? void 0 : userProfile.skills}
+            Contact Info: ${(userProfile == null ? void 0 : userProfile.email) || ""}, ${(userProfile == null ? void 0 : userProfile.phone) || ""}, ${(userProfile == null ? void 0 : userProfile.location) || ""}
+            
+            JOB DETAILS:
+            Title: ${job.job_title}
+            Company: ${job.company_name}
+            Description: ${job.description}
+            Required Skills: ${job.required_skills}
+            
+            COMPANY RESEARCH:
+            ${companyResearch}
+            
+            ${feedback ? `PREVIOUS FEEDBACK FROM AUDITOR: ${feedback}
+Please fix these issues in the new version.` : ""}
+            
+            STRICT GUIDELINES:
+            1. HUMAN-LIKE CONTENT: Avoid AI-generated clich\xE9s. Do not use long hyphens (\u2014) or repetitive word structures. Be authentic and concise.
+            2. CONTACT INFO: Include the applicant's contact info at the top.
+            3. ATS FRIENDLY: Use clear headings and standard formatting.
+            4. MOTIVATION/COVER LETTER STRUCTURE:
+               - 1. Clear Purpose: State intent upfront and introduce yourself briefly.
+               - 2. Research & Specific Interest: Show you've done your homework. Reference the company's mission, history, or news from the research provided. Avoid generic statements.
+               - 3. Alignment: Connect your aspirations to the organization's mission and values.
+               - 4. Qualifications: Highlight key skills/experiences directly related to the role. QUANTIFY achievements with metrics (e.g., "reduced time by 30%").
+               - 5. Passion: Convey genuine enthusiasm and explain why you are the best fit.
+               - 6. Professional Closing: Reiterate eagerness, thank the reader, and offer next steps.
+            5. 3 MAIN QUESTIONS: The letter must answer: Why this company? Why this role? Why am I the best candidate?
+            6. NO PLACEHOLDERS: Do not use [Company Name] or [Date]. Use the actual data.
+            
+            Return ONLY the content of the ${type.label}.
+          `;
+          content = await callAI2(thinker, thinkerPrompt);
+          await logAction(userId, "ai_auditor", `\u{1F9D0} Auditing ${type.label} (Attempt ${attempts})`, "in_progress");
+          const auditorPrompt = `
+            You are the "Auditor" agent. Review this ${type.label} for accuracy and quality.
+            
+            JOB: ${job.job_title} at ${job.company_name}
+            CONTENT:
+            ${content}
+            
+            CRITERIA:
+            1. LANGUAGE: Is it in the same language as the job description?
+            2. HUMAN-LIKE: Does it avoid AI clich\xE9s and long hyphens?
+            3. CONTACT INFO: Is the applicant's contact info at the top?
+            4. ATS FRIENDLY: Is the structure clear?
+            5. RESEARCH: Does it reference specific company mission/history/news from the research?
+            6. 3 QUESTIONS: Does it answer Why Company, Why Role, and Why Candidate?
+            7. STRUCTURE: Does it follow the 6-point structure (Purpose, Research, Alignment, Qualifications, Passion, Closing)?
+            8. QUANTIFIED: Are achievements quantified with metrics?
+            9. NO PLACEHOLDERS: Are there any "[Insert...]" or "XYZ"?
+            
+            If it passes all criteria, respond with "APPROVED".
+            If it fails, respond with "REJECTED: " followed by specific feedback on what to fix.
+          `;
+          const auditResponse = await callAI2(auditor, auditorPrompt);
+          if (auditResponse.toUpperCase().includes("APPROVED")) {
+            approved = true;
+            await logAction(userId, "ai_auditor", `\u2705 ${type.label} approved`, "completed", true);
+          } else {
+            feedback = auditResponse.replace(/REJECTED:/i, "").trim();
+            await logAction(userId, "ai_auditor", `\u274C ${type.label} rejected: ${feedback}`, "in_progress", false);
+          }
+        }
+        if (approved) {
+          const docId = Date.now() + Math.floor(Math.random() * 1e3);
+          await runQuery("INSERT INTO documents", {
+            id: docId,
+            job_id: job.id,
+            user_id: userId,
+            document_type: type.key,
+            content,
+            version: 1,
+            status: "final"
+          });
           await runQuery("UPDATE job_listings", { id: job.id, [`${type.key}_status`]: "auditor_done" });
         } else {
           await runQuery("UPDATE job_listings", { id: job.id, [`${type.key}_status`]: "failed" });
+          await logAction(userId, "ai_thinker", `\u274C Failed to generate acceptable ${type.label} after 2 attempts`, "failed", false);
         }
       } catch (e) {
+        console.error(`Error generating ${type.key}:`, e);
         await runQuery("UPDATE job_listings", { id: job.id, [`${type.key}_status`]: "failed" });
+        await logAction(userId, "ai_thinker", `\u274C Error: ${e.message}`, "failed", false);
       }
     }
   }
+}
+
+// src/main/features/secretary-service.ts
+var import_imap = __toESM(require("imap"), 1);
+var import_mailparser = require("mailparser");
+async function monitorConfirmations(userId) {
+  const configRes = await getAllQuery("SELECT * FROM email_config");
+  const config = configRes[0];
+  if (!config || !config.email_user || !config.email_password)
+    return;
+  const confirmation = await performImapSearch(config, ["UNSEEN"], (text, subject) => {
+    const keywords = ["application received", "thank you for applying", "confirmation", "received your application"];
+    const combined = (text + " " + subject).toLowerCase();
+    if (keywords.some((k) => combined.includes(k))) {
+      return { subject, snippet: text.substring(0, 200) };
+    }
+    return null;
+  });
+  if (confirmation) {
+    await logAction(userId, "ai_secretary", `\u{1F4EC} Received confirmation: ${confirmation.subject}`, "completed", true);
+    await runQuery("INSERT INTO email_alerts", {
+      user_id: userId,
+      alert_type: "confirmation",
+      subject: confirmation.subject,
+      snippet: confirmation.snippet,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  }
+}
+async function performImapSearch(config, criteria, extractor) {
+  return new Promise((resolve) => {
+    const imap = new import_imap.default({
+      user: config.email_user,
+      password: config.email_password,
+      host: config.imap_host,
+      port: config.imap_port || 993,
+      tls: true,
+      tlsOptions: { rejectUnauthorized: false }
+    });
+    imap.once("ready", () => {
+      imap.openBox("INBOX", false, (err) => {
+        if (err) {
+          console.error("IMAP: Could not open inbox", err);
+          imap.end();
+          resolve(null);
+          return;
+        }
+        imap.search(criteria, (err2, results) => {
+          if (err2 || !results || results.length === 0) {
+            imap.end();
+            resolve(null);
+            return;
+          }
+          const f = imap.fetch(results[results.length - 1], { bodies: "" });
+          f.on("message", (msg) => {
+            msg.on("body", async (stream) => {
+              const parsed = await (0, import_mailparser.simpleParser)(stream);
+              const result = extractor(parsed.text || "", parsed.subject || "");
+              resolve(result);
+            });
+          });
+          f.once("end", () => imap.end());
+        });
+      });
+    });
+    imap.once("error", (err) => {
+      console.error("IMAP Connection Error:", err);
+      resolve(null);
+    });
+    imap.connect();
+  });
 }
 
 // src/main/features/scheduler.ts
 function startHuntingScheduler(userId, startHunterSearch3, callAI2) {
   return setInterval(async () => {
     const db = getDatabase();
-    const websites = db.job_websites.filter((w) => w.is_active === 1);
-    const now = /* @__PURE__ */ new Date();
-    for (const website of websites) {
-      const lastChecked = website.last_checked ? new Date(website.last_checked) : /* @__PURE__ */ new Date(0);
-      const hoursSinceLastCheck = (now.getTime() - lastChecked.getTime()) / (1e3 * 60 * 60);
-      const frequency = website.site_type === "career_page" ? 24 : website.check_frequency || 4;
-      if (hoursSinceLastCheck >= frequency) {
-        await startHunterSearch3(userId, callAI2);
-        await runQuery("UPDATE job_websites", { id: website.id, last_checked: now.toISOString() });
+    const settings = db.settings[0];
+    if (settings && settings.job_hunting_active === 1) {
+      const websites = db.job_websites.filter((w) => w.is_active === 1);
+      const now = /* @__PURE__ */ new Date();
+      for (const website of websites) {
+        const lastChecked = website.last_checked ? new Date(website.last_checked) : /* @__PURE__ */ new Date(0);
+        const hoursSinceLastCheck = (now.getTime() - lastChecked.getTime()) / (1e3 * 60 * 60);
+        const frequency = website.site_type === "career_page" ? 24 : website.check_frequency || 4;
+        if (hoursSinceLastCheck >= frequency) {
+          console.log(`Scheduler: Checking ${website.website_name}...`);
+          await startHunterSearch3(userId, callAI2);
+          await runQuery("UPDATE job_websites", { id: website.id, last_checked: now.toISOString() });
+        }
       }
+    } else {
+      console.log("Scheduler: Job hunting is currently turned OFF.");
+    }
+    try {
+      await monitorConfirmations(userId);
+    } catch (e) {
+      console.error("Scheduler: Secretary monitoring failed", e);
     }
   }, 6e4);
+}
+
+// src/main/features/application-submitter.ts
+var import_puppeteer2 = __toESM(require("puppeteer"), 1);
+var import_path3 = __toESM(require("path"), 1);
+var import_electron2 = require("electron");
+async function submitApplication(jobId, userId, observerModel, callAI2) {
+  console.log(`
+========== SUBMITTING APPLICATION FOR JOB ${jobId} ==========`);
+  try {
+    const db = getDatabase();
+    const job = db.job_listings.find((j) => j.id === jobId);
+    const userProfile = db.user_profile.find((p) => p.id === userId) || db.user_profile[0];
+    const tailoredDoc = db.documents.find((d) => d.job_id === jobId && d.document_type === "cv");
+    if (!job || !job.application_url) {
+      throw new Error("Job or application URL not found");
+    }
+    await logAction(userId, "ai_mouse", `\u{1F5B1}\uFE0F Starting automated submission for ${job.company_name}`, "in_progress");
+    const browser = await import_puppeteer2.default.launch({
+      headless: false,
+      userDataDir: import_path3.default.join(import_electron2.app.getPath("userData"), "browser_data"),
+      args: ["--no-sandbox", "--start-maximized"]
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.goto(job.application_url, { waitUntil: "networkidle2", timeout: 6e4 });
+    const coordinates = await getFormCoordinates(page, userId, observerModel, callAI2);
+    console.log("Form coordinates identified:", coordinates);
+    for (const coord of coordinates) {
+      let value = "";
+      if (coord.field === "first_name")
+        value = userProfile.name.split(" ")[0];
+      else if (coord.field === "last_name")
+        value = userProfile.name.split(" ").slice(1).join(" ");
+      else if (coord.field === "email")
+        value = userProfile.email || "";
+      else if (coord.field === "phone")
+        value = userProfile.phone || "";
+      if (value) {
+        await executeMouseAction(page, { type: "type", x: coord.x, y: coord.y, text: value });
+      } else if (coord.field.includes("upload") && tailoredDoc) {
+        const fs2 = require("fs");
+        const tempPath = import_path3.default.join(import_electron2.app.getPath("temp"), `tailored_cv_${jobId}.txt`);
+        fs2.writeFileSync(tempPath, tailoredDoc.content);
+        await executeMouseAction(page, { type: "upload", x: coord.x, y: coord.y, filePath: tempPath });
+      }
+    }
+    const submitBtn = coordinates.find((c) => c.field === "submit");
+    if (submitBtn) {
+      await logAction(userId, "ai_auditor", "\u{1F9D0} Final visual check before submission...", "in_progress");
+      await executeMouseAction(page, { type: "click", x: submitBtn.x, y: submitBtn.y });
+      await logAction(userId, "ai_mouse", `\u2705 Application submitted to ${job.company_name}`, "completed", true);
+      await runQuery("UPDATE job_listings", { id: jobId, status: "submitted" });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5e3));
+    await browser.close();
+    return { success: true };
+  } catch (error) {
+    console.error("Submission Error:", error);
+    await logAction(userId, "ai_mouse", `\u274C Submission failed: ${error.message}`, "failed", false);
+    return { success: false, error: error.message };
+  }
 }
 
 // src/main/ai-service.ts
@@ -908,10 +1278,12 @@ async function processApplication(jobId, userId, userConsentGiven = false) {
     const models = await getAllQuery("SELECT * FROM ai_models");
     const thinker = models.find((m) => m.role === "Thinker" && m.status === "active");
     const auditor = models.find((m) => m.role === "Auditor" && m.status === "active");
+    const observer = models.find((m) => m.role === "Observer" && m.status === "active") || thinker;
     if (thinker && auditor) {
-      await generateTailoredDocs(job, thinker, auditor, { cv: true, coverLetter: true }, callAI);
+      await generateTailoredDocs(job, userId, thinker, auditor, { cv: true, coverLetter: true }, callAI);
     }
-    return { success: true };
+    console.log(`AI Service: Docs ready for job ${jobId}. Handing over to AI Mouse...`);
+    return await submitApplication(jobId, userId, observer, callAI);
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -1218,12 +1590,12 @@ function createWindow() {
     minWidth: 1e3,
     minHeight: 700,
     webPreferences: {
-      preload: import_path3.default.join(__dirname, "preload.cjs"),
+      preload: import_path4.default.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false
     }
   });
-  const startUrl = import_electron_is_dev.default ? "http://localhost:5173" : `file://${import_path3.default.join(__dirname, "../dist/index.html")}`;
+  const startUrl = import_electron_is_dev.default ? "http://localhost:5173" : `file://${import_path4.default.join(__dirname, "../dist/index.html")}`;
   mainWindow.loadURL(startUrl);
   if (import_electron_is_dev.default)
     mainWindow.webContents.openDevTools();

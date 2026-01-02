@@ -7,6 +7,7 @@ import * as DocGenerator from './features/doc-generator';
 import * as GhostJobNetwork from './features/ghost-job-network';
 import * as SecretaryService from './features/secretary-service';
 import { startHuntingScheduler as initScheduler } from './features/scheduler';
+import * as AppSubmitter from './features/application-submitter';
 
 let huntingInterval: NodeJS.Timeout | null = null;
 
@@ -117,13 +118,21 @@ export async function processApplication(jobId: number, userId: number, userCons
     const db = getDatabase();
     const job = db.job_listings.find((j: any) => j.id === jobId);
     if (!job) return { success: false, error: 'Job not found' };
+
     const models = await getAllQuery('SELECT * FROM ai_models');
     const thinker = models.find((m: any) => m.role === 'Thinker' && m.status === 'active');
     const auditor = models.find((m: any) => m.role === 'Auditor' && m.status === 'active');
+    const observer = models.find((m: any) => m.role === 'Observer' && m.status === 'active') || thinker;
+
+    // Step 1: Generate Docs (The "Skeleton" call)
     if (thinker && auditor) {
-      await DocGenerator.generateTailoredDocs(job, thinker, auditor, { cv: true, coverLetter: true }, callAI);
+      await DocGenerator.generateTailoredDocs(job, userId, thinker, auditor, { cv: true, coverLetter: true }, callAI);
     }
-    return { success: true };
+
+    // Step 2: Trigger AI Mouse Submission (The "Skeleton" link)
+    console.log(`AI Service: Docs ready for job ${jobId}. Handing over to AI Mouse...`);
+    return await AppSubmitter.submitApplication(jobId, userId, observer, callAI);
+
   } catch (error: any) {
     return { success: false, error: error.message };
   }
@@ -132,4 +141,12 @@ export async function processApplication(jobId: number, userId: number, userCons
 export function startHuntingScheduler(userId: number) {
   if (huntingInterval) clearInterval(huntingInterval);
   huntingInterval = initScheduler(userId, startHunterSearch, callAI);
+}
+
+export async function submitApplication(jobId: number, userId: number) {
+  const models = await getAllQuery('SELECT * FROM ai_models');
+  const observer = models.find((m: any) => m.role === 'Observer' && m.status === 'active') || 
+                   models.find((m: any) => m.role === 'Hunter' && m.status === 'active');
+  
+  return await AppSubmitter.submitApplication(jobId, userId, observer, callAI);
 }

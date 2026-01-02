@@ -60,17 +60,17 @@ export function DocumentRepository({ userId }: { userId: number }) {
     const fileType = doc.file_type || '';
     
     if (fileType.includes('image')) {
-      return <img src={doc.content} style={{ maxWidth: '100%', borderRadius: '8px' }} />;
+      return <img src={doc.content} style={{ maxWidth: '100%', borderRadius: '8px' }} alt={doc.file_name || 'Preview'} />;
     }
 
-    if (doc.file_type.includes('pdf')) {
-      return <iframe src={doc.content} style={{ width: '100%', height: '600px', border: 'none', borderRadius: '8px' }} />;
+    if (fileType.includes('pdf')) {
+      return <iframe src={doc.content} style={{ width: '100%', height: '600px', border: 'none', borderRadius: '8px' }} title={doc.file_name || 'PDF Preview'} />;
     }
 
     return (
-      <div style={{ padding: '40px', textAlign: 'center', color: '#666', background: '#f9f9f9', borderRadius: '8px' }}>
+      <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)', borderRadius: '8px' }}>
         <div style={{ fontSize: '40px', marginBottom: '10px' }}>📄</div>
-        Preview not available for <strong>{doc.file_type}</strong>.<br/>
+        Preview not available for <strong>{fileType || 'this file type'}</strong>.<br/>
         Please download the file to view it.
       </div>
     );

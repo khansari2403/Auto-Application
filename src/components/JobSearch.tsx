@@ -381,6 +381,18 @@ export function JobSearch({ userId }: { userId: number }) {
                     {docOptions.portfolio && renderDocIcon(job, 'portfolio', 'Portfolio', 'PT')}
                     {docOptions.proposal && renderDocIcon(job, 'proposal', 'Proposal', 'PR')}
                     {docOptions.coverLetter && renderDocIcon(job, 'cover_letter', 'Cover Letter', 'CL')}
+                    {/* PDF button */}
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleConvertToPdf(job.id); }}
+                      title="Convert all documents to PDF"
+                      style={{ 
+                        width: '28px', height: '28px', borderRadius: '6px', 
+                        background: 'var(--card-bg)', border: '1px solid var(--border)',
+                        cursor: 'pointer', fontSize: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      }}
+                    >
+                      📄
+                    </button>
                   </div>
                 </td>
                 {visibleColumns.includes('job_title') && (
@@ -403,9 +415,17 @@ export function JobSearch({ userId }: { userId: number }) {
                             <input type="checkbox" checked={!!job.user_confirmed_docs} onChange={(e) => (window as any).electron.invoke('jobs:update-doc-confirmation', { jobId: job.id, confirmed: e.target.checked ? 1 : 0 }).then(loadData)} /> Happy with files?
                           </label>
                         )}
-                        <div style={{ display: 'flex', gap: '4px' }}>
-                          <button onClick={() => handleApply(job.id)} disabled={processingId === job.id || (docOptions.manualReview && !job.user_confirmed_docs)} style={{ padding: '6px 16px', background: job.status === 'applied' ? 'var(--text-tertiary)' : 'var(--success)', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' }}>
-                            {processingId === job.id ? '...' : job.status === 'applied' ? 'Applied' : 'Apply'}
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                          <button 
+                            onClick={() => handleSmartApply(job.id)} 
+                            disabled={processingId === job.id || (docOptions.manualReview && !job.user_confirmed_docs)} 
+                            style={{ 
+                              padding: '6px 12px', 
+                              background: job.status === 'applied' ? 'var(--text-tertiary)' : 'var(--success)', 
+                              color: '#fff', border: 'none', borderRadius: '4px', fontSize: '11px', cursor: 'pointer', fontWeight: 'bold' 
+                            }}
+                          >
+                            {processingId === job.id ? '⏳...' : job.status === 'applied' ? '✓ Applied' : '🤖 Smart Apply'}
                           </button>
                           <button onClick={() => (window as any).electron.invoke('jobs:delete', job.id).then(loadData)} style={{ padding: '6px 8px', background: 'var(--card-bg)', color: 'var(--danger)', border: '1px solid var(--danger-light)', borderRadius: '4px', cursor: 'pointer' }}>🗑️</button>
                         </div>

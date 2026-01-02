@@ -377,17 +377,17 @@ function LinkedInSection({ userId }: { userId: number }) {
 
       {/* Current Profile Summary */}
       {profile.name && (
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '8px', border: '1px solid #ddd' }}>
-          <h4 style={{ marginTop: 0 }}>📋 Current Profile</h4>
+        <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+          <h4 style={{ marginTop: 0, color: 'var(--text-primary)' }}>📋 Current Profile</h4>
           <div style={{ display: 'flex', gap: '20px', alignItems: 'start' }}>
             {profile.photo && <img src={profile.photo} style={{ width: '60px', height: '60px', borderRadius: '8px' }} alt="" />}
             <div>
-              <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', fontSize: '16px' }}>{profile.name}</p>
-              <p style={{ margin: '0 0 5px 0', color: '#666' }}>{profile.title}</p>
-              <p style={{ margin: '0', fontSize: '13px', color: '#999' }}>{profile.location}</p>
+              <p style={{ margin: '0 0 5px 0', fontWeight: 'bold', fontSize: '16px', color: 'var(--text-primary)' }}>{profile.name}</p>
+              <p style={{ margin: '0 0 5px 0', color: 'var(--text-secondary)' }}>{profile.title}</p>
+              <p style={{ margin: '0', fontSize: '13px', color: 'var(--text-tertiary)' }}>{profile.location}</p>
             </div>
           </div>
-          <div style={{ marginTop: '15px', display: 'flex', flexWrap: 'wrap', gap: '15px', fontSize: '12px', color: '#666' }}>
+          <div style={{ marginTop: '15px', display: 'flex', flexWrap: 'wrap', gap: '15px', fontSize: '12px', color: 'var(--text-secondary)' }}>
             <span>💼 {profile.experiences.length} Experiences</span>
             <span>🎓 {profile.educations.length} Education</span>
             <span>🛠️ {profile.skills.length} Skills</span>

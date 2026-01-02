@@ -399,16 +399,21 @@ textarea::placeholder {
   color: var(--text-tertiary);
 }
 
-/* Neumorphism inputs */
+/* Neumorphism inputs - CONSISTENT STYLING */
 [data-theme-style="neumorphism"] .form-input,
 [data-theme-style="neumorphism"] input[type="text"],
 [data-theme-style="neumorphism"] input[type="email"],
 [data-theme-style="neumorphism"] input[type="password"],
 [data-theme-style="neumorphism"] input[type="number"],
+[data-theme-style="neumorphism"] input[type="url"],
+[data-theme-style="neumorphism"] input[type="month"],
+[data-theme-style="neumorphism"] input[type="date"],
 [data-theme-style="neumorphism"] select,
 [data-theme-style="neumorphism"] textarea {
   box-shadow: var(--shadow-inset-sm);
   border: none;
+  background: var(--input-bg) !important;
+  color: var(--text-primary) !important;
 }
 
 [data-theme-style="neumorphism"] .form-input:focus,
@@ -416,6 +421,21 @@ textarea::placeholder {
 [data-theme-style="neumorphism"] select:focus,
 [data-theme-style="neumorphism"] textarea:focus {
   box-shadow: var(--shadow-inset);
+}
+
+/* Force consistent input styling for neumorphism */
+[data-theme-style="neumorphism"] input,
+[data-theme-style="neumorphism"] select,
+[data-theme-style="neumorphism"] textarea {
+  background: var(--input-bg) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Fix inline styled inputs for neumorphism */
+[data-theme-style="neumorphism"] input[style*="background"],
+[data-theme-style="neumorphism"] select[style*="background"],
+[data-theme-style="neumorphism"] textarea[style*="background"] {
+  background: var(--input-bg) !important;
 }
 
 /* ========================================
@@ -509,6 +529,93 @@ textarea::placeholder {
 
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-tertiary);
+}
+
+/* ========================================
+   DROPDOWN Z-INDEX FIX (Glassmorphism)
+   ======================================== */
+/* Fix dropdown menus going behind panels */
+[data-theme-style="glassmorphism"] select,
+[data-theme-style="glassmorphism"] .dropdown,
+[data-theme-style="glassmorphism"] [class*="dropdown"] {
+  position: relative;
+  z-index: 100;
+}
+
+/* Ensure dropdowns appear above cards */
+select:focus,
+.dropdown:focus-within,
+[class*="dropdown"]:focus-within {
+  z-index: 1000;
+}
+
+/* Fix for absolute positioned dropdowns */
+.dropdown-menu,
+[class*="dropdown-menu"],
+div[style*="position: absolute"] {
+  z-index: 1000 !important;
+}
+
+/* ========================================
+   GLOBAL THEME APPLICATION TO ALL ELEMENTS
+   ======================================== */
+/* Ensure all backgrounds use theme variables */
+.settings-section,
+.settings-form,
+.form-group,
+div[style*="background: #fff"],
+div[style*="background: white"],
+div[style*="background:#fff"] {
+  background: var(--card-bg) !important;
+  color: var(--text-primary);
+}
+
+/* Theme-aware text colors */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+}
+
+p, span, label {
+  color: var(--text-primary);
+}
+
+/* Links theme support */
+a {
+  color: var(--primary);
+}
+
+a:hover {
+  color: var(--primary-dark);
+}
+
+/* Tables theme support */
+table {
+  background: var(--card-bg);
+  color: var(--text-primary);
+}
+
+thead {
+  background: var(--bg-secondary);
+}
+
+th {
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+td {
+  border-color: var(--border);
+  color: var(--text-primary);
+}
+
+tr:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Badge and status theme */
+.badge {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
 }
 
 /* ========================================

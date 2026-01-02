@@ -617,23 +617,26 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 1. DO NOT include any JSON formatting like { "coverLetter": ... }
 2. DO NOT start with meta-text like "Here is the cover letter:"
 3. DO NOT use long em-dashes (—), use regular dashes (-) only
-4. Output ONLY the letter content, starting with "Dear Hiring Manager" or similar
+4. DO NOT fabricate or hallucinate information not provided in the profile
+5. Output ONLY the letter content, starting with "Dear Hiring Manager" or similar
 
 REQUIREMENTS:
 1. Be concise (250-300 words)
 2. Address the hiring manager professionally
-3. Highlight 2-3 most relevant qualifications with specific examples
+3. Highlight 2-3 most relevant qualifications with specific examples FROM THE PROVIDED PROFILE ONLY
 4. Show enthusiasm for the specific role
 5. Include a clear call to action
 6. No clichés or AI-sounding phrases
 7. Language: Match the job description
+8. MUST end with proper sign-off: "Kind regards," followed by the applicant's full name
 
 STRUCTURE:
-- Opening: State the position and express interest (1-2 sentences)
+- Opening: "Dear Hiring Manager," then state the position and express interest (1-2 sentences)
 - Middle (2 paragraphs): Your relevant qualifications and why you're a great fit
-- Closing: Thank them and suggest next steps
+- Closing: Thank them, suggest next steps
+- Sign-off: "Kind regards," + new line + "${userProfile?.name || '[Your Name]'}"
 
-Return ONLY the cover letter content, starting directly with the greeting.`,
+Return ONLY the cover letter content, starting with "Dear Hiring Manager," and ending with the sign-off.`,
 
     portfolio: `You are a Portfolio Description writer. Create a portfolio summary for this job application.
 

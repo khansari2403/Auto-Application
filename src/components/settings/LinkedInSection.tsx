@@ -80,12 +80,54 @@ function LinkedInSection({ userId }: { userId: number }) {
 
   useEffect(() => { loadProfile(); }, [userId]);
 
-  const handleCapture = async () => {
-    const result = await (window as any).electron.invoke('user:capture-linkedin');
+  // LinkedIn scraping state
+  const [isScraping, setIsScraping] = useState(false);
+  const [scrapeStatus, setScrapeStatus] = useState('');
+
+  const handleOpenLinkedIn = async () => {
+    setScrapeStatus('Opening LinkedIn for login...');
+    const result = await (window as any).electron.invoke('user:capture-linkedin', { userId });
     if (result.success) {
-      setImportedData(result.data);
-      setIsReviewing(true);
+      setScrapeStatus(result.message || 'LinkedIn opened. Please login manually.');
+    } else {
+      setScrapeStatus('Error: ' + result.error);
     }
+  };
+
+  const handleCaptureProfile = async () => {
+    setIsScraping(true);
+    setScrapeStatus('Capturing profile data...');
+    
+    try {
+      const result = await (window as any).electron.invoke('user:capture-linkedin', { userId, profileUrl: url || undefined });
+      
+      if (result.success && result.data) {
+        setScrapeStatus('Profile captured! Review the data below.');
+        setImportedData({
+          name: result.data.name,
+          title: result.data.title,
+          location: result.data.location,
+          photo: result.data.photo,
+          summary: result.data.summary,
+          experienceList: result.data.experiences,
+          educationList: result.data.educations,
+          skillList: result.data.skills,
+          licenseList: result.data.licenses,
+          languageList: result.data.languages
+        });
+        setIsReviewing(true);
+      } else {
+        setScrapeStatus(result.message || result.error || 'Capture failed. Please try again.');
+      }
+    } catch (e: any) {
+      setScrapeStatus('Error: ' + e.message);
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
+  const handleCapture = async () => {
+    await handleCaptureProfile();
   };
 
   const acceptImportedData = () => {
@@ -105,6 +147,7 @@ function LinkedInSection({ userId }: { userId: number }) {
       languages: n.languageList ? [...new Set([...p.languages, ...n.languageList])] : p.languages,
     }));
     setImportedData(null);
+    setScrapeStatus('');
   };
 
   const deleteImportedItem = (field: string, index: number) => {

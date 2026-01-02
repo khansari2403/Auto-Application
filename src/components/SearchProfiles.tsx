@@ -411,7 +411,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
           {/* Column 2: Industries & Skills */}
           <div>
             <div style={groupStyle}>
-              <h4 style={{ marginTop: 0, marginBottom: '12px' }}>🏭 Industries</h4>
+              <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🏭 Industries</h4>
               
               {/* Industries - Include */}
               <ScrollableMultiSelect 

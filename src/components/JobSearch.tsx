@@ -206,6 +206,49 @@ export function JobSearch({ userId }: { userId: number }) {
     }
   };
 
+  // Generate a single document type for a job
+  const handleGenerateSingleDoc = async (jobId: number, docType: string) => {
+    setProcessingId(jobId);
+    try {
+      // Create options with only the specific document type enabled
+      const singleDocOptions: any = {
+        cv: false,
+        motivationLetter: false,
+        coverLetter: false,
+        portfolio: false,
+        proposal: false
+      };
+      
+      // Map the document type to the correct option key
+      const typeToOption: Record<string, string> = {
+        'cv': 'cv',
+        'motivation_letter': 'motivationLetter',
+        'cover_letter': 'coverLetter',
+        'portfolio': 'portfolio',
+        'proposal': 'proposal'
+      };
+      
+      const optionKey = typeToOption[docType];
+      if (optionKey) {
+        singleDocOptions[optionKey] = true;
+      }
+      
+      const result = await (window as any).electron.invoke('ai:generate-tailored-docs', { 
+        jobId, 
+        userId, 
+        docOptions: singleDocOptions 
+      });
+      if (!result.success) {
+        alert('Generation Error: ' + result.error);
+      }
+    } catch (e: any) {
+      alert('Generation Error: ' + e.message);
+    } finally {
+      setProcessingId(null);
+      loadData();
+    }
+  };
+
   const renderDocIcon = (job: any, type: string, label: string, shortLabel: string) => {
     const status = job[`${type}_status`];
     const path = job[`${type}_path`];
@@ -218,8 +261,8 @@ export function JobSearch({ userId }: { userId: number }) {
         // Open the completed document
         (window as any).electron.invoke('docs:open-file', path);
       } else {
-        // Generate the document
-        handleGenerateDocs(job.id);
+        // Generate ONLY this specific document type
+        handleGenerateSingleDoc(job.id, type);
       }
     };
 

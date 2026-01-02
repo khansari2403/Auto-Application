@@ -350,11 +350,11 @@ function LinkedInSection({ userId }: { userId: number }) {
 
   // Main LinkedIn Section View
   return (
-    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-      <h3>👤 LinkedIn Profile Import</h3>
+    <div style={{ padding: '20px', fontFamily: 'sans-serif', background: 'var(--bg-primary)' }}>
+      <h3 style={{ color: 'var(--text-primary)' }}>👤 LinkedIn Profile Import</h3>
       
-      <div style={{ background: '#e3f2fd', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-        <p style={{ margin: 0, fontSize: '13px', color: '#1565c0' }}>
+      <div style={{ background: 'var(--info-light)', padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+        <p style={{ margin: 0, fontSize: '13px', color: 'var(--info)' }}>
           <strong>ℹ️ How it works:</strong> Your profile data will be used to automatically generate tailored CVs and motivation letters for each job application.
         </p>
       </div>

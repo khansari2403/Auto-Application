@@ -119,10 +119,44 @@ Settings are stored in `settings.secretary_settings` as JSON:
 
 ## Remaining Work
 
+### P0 - Critical (Fixed in this session - Dec 2025)
+- [x] IPC Handler duplicate fix (user:capture-linkedin)
+- [x] Documents tab crash fix
+- [x] LinkedIn Profile section cleanup (removed extra buttons)
+- [x] Job Websites page redesign as clean list
+- [x] Cover letter JSON artifacts fix
+- [x] Motivation letter improvements
+
+### P1 - High Priority (Testing Needed)
+- [ ] End-to-end test of Smart Apply flow
+- [ ] CV generation verification
+- [ ] Document quality verification (no JSON artifacts)
+
+### P2 - Medium Priority
+- [ ] Secretary Authentication Flow
+- [ ] Storage directory structure (Company/Position/Files)
+
 ### P3 - Low Priority
 - [ ] Full email integration (SMTP/IMAP)
 - [ ] Actual email sending for notifications
 - [ ] Email verification flow completion
+
+## Changes Made - December 2025
+
+### Bug Fixes
+1. **Documents Tab Crash** - Fixed DocumentRepository.tsx to handle errors gracefully, added loading states
+2. **IPC Handler for docs:delete** - Added missing handler
+3. **LinkedIn Profile Section** - Removed "1. Open LinkedIn" and "2. Capture Profile Data" buttons, kept only "Edit Profile"
+4. **Job Websites Page** - Complete redesign with clean list layout, proper grid, activate/pause/edit/delete buttons
+5. **Cover Letter JSON Fix** - Added cleanAIOutput() function to strip JSON formatting and meta-text
+6. **Motivation Letter** - Improved prompts to require full page (400-500 words), better structure, no apologies
+
+### Files Modified
+- `/app/src/components/DocumentRepository.tsx` - Fixed crashes, better error handling, theme support
+- `/app/src/components/settings/LinkedInSection.tsx` - Simplified UI, removed extra buttons
+- `/app/src/components/settings/JobWebsitesSection.tsx` - Complete redesign as clean list
+- `/app/src/main/features/doc-generator.ts` - Added cleanAIOutput(), improved prompts
+- `/app/src/main/ipc-handlers.ts` - Added docs:delete handler
 
 ## Run Instructions
 ```bash

@@ -240,9 +240,9 @@ export function SearchProfiles({ userId }: { userId: number }) {
     }
   };
 
-  const inputStyle = { width: '100%', padding: '8px', marginBottom: '8px', border: '1px solid #ccc', borderRadius: '6px', fontSize: '12px' };
-  const labelStyle: React.CSSProperties = { display: 'block', fontWeight: 'bold', marginBottom: '4px', color: '#0077b5', fontSize: '11px' };
-  const groupStyle = { background: '#f9f9f9', padding: '12px', borderRadius: '10px', marginBottom: '12px', border: '1px solid #eee' };
+  const inputStyle = { width: '100%', padding: '8px', marginBottom: '8px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', background: 'var(--input-bg)', color: 'var(--text-primary)' };
+  const labelStyle: React.CSSProperties = { display: 'block', fontWeight: 'bold', marginBottom: '4px', color: 'var(--primary)', fontSize: '11px' };
+  const groupStyle = { background: 'var(--bg-secondary)', padding: '12px', borderRadius: '10px', marginBottom: '12px', border: '1px solid var(--border)' };
 
   // Multi-Select Scrollable Component
   const ScrollableMultiSelect = ({ label, options, selected, setSelected, maxHeight = '120px' }: any) => (

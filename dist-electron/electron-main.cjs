@@ -1370,9 +1370,925 @@ var init_scheduler = __esm({
   }
 });
 
+// src/main/features/linkedin-scraper.ts
+var linkedin_scraper_exports = {};
+__export(linkedin_scraper_exports, {
+  closeLinkedInBrowser: () => closeLinkedInBrowser,
+  openLinkedInForLogin: () => openLinkedInForLogin,
+  saveLinkedInProfile: () => saveLinkedInProfile,
+  scrapeLinkedInProfile: () => scrapeLinkedInProfile
+});
+async function openLinkedInForLogin(userId) {
+  try {
+    await logAction(userId, "linkedin", "\u{1F517} Opening LinkedIn for login...", "in_progress");
+    const browser = await import_puppeteer3.default.launch({
+      headless: false,
+      userDataDir: getUserDataDir2(),
+      args: ["--no-sandbox", "--start-maximized", "--disable-blink-features=AutomationControlled"]
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, "webdriver", { get: () => false });
+    });
+    await page.goto("https://www.linkedin.com/login", { waitUntil: "networkidle2" });
+    global.linkedInBrowser = browser;
+    global.linkedInPage = page;
+    await logAction(userId, "linkedin", "\u2705 LinkedIn opened. Please login manually.", "completed", true);
+    return {
+      success: true,
+      message: 'LinkedIn opened. Please login manually, then click "Capture Profile".'
+    };
+  } catch (error) {
+    await logAction(userId, "linkedin", `\u274C Error: ${error.message}`, "failed", false);
+    return { success: false, message: error.message };
+  }
+}
+async function scrapeLinkedInProfile(userId, profileUrl) {
+  let browser = global.linkedInBrowser;
+  let page = global.linkedInPage;
+  let shouldCloseBrowser = false;
+  try {
+    await logAction(userId, "linkedin", "\u{1F50D} Starting LinkedIn profile capture...", "in_progress");
+    if (!browser || !page) {
+      browser = await import_puppeteer3.default.launch({
+        headless: false,
+        userDataDir: getUserDataDir2(),
+        args: ["--no-sandbox", "--disable-blink-features=AutomationControlled"]
+      });
+      page = await browser.newPage();
+      await page.setViewport({ width: 1280, height: 800 });
+      shouldCloseBrowser = true;
+    }
+    if (profileUrl) {
+      await page.goto(profileUrl, { waitUntil: "networkidle2", timeout: 6e4 });
+    } else {
+      await page.goto("https://www.linkedin.com/in/me/", { waitUntil: "networkidle2", timeout: 6e4 });
+    }
+    await page.waitForSelector(".pv-top-card", { timeout: 3e4 }).catch(() => {
+    });
+    await new Promise((r) => setTimeout(r, 2e3 + Math.random() * 2e3));
+    await page.evaluate(() => window.scrollBy(0, 500));
+    await new Promise((r) => setTimeout(r, 1e3));
+    await page.evaluate(() => window.scrollBy(0, 500));
+    await new Promise((r) => setTimeout(r, 1e3));
+    const profileData = await page.evaluate(() => {
+      const getText = (selector) => {
+        var _a, _b;
+        return ((_b = (_a = document.querySelector(selector)) == null ? void 0 : _a.textContent) == null ? void 0 : _b.trim()) || "";
+      };
+      const getAttr = (selector, attr) => {
+        var _a;
+        return ((_a = document.querySelector(selector)) == null ? void 0 : _a.getAttribute(attr)) || "";
+      };
+      const name = getText(".pv-top-card--list li:first-child") || getText("h1.text-heading-xlarge") || getText(".pv-text-details__left-panel h1");
+      const title = getText(".pv-top-card--list-bullet li:first-child") || getText(".text-body-medium.break-words") || "";
+      const location = getText(".pv-top-card--list-bullet li:last-child") || getText(".text-body-small.inline.t-black--light.break-words") || "";
+      const photo = getAttr(".pv-top-card-profile-picture__image", "src") || getAttr("img.pv-top-card-profile-picture__image--show", "src") || "";
+      const summary = getText(".pv-about-section .pv-about__summary-text") || getText("#about ~ .display-flex .full-width") || "";
+      const experiences = [];
+      document.querySelectorAll("#experience ~ .pvs-list__outer-container > ul > li").forEach((li) => {
+        var _a, _b;
+        const titleEl = li.querySelector('.t-bold span[aria-hidden="true"]') || li.querySelector(".mr1.t-bold span");
+        const companyEl = li.querySelector('.t-14.t-normal span[aria-hidden="true"]') || li.querySelector(".t-14.t-normal");
+        const datesEl = li.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]');
+        const descEl = li.querySelector('.pvs-list__outer-container .t-14.t-normal.t-black span[aria-hidden="true"]');
+        if (titleEl) {
+          const fullText = (companyEl == null ? void 0 : companyEl.textContent) || "";
+          const [company, ...locationParts] = fullText.split("\xB7").map((s) => s.trim());
+          const datesText = (datesEl == null ? void 0 : datesEl.textContent) || "";
+          const dateMatch = datesText.match(/(\w+ \d{4})\s*[-–]\s*(\w+ \d{4}|Present)/i);
+          experiences.push({
+            title: ((_a = titleEl.textContent) == null ? void 0 : _a.trim()) || "",
+            company: company || "",
+            location: locationParts.join(" ").trim(),
+            startDate: (dateMatch == null ? void 0 : dateMatch[1]) || "",
+            endDate: (dateMatch == null ? void 0 : dateMatch[2]) || "",
+            description: ((_b = descEl == null ? void 0 : descEl.textContent) == null ? void 0 : _b.trim()) || ""
+          });
+        }
+      });
+      const educations = [];
+      document.querySelectorAll("#education ~ .pvs-list__outer-container > ul > li").forEach((li) => {
+        var _a;
+        const schoolEl = li.querySelector('.t-bold span[aria-hidden="true"]');
+        const degreeEl = li.querySelector('.t-14.t-normal span[aria-hidden="true"]');
+        const datesEl = li.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]');
+        if (schoolEl) {
+          const degreeText = (degreeEl == null ? void 0 : degreeEl.textContent) || "";
+          const [degree, field] = degreeText.split(",").map((s) => s.trim());
+          const datesText = (datesEl == null ? void 0 : datesEl.textContent) || "";
+          const yearMatch = datesText.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+          educations.push({
+            school: ((_a = schoolEl.textContent) == null ? void 0 : _a.trim()) || "",
+            degree: degree || "",
+            field: field || "",
+            startYear: (yearMatch == null ? void 0 : yearMatch[1]) || "",
+            endYear: (yearMatch == null ? void 0 : yearMatch[2]) || ""
+          });
+        }
+      });
+      const skills = [];
+      document.querySelectorAll('#skills ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach((el) => {
+        var _a;
+        const skill = (_a = el.textContent) == null ? void 0 : _a.trim();
+        if (skill && !skills.includes(skill)) skills.push(skill);
+      });
+      const licenses = [];
+      document.querySelectorAll('#licenses_and_certifications ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach((el) => {
+        var _a;
+        const license = (_a = el.textContent) == null ? void 0 : _a.trim();
+        if (license && !licenses.includes(license)) licenses.push(license);
+      });
+      const languages = [];
+      document.querySelectorAll('#languages ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach((el) => {
+        var _a;
+        const lang = (_a = el.textContent) == null ? void 0 : _a.trim();
+        if (lang && !languages.includes(lang)) languages.push(lang);
+      });
+      return { name, title, location, photo, summary, experiences, educations, skills, licenses, languages };
+    });
+    await logAction(userId, "linkedin", `\u2705 Profile captured: ${profileData.name}`, "completed", true);
+    if (shouldCloseBrowser && browser) {
+      await browser.close();
+    }
+    return { success: true, data: profileData };
+  } catch (error) {
+    console.error("LinkedIn scrape error:", error);
+    await logAction(userId, "linkedin", `\u274C Capture failed: ${error.message}`, "failed", false);
+    if (shouldCloseBrowser && browser) {
+      await browser.close();
+    }
+    return { success: false, error: error.message };
+  }
+}
+async function saveLinkedInProfile(userId, profileData) {
+  try {
+    const db = getDatabase();
+    const existingProfile = db.user_profile.find((p) => p.id === userId) || db.user_profile[0];
+    const profileToSave = {
+      id: (existingProfile == null ? void 0 : existingProfile.id) || userId,
+      name: profileData.name,
+      title: profileData.title,
+      location: profileData.location,
+      photo: profileData.photo,
+      summary: profileData.summary,
+      experiences: JSON.stringify(profileData.experiences),
+      educations: JSON.stringify(profileData.educations),
+      skills: JSON.stringify(profileData.skills),
+      licenses: JSON.stringify(profileData.licenses),
+      languages: JSON.stringify(profileData.languages),
+      linkedin_imported: true,
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    if (existingProfile) {
+      await runQuery("UPDATE user_profile", profileToSave);
+    } else {
+      await runQuery("INSERT INTO user_profile", profileToSave);
+    }
+    await logAction(userId, "linkedin", `\u{1F4BE} Profile saved to database`, "completed", true);
+    return { success: true };
+  } catch (error) {
+    console.error("Save profile error:", error);
+    return { success: false };
+  }
+}
+async function closeLinkedInBrowser() {
+  const browser = global.linkedInBrowser;
+  if (browser) {
+    await browser.close();
+    global.linkedInBrowser = null;
+    global.linkedInPage = null;
+  }
+}
+var import_puppeteer3, import_path4, app5, getUserDataDir2;
+var init_linkedin_scraper = __esm({
+  "src/main/features/linkedin-scraper.ts"() {
+    import_puppeteer3 = __toESM(require("puppeteer"), 1);
+    init_database();
+    import_path4 = __toESM(require("path"), 1);
+    try {
+      app5 = require("electron").app;
+    } catch (e) {
+      app5 = global.electronApp;
+    }
+    getUserDataDir2 = () => import_path4.default.join(app5.getPath("userData"), "browser_data");
+  }
+});
+
+// src/main/features/pdf-export.ts
+var pdf_export_exports = {};
+__export(pdf_export_exports, {
+  convertAllJobDocsToPdf: () => convertAllJobDocsToPdf,
+  convertHtmlToPdf: () => convertHtmlToPdf,
+  generatePdfFromContent: () => generatePdfFromContent
+});
+async function convertHtmlToPdf(htmlPath, userId) {
+  let browser = null;
+  try {
+    await logAction(userId, "pdf", `\u{1F4C4} Converting to PDF: ${path6.basename(htmlPath)}`, "in_progress");
+    if (!fs3.existsSync(htmlPath)) {
+      return { success: false, error: "HTML file not found" };
+    }
+    const htmlContent = fs3.readFileSync(htmlPath, "utf-8");
+    browser = await import_puppeteer4.default.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    await page.evaluateHandle("document.fonts.ready");
+    const pdfPath = htmlPath.replace(".html", ".pdf");
+    await page.pdf({
+      path: pdfPath,
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "20mm",
+        right: "15mm",
+        bottom: "20mm",
+        left: "15mm"
+      }
+    });
+    await browser.close();
+    await logAction(userId, "pdf", `\u2705 PDF created: ${path6.basename(pdfPath)}`, "completed", true);
+    return { success: true, pdfPath };
+  } catch (error) {
+    console.error("PDF conversion error:", error);
+    if (browser) await browser.close();
+    await logAction(userId, "pdf", `\u274C PDF conversion failed: ${error.message}`, "failed", false);
+    return { success: false, error: error.message };
+  }
+}
+async function convertAllJobDocsToPdf(jobId, userId) {
+  var _a;
+  const db = getDatabase();
+  const job = (_a = db.job_listings) == null ? void 0 : _a.find((j) => j.id === jobId);
+  if (!job) {
+    return { success: false, pdfs: [], errors: ["Job not found"] };
+  }
+  const docTypes = ["cv", "motivation_letter", "cover_letter", "portfolio", "proposal"];
+  const pdfs = [];
+  const errors = [];
+  for (const docType of docTypes) {
+    const htmlPath = job[`${docType}_path`];
+    if (htmlPath && fs3.existsSync(htmlPath)) {
+      const result = await convertHtmlToPdf(htmlPath, userId);
+      if (result.success && result.pdfPath) {
+        pdfs.push(result.pdfPath);
+      } else if (result.error) {
+        errors.push(`${docType}: ${result.error}`);
+      }
+    }
+  }
+  return { success: pdfs.length > 0, pdfs, errors };
+}
+async function generatePdfFromContent(content, fileName, userId, options) {
+  let browser = null;
+  try {
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${(options == null ? void 0 : options.title) || "Document"}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      padding: 0;
+      background: #fff;
+    }
+    
+    .header {
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #0077b5;
+    }
+    
+    .name {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0077b5;
+      margin-bottom: 3px;
+    }
+    
+    .title {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    
+    .contact {
+      font-size: 11px;
+      color: #444;
+    }
+    
+    .content {
+      font-size: 12px;
+      text-align: justify;
+      white-space: pre-wrap;
+      line-height: 1.7;
+    }
+    
+    .content p {
+      margin-bottom: 10px;
+    }
+    
+    @page {
+      size: A4;
+      margin: 20mm 15mm;
+    }
+  </style>
+</head>
+<body>
+  ${(options == null ? void 0 : options.headerName) ? `
+  <div class="header">
+    <div class="name">${options.headerName}</div>
+    ${options.headerTitle ? `<div class="title">${options.headerTitle}</div>` : ""}
+    ${options.headerContact ? `<div class="contact">${options.headerContact}</div>` : ""}
+  </div>
+  ` : ""}
+  
+  <div class="content">${content.replace(/\n/g, "<br>")}</div>
+</body>
+</html>`;
+    browser = await import_puppeteer4.default.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    await page.evaluateHandle("document.fonts.ready");
+    const pdfPath = path6.join(getDocsDir2(), `${fileName}.pdf`);
+    await page.pdf({
+      path: pdfPath,
+      format: "A4",
+      printBackground: true,
+      margin: { top: "20mm", right: "15mm", bottom: "20mm", left: "15mm" }
+    });
+    await browser.close();
+    await logAction(userId, "pdf", `\u2705 PDF generated: ${fileName}.pdf`, "completed", true);
+    return { success: true, pdfPath };
+  } catch (error) {
+    if (browser) await browser.close();
+    return { success: false, error: error.message };
+  }
+}
+var import_puppeteer4, fs3, path6, app6, getDocsDir2;
+var init_pdf_export = __esm({
+  "src/main/features/pdf-export.ts"() {
+    import_puppeteer4 = __toESM(require("puppeteer"), 1);
+    fs3 = __toESM(require("fs"), 1);
+    path6 = __toESM(require("path"), 1);
+    init_database();
+    try {
+      app6 = require("electron").app;
+    } catch (e) {
+      app6 = global.electronApp;
+    }
+    getDocsDir2 = () => {
+      const docsPath = path6.join(app6.getPath("userData"), "generated_docs");
+      if (!fs3.existsSync(docsPath)) {
+        fs3.mkdirSync(docsPath, { recursive: true });
+      }
+      return docsPath;
+    };
+  }
+});
+
+// src/main/features/smart-applicant.ts
+var smart_applicant_exports = {};
+__export(smart_applicant_exports, {
+  cancelApplication: () => cancelApplication,
+  continueApplicationWithAnswers: () => continueApplicationWithAnswers,
+  deleteQuestion: () => deleteQuestion,
+  getAllQuestions: () => getAllQuestions,
+  submitApplication: () => submitApplication2,
+  updateQuestionAnswer: () => updateQuestionAnswer
+});
+async function findSimilarAnswer(question, category) {
+  const db = getDatabase();
+  const questions = db.questions || [];
+  const questionLower = question.toLowerCase();
+  const keywords = questionLower.split(/\s+/).filter((w) => w.length > 3);
+  for (const q of questions) {
+    if (q.category === category) {
+      const storedLower = q.question.toLowerCase();
+      const matchCount = keywords.filter((k) => storedLower.includes(k)).length;
+      if (matchCount >= keywords.length * 0.5) {
+        return q.answer;
+      }
+    }
+  }
+  return null;
+}
+async function saveQuestionAnswer(question, answer, category, jobId) {
+  const db = getDatabase();
+  const existingIndex = db.questions.findIndex(
+    (q) => q.question.toLowerCase() === question.toLowerCase()
+  );
+  if (existingIndex >= 0) {
+    db.questions[existingIndex].answer = answer;
+    db.questions[existingIndex].updated_at = (/* @__PURE__ */ new Date()).toISOString();
+  } else {
+    db.questions.push({
+      id: Date.now(),
+      job_id: jobId,
+      question,
+      answer,
+      category,
+      created_at: (/* @__PURE__ */ new Date()).toISOString(),
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  }
+  await runQuery("UPDATE settings", { id: 1, last_qa_update: (/* @__PURE__ */ new Date()).toISOString() });
+}
+async function getAllQuestions() {
+  const db = getDatabase();
+  return db.questions || [];
+}
+async function updateQuestionAnswer(questionId, newAnswer) {
+  const db = getDatabase();
+  const index = db.questions.findIndex((q) => q.id === questionId);
+  if (index >= 0) {
+    db.questions[index].answer = newAnswer;
+    db.questions[index].updated_at = (/* @__PURE__ */ new Date()).toISOString();
+    await runQuery("UPDATE settings", { id: 1, last_qa_update: (/* @__PURE__ */ new Date()).toISOString() });
+    return { success: true };
+  }
+  return { success: false };
+}
+async function deleteQuestion(questionId) {
+  const db = getDatabase();
+  const initialLength = db.questions.length;
+  db.questions = db.questions.filter((q) => q.id !== questionId);
+  if (db.questions.length < initialLength) {
+    await runQuery("UPDATE settings", { id: 1, last_qa_update: (/* @__PURE__ */ new Date()).toISOString() });
+    return { success: true };
+  }
+  return { success: false };
+}
+async function analyzeFormFields(page, observerModel, callAI2) {
+  const screenshot = await page.screenshot({ encoding: "base64" });
+  const formInfo = await page.evaluate(() => {
+    var _a;
+    const fields = [];
+    document.querySelectorAll("input, select, textarea").forEach((el) => {
+      var _a2, _b;
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        const label = ((_b = (_a2 = el.labels) == null ? void 0 : _a2[0]) == null ? void 0 : _b.textContent) || el.placeholder || el.name || el.id || el.getAttribute("aria-label") || "";
+        fields.push({
+          type: el.type || el.tagName.toLowerCase(),
+          name: el.name,
+          id: el.id,
+          label: label.trim(),
+          required: el.required,
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+          options: el.tagName === "SELECT" ? Array.from(el.options).map((o) => o.text) : void 0
+        });
+      }
+    });
+    document.querySelectorAll('input[type="file"], button[class*="upload"], [data-testid*="upload"]').forEach((el) => {
+      var _a2;
+      const rect = el.getBoundingClientRect();
+      if (rect.width > 0) {
+        fields.push({
+          type: "file",
+          label: ((_a2 = el.textContent) == null ? void 0 : _a2.trim()) || "Upload",
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2
+        });
+      }
+    });
+    const submitBtn = document.querySelector('button[type="submit"], input[type="submit"], button[class*="submit"], button:contains("Submit"), button:contains("Apply")');
+    if (submitBtn) {
+      const rect = submitBtn.getBoundingClientRect();
+      fields.push({
+        type: "submit",
+        label: ((_a = submitBtn.textContent) == null ? void 0 : _a.trim()) || "Submit",
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2
+      });
+    }
+    return fields;
+  });
+  if (observerModel && callAI2) {
+    try {
+      const prompt = `Analyze this job application form screenshot. Identify all form fields and their purpose.
+      
+Return a JSON array of objects with:
+- field: field name/purpose (e.g., "first_name", "email", "resume_upload", "cover_letter", "salary_expectation")
+- type: input type (text, email, file, select, textarea, checkbox, submit)
+- required: true/false
+- x: approximate x coordinate (0-1280)
+- y: approximate y coordinate (0-800)
+- question: if this is a question that needs user input (e.g., "What are your salary expectations?")
+- category: personal|experience|availability|salary|visa|education|skills|other
+
+Current DOM fields detected: ${JSON.stringify(formInfo.slice(0, 10))}`;
+      const response = await callAI2(observerModel, prompt, `data:image/png;base64,${screenshot}`);
+      const jsonMatch = response.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const aiFields = JSON.parse(jsonMatch[0]);
+        return [...formInfo, ...aiFields.filter((f) => !formInfo.find(
+          (df) => Math.abs(df.x - f.x) < 50 && Math.abs(df.y - f.y) < 50
+        ))];
+      }
+    } catch (e) {
+      console.log("AI field analysis failed, using DOM only");
+    }
+  }
+  return formInfo;
+}
+function mapProfileToField(fieldLabel, fieldType, userProfile) {
+  var _a, _b, _c, _d, _e, _f;
+  const label = fieldLabel.toLowerCase();
+  if (label.includes("first name") || label === "firstname" || label === "vorname") {
+    return ((_a = userProfile.name) == null ? void 0 : _a.split(" ")[0]) || "";
+  }
+  if (label.includes("last name") || label === "lastname" || label === "nachname" || label.includes("surname")) {
+    return ((_b = userProfile.name) == null ? void 0 : _b.split(" ").slice(1).join(" ")) || "";
+  }
+  if (label.includes("full name") || label === "name") {
+    return userProfile.name || "";
+  }
+  if (label.includes("email") || label.includes("e-mail")) {
+    return userProfile.email || "";
+  }
+  if (label.includes("phone") || label.includes("tel") || label.includes("mobile")) {
+    return userProfile.phone || "";
+  }
+  if (label.includes("city") || label.includes("stadt")) {
+    return ((_d = (_c = userProfile.location) == null ? void 0 : _c.split(",")[0]) == null ? void 0 : _d.trim()) || "";
+  }
+  if (label.includes("country") || label.includes("land")) {
+    return ((_f = (_e = userProfile.location) == null ? void 0 : _e.split(",").pop()) == null ? void 0 : _f.trim()) || "";
+  }
+  if (label.includes("address") || label.includes("location") || label.includes("adresse")) {
+    return userProfile.location || "";
+  }
+  if (label.includes("current title") || label.includes("job title") || label.includes("position")) {
+    return userProfile.title || "";
+  }
+  if (label.includes("linkedin")) {
+    return userProfile.linkedin_url || "";
+  }
+  if (label.includes("website") || label.includes("portfolio")) {
+    return userProfile.website || "";
+  }
+  if (label.includes("summary") || label.includes("about") || label.includes("introduction")) {
+    return userProfile.summary || "";
+  }
+  return null;
+}
+function categorizeField(label) {
+  const l = label.toLowerCase();
+  if (l.includes("salary") || l.includes("compensation") || l.includes("gehalt")) return "salary";
+  if (l.includes("visa") || l.includes("work permit") || l.includes("authorization")) return "visa";
+  if (l.includes("experience") || l.includes("years") || l.includes("erfahrung")) return "experience";
+  if (l.includes("education") || l.includes("degree") || l.includes("university")) return "education";
+  if (l.includes("available") || l.includes("start date") || l.includes("notice")) return "availability";
+  if (l.includes("skill") || l.includes("proficiency") || l.includes("language")) return "skills";
+  if (l.includes("name") || l.includes("email") || l.includes("phone") || l.includes("address")) return "personal";
+  return "other";
+}
+async function submitApplication2(jobId, userId, observerModel, callAI2) {
+  console.log(`
+========== SMART APPLICATION SUBMISSION FOR JOB ${jobId} ==========`);
+  let browser = null;
+  try {
+    const db = getDatabase();
+    const job = db.job_listings.find((j) => j.id === jobId);
+    const userProfile = db.user_profile.find((p) => p.id === userId) || db.user_profile[0];
+    if (!job) {
+      return { success: false, status: "failed", error: "Job not found" };
+    }
+    if (!userProfile) {
+      return { success: false, status: "failed", error: "User profile not found. Please create your profile first." };
+    }
+    const applicationUrl = job.application_url || job.url;
+    if (!applicationUrl) {
+      return { success: false, status: "failed", error: "No application URL found" };
+    }
+    await logAction(userId, "ai_applicant", `\u{1F680} Starting smart application for ${job.company_name}`, "in_progress");
+    const appState = {
+      jobId,
+      userId,
+      status: "started",
+      currentStep: "Opening application page",
+      pendingQuestions: []
+    };
+    activeApplications.set(jobId, appState);
+    browser = await import_puppeteer5.default.launch({
+      headless: false,
+      userDataDir: getUserDataDir3(),
+      args: ["--no-sandbox", "--start-maximized", "--disable-blink-features=AutomationControlled"]
+    });
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, "webdriver", { get: () => false });
+      Object.defineProperty(navigator, "plugins", { get: () => [1, 2, 3, 4, 5] });
+    });
+    appState.browser = browser;
+    appState.page = page;
+    await logAction(userId, "ai_applicant", `\u{1F4C4} Opening: ${applicationUrl}`, "in_progress");
+    await page.goto(applicationUrl, { waitUntil: "networkidle2", timeout: 6e4 });
+    await new Promise((r) => setTimeout(r, 2e3 + Math.random() * 2e3));
+    const needsAuth = await checkIfNeedsAuthentication(page);
+    if (needsAuth.needsLogin) {
+      await logAction(userId, "ai_applicant", "\u{1F511} Login required. Attempting to login...", "in_progress");
+      const loginResult = await handleLogin(page, userId, userProfile, callAI2);
+      if (!loginResult.success) {
+        if (loginResult.needsRegistration) {
+          await logAction(userId, "ai_applicant", "\u{1F4DD} Registration required...", "in_progress");
+          const regResult = await handleRegistration(page, userId, userProfile, callAI2);
+          if (!regResult.success) {
+            return { success: false, status: "failed", error: "Registration failed: " + regResult.error };
+          }
+        } else {
+          return { success: false, status: "failed", error: "Login failed: " + loginResult.error };
+        }
+      }
+    }
+    appState.status = "form_filling";
+    await logAction(userId, "ai_applicant", "\u{1F4DD} Analyzing application form...", "in_progress");
+    const formFields = await analyzeFormFields(page, observerModel, callAI2);
+    console.log(`Found ${formFields.length} form fields`);
+    const pendingQuestions = [];
+    for (const field of formFields) {
+      if (field.type === "submit") continue;
+      let value = mapProfileToField(field.label, field.type, userProfile);
+      if (!value && field.label) {
+        const category = categorizeField(field.label);
+        value = await findSimilarAnswer(field.label, category);
+        if (value) {
+          await logAction(userId, "ai_applicant", `\u{1F4A1} Found answer from Q&A database for "${field.label}"`, "in_progress");
+        }
+      }
+      if (field.type === "file") {
+        const uploadResult = await handleFileUpload(page, field, jobId, userId);
+        if (!uploadResult.success) {
+          await logAction(userId, "ai_applicant", `\u26A0\uFE0F File upload issue: ${uploadResult.error}`, "in_progress");
+        }
+        continue;
+      }
+      if (value) {
+        await fillField(page, field, value);
+        await logAction(userId, "ai_applicant", `\u2713 Filled: ${field.label}`, "in_progress");
+        await new Promise((r) => setTimeout(r, 300 + Math.random() * 500));
+      } else if (field.required || field.question) {
+        const category = categorizeField(field.label);
+        pendingQuestions.push({
+          field: field.name || field.id || field.label,
+          label: field.label,
+          question: field.question || `What is your ${field.label}?`,
+          type: field.type,
+          category,
+          options: field.options,
+          x: field.x,
+          y: field.y
+        });
+      }
+    }
+    if (pendingQuestions.length > 0) {
+      appState.status = "questions_pending";
+      appState.pendingQuestions = pendingQuestions;
+      await logAction(userId, "ai_applicant", `\u2753 ${pendingQuestions.length} questions need your input`, "in_progress");
+      return {
+        success: true,
+        status: "questions_pending",
+        pendingQuestions
+      };
+    }
+    appState.status = "uploading";
+    await logAction(userId, "ai_applicant", "\u{1F4CE} Uploading application documents...", "in_progress");
+    appState.status = "reviewing";
+    await logAction(userId, "ai_applicant", "\u{1F50D} Final review before submission...", "in_progress");
+    const reviewScreenshot = await page.screenshot({ encoding: "base64" });
+    const submitBtn = formFields.find((f) => f.type === "submit");
+    if (submitBtn) {
+      await page.mouse.click(submitBtn.x, submitBtn.y);
+      await new Promise((r) => setTimeout(r, 3e3));
+      const pageText = await page.evaluate(() => document.body.innerText.toLowerCase());
+      const isSuccess = pageText.includes("thank you") || pageText.includes("submitted") || pageText.includes("application received") || pageText.includes("erfolgreich");
+      if (isSuccess) {
+        appState.status = "submitted";
+        await logAction(userId, "ai_applicant", `\u2705 Application submitted successfully to ${job.company_name}!`, "completed", true);
+        await runQuery("UPDATE job_listings", { id: jobId, status: "applied" });
+        monitorConfirmations(userId).catch(console.error);
+        return { success: true, status: "submitted" };
+      }
+    }
+    return {
+      success: true,
+      status: "review_needed",
+      pendingQuestions: [{
+        field: "manual_submit",
+        question: "Please review the form and click Submit manually. The form appears ready.",
+        type: "action"
+      }]
+    };
+  } catch (error) {
+    console.error("Application submission error:", error);
+    await logAction(userId, "ai_applicant", `\u274C Application failed: ${error.message}`, "failed", false);
+    return { success: false, status: "failed", error: error.message };
+  } finally {
+    setTimeout(async () => {
+      var _a;
+      if (browser && ((_a = activeApplications.get(jobId)) == null ? void 0 : _a.status) === "submitted") {
+        await browser.close();
+        activeApplications.delete(jobId);
+      }
+    }, 3e4);
+  }
+}
+async function continueApplicationWithAnswers(jobId, userId, answers) {
+  const appState = activeApplications.get(jobId);
+  if (!appState || !appState.page) {
+    return { success: false, status: "failed", error: "Application session expired. Please start again." };
+  }
+  try {
+    const page = appState.page;
+    for (const ans of answers) {
+      const pendingQ = appState.pendingQuestions.find((q) => q.field === ans.field);
+      if (pendingQ) {
+        await fillField(page, pendingQ, ans.answer);
+        await new Promise((r) => setTimeout(r, 300 + Math.random() * 500));
+        if (ans.saveForLater) {
+          await saveQuestionAnswer(
+            pendingQ.question || pendingQ.label,
+            ans.answer,
+            pendingQ.category || "other",
+            jobId
+          );
+          await logAction(userId, "ai_applicant", `\u{1F4BE} Saved answer for future use: "${pendingQ.label}"`, "in_progress");
+        }
+      }
+    }
+    appState.pendingQuestions = [];
+    const db = getDatabase();
+    const models = await getAllQuery("SELECT * FROM ai_models");
+    const observer = models.find((m) => m.role === "Observer" && m.status === "active");
+    return await submitApplication2(jobId, userId, observer, global.callAI);
+  } catch (error) {
+    return { success: false, status: "failed", error: error.message };
+  }
+}
+async function checkIfNeedsAuthentication(page) {
+  const url = page.url().toLowerCase();
+  const pageText = await page.evaluate(() => document.body.innerText.toLowerCase());
+  const loginIndicators = ["sign in", "log in", "login", "anmelden", "einloggen"];
+  const registerIndicators = ["sign up", "register", "create account", "registrieren"];
+  const needsLogin = loginIndicators.some((i) => url.includes(i) || pageText.includes(i));
+  const needsRegistration = registerIndicators.some((i) => pageText.includes(i));
+  return { needsLogin, needsRegistration };
+}
+async function handleLogin(page, userId, userProfile, callAI2) {
+  try {
+    const emailField = await page.$('input[type="email"], input[name*="email"], input[name*="user"], input[id*="email"]');
+    const passwordField = await page.$('input[type="password"]');
+    if (emailField && passwordField) {
+      await emailField.type(userProfile.email || "", { delay: 50 + Math.random() * 50 });
+      await logAction(userId, "ai_applicant", "\u{1F511} Please enter your password to continue", "in_progress");
+      return { success: false, error: "Password required. Please login manually in the browser window." };
+    }
+    return { success: false, needsRegistration: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+async function handleRegistration(page, userId, userProfile, callAI2) {
+  var _a, _b, _c, _d, _e, _f, _g;
+  try {
+    await logAction(userId, "ai_applicant", "\u{1F4DD} Attempting automatic registration...", "in_progress");
+    const fields = await page.$$eval(
+      "input, select",
+      (inputs) => inputs.map((input) => ({
+        type: input.type,
+        name: input.name,
+        id: input.id,
+        placeholder: input.placeholder
+      }))
+    );
+    for (const field of fields) {
+      const selector = field.id ? `#${field.id}` : `[name="${field.name}"]`;
+      if (field.type === "email" || ((_a = field.name) == null ? void 0 : _a.includes("email"))) {
+        await page.type(selector, userProfile.email || "");
+      } else if (((_b = field.name) == null ? void 0 : _b.includes("first")) || ((_c = field.name) == null ? void 0 : _c.includes("vorname"))) {
+        await page.type(selector, ((_d = userProfile.name) == null ? void 0 : _d.split(" ")[0]) || "");
+      } else if (((_e = field.name) == null ? void 0 : _e.includes("last")) || ((_f = field.name) == null ? void 0 : _f.includes("nachname"))) {
+        await page.type(selector, ((_g = userProfile.name) == null ? void 0 : _g.split(" ").slice(1).join(" ")) || "");
+      }
+      await new Promise((r) => setTimeout(r, 200 + Math.random() * 300));
+    }
+    const passwordField = await page.$('input[type="password"]');
+    if (passwordField) {
+      await logAction(userId, "ai_applicant", "\u{1F510} Please create a password in the browser window", "in_progress");
+      return { success: false, error: "Please complete registration manually and create a password." };
+    }
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+async function fillField(page, field, value) {
+  try {
+    let selector = "";
+    if (field.id) selector = `#${field.id}`;
+    else if (field.name) selector = `[name="${field.name}"]`;
+    else if (field.x && field.y) {
+      await page.mouse.click(field.x, field.y);
+      await page.keyboard.type(value, { delay: 30 + Math.random() * 50 });
+      return;
+    }
+    if (selector) {
+      const element = await page.$(selector);
+      if (element) {
+        await element.click();
+        await element.type(value, { delay: 30 + Math.random() * 50 });
+      }
+    }
+  } catch (e) {
+    console.log(`Could not fill field: ${field.label || field.name}`);
+  }
+}
+async function handleFileUpload(page, field, jobId, userId) {
+  try {
+    const db = getDatabase();
+    const job = db.job_listings.find((j) => j.id === jobId);
+    const label = (field.label || "").toLowerCase();
+    let docPath = "";
+    if (label.includes("cv") || label.includes("resume") || label.includes("lebenslauf")) {
+      docPath = job == null ? void 0 : job.cv_path;
+    } else if (label.includes("cover") || label.includes("anschreiben")) {
+      docPath = job == null ? void 0 : job.cover_letter_path;
+    } else if (label.includes("motivation")) {
+      docPath = job == null ? void 0 : job.motivation_letter_path;
+    } else if (label.includes("portfolio")) {
+      docPath = job == null ? void 0 : job.portfolio_path;
+    }
+    if (!docPath || !fs4.existsSync(docPath)) {
+      const pdfPath = docPath == null ? void 0 : docPath.replace(".html", ".pdf");
+      if (pdfPath && fs4.existsSync(pdfPath)) {
+        docPath = pdfPath;
+      } else {
+        return { success: false, error: `Document not found: ${label}` };
+      }
+    }
+    const fileInput = await page.$('input[type="file"]');
+    if (fileInput) {
+      const [fileChooser] = await Promise.all([
+        page.waitForFileChooser(),
+        field.x && field.y ? page.mouse.click(field.x, field.y) : fileInput.click()
+      ]);
+      await fileChooser.accept([docPath]);
+      await logAction(userId, "ai_applicant", `\u{1F4CE} Uploaded: ${import_path5.default.basename(docPath)}`, "in_progress");
+      return { success: true };
+    }
+    return { success: false, error: "No file input found" };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+}
+async function cancelApplication(jobId) {
+  const appState = activeApplications.get(jobId);
+  if (appState == null ? void 0 : appState.browser) {
+    await appState.browser.close();
+  }
+  activeApplications.delete(jobId);
+}
+var import_puppeteer5, import_path5, fs4, app7, getUserDataDir3, activeApplications;
+var init_smart_applicant = __esm({
+  "src/main/features/smart-applicant.ts"() {
+    init_database();
+    import_puppeteer5 = __toESM(require("puppeteer"), 1);
+    import_path5 = __toESM(require("path"), 1);
+    fs4 = __toESM(require("fs"), 1);
+    init_secretary_service();
+    try {
+      app7 = require("electron").app;
+    } catch (e) {
+      app7 = global.electronApp;
+    }
+    getUserDataDir3 = () => import_path5.default.join(app7.getPath("userData"), "browser_data");
+    activeApplications = /* @__PURE__ */ new Map();
+  }
+});
+
 // electron-main.ts
 var import_electron4 = require("electron");
-var import_path4 = __toESM(require("path"), 1);
+var import_path6 = __toESM(require("path"), 1);
 var import_electron_is_dev = __toESM(require("electron-is-dev"), 1);
 init_database();
 
@@ -1705,9 +2621,9 @@ async function submitApplication(jobId, userId, observerModel, callAI2) {
       if (value) {
         await executeMouseAction(page, { type: "type", x: coord.x, y: coord.y, text: value });
       } else if (coord.field.includes("upload") && tailoredDoc) {
-        const fs3 = require("fs");
+        const fs5 = require("fs");
         const tempPath = import_path3.default.join(import_electron2.app.getPath("temp"), `tailored_cv_${jobId}.txt`);
-        fs3.writeFileSync(tempPath, tailoredDoc.content);
+        fs5.writeFileSync(tempPath, tailoredDoc.content);
         await executeMouseAction(page, { type: "upload", x: coord.x, y: coord.y, filePath: tempPath });
       }
     }
@@ -2234,6 +3150,96 @@ function setupIpcHandlers() {
       return { success: false, error: e.message };
     }
   });
+  import_electron3.ipcMain.handle("user:capture-linkedin", async (_, data) => {
+    try {
+      const LinkedInScraper = (init_linkedin_scraper(), __toCommonJS(linkedin_scraper_exports));
+      const { userId, profileUrl } = data || {};
+      if (!profileUrl) {
+        return await LinkedInScraper.openLinkedInForLogin(userId || 1);
+      }
+      return await LinkedInScraper.scrapeLinkedInProfile(userId || 1, profileUrl);
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("user:save-linkedin-profile", async (_, data) => {
+    try {
+      const LinkedInScraper = (init_linkedin_scraper(), __toCommonJS(linkedin_scraper_exports));
+      return await LinkedInScraper.saveLinkedInProfile(data.userId, data.profileData);
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("docs:convert-to-pdf", async (_, data) => {
+    try {
+      const PdfExport = (init_pdf_export(), __toCommonJS(pdf_export_exports));
+      return await PdfExport.convertHtmlToPdf(data.htmlPath, data.userId);
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("docs:convert-all-pdf", async (_, data) => {
+    try {
+      const PdfExport = (init_pdf_export(), __toCommonJS(pdf_export_exports));
+      return await PdfExport.convertAllJobDocsToPdf(data.jobId, data.userId);
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("ai:smart-apply", async (_, data) => {
+    try {
+      const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
+      const models = await getAllQuery("SELECT * FROM ai_models");
+      const observer = models.find((m) => m.role === "Observer" && m.status === "active") || models.find((m) => m.role === "Hunter" && m.status === "active");
+      global.callAI = callAI;
+      return await SmartApplicant.submitApplication(data.jobId, data.userId, observer, callAI);
+    } catch (e) {
+      console.error("Smart apply error:", e);
+      return { success: false, status: "failed", error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("ai:continue-application", async (_, data) => {
+    try {
+      const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
+      return await SmartApplicant.continueApplicationWithAnswers(data.jobId, data.userId, data.answers);
+    } catch (e) {
+      return { success: false, status: "failed", error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("ai:cancel-application", async (_, jobId) => {
+    try {
+      const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
+      await SmartApplicant.cancelApplication(jobId);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("qa:get-all", async () => {
+    try {
+      const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
+      const data = await SmartApplicant.getAllQuestions();
+      return { success: true, data };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("qa:update", async (_, data) => {
+    try {
+      const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
+      return await SmartApplicant.updateQuestionAnswer(data.questionId, data.answer);
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("qa:delete", async (_, questionId) => {
+    try {
+      const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
+      return await SmartApplicant.deleteQuestion(questionId);
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
   startHuntingScheduler2(1);
   console.log("\u2705 IPC Handlers registered successfully");
 }
@@ -2252,12 +3258,12 @@ function createWindow() {
     minWidth: 1e3,
     minHeight: 700,
     webPreferences: {
-      preload: import_path4.default.join(__dirname, "preload.cjs"),
+      preload: import_path6.default.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false
     }
   });
-  const startUrl = import_electron_is_dev.default ? "http://localhost:5173" : `file://${import_path4.default.join(__dirname, "../dist/index.html")}`;
+  const startUrl = import_electron_is_dev.default ? "http://localhost:5173" : `file://${import_path6.default.join(__dirname, "../dist/index.html")}`;
   mainWindow.loadURL(startUrl);
   if (import_electron_is_dev.default) mainWindow.webContents.openDevTools();
   mainWindow.webContents.on("context-menu", (event, params) => {

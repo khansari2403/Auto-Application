@@ -438,6 +438,118 @@ export function setupIpcHandlers(): void {
     }
   });
 
+  // --- LINKEDIN SCRAPER ---
+  ipcMain.handle('user:capture-linkedin', async (_, data) => {
+    try {
+      const LinkedInScraper = require('./features/linkedin-scraper');
+      const { userId, profileUrl } = data || {};
+      
+      // First open LinkedIn for login
+      if (!profileUrl) {
+        return await LinkedInScraper.openLinkedInForLogin(userId || 1);
+      }
+      
+      // Scrape profile
+      return await LinkedInScraper.scrapeLinkedInProfile(userId || 1, profileUrl);
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('user:save-linkedin-profile', async (_, data) => {
+    try {
+      const LinkedInScraper = require('./features/linkedin-scraper');
+      return await LinkedInScraper.saveLinkedInProfile(data.userId, data.profileData);
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // --- PDF EXPORT ---
+  ipcMain.handle('docs:convert-to-pdf', async (_, data) => {
+    try {
+      const PdfExport = require('./features/pdf-export');
+      return await PdfExport.convertHtmlToPdf(data.htmlPath, data.userId);
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('docs:convert-all-pdf', async (_, data) => {
+    try {
+      const PdfExport = require('./features/pdf-export');
+      return await PdfExport.convertAllJobDocsToPdf(data.jobId, data.userId);
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // --- SMART APPLICATION ---
+  ipcMain.handle('ai:smart-apply', async (_, data) => {
+    try {
+      const SmartApplicant = require('./features/smart-applicant');
+      const models = await getAllQuery('SELECT * FROM ai_models');
+      const observer = models.find((m: any) => m.role === 'Observer' && m.status === 'active') ||
+                       models.find((m: any) => m.role === 'Hunter' && m.status === 'active');
+      
+      // Store callAI globally for smart applicant
+      (global as any).callAI = aiService.callAI;
+      
+      return await SmartApplicant.submitApplication(data.jobId, data.userId, observer, aiService.callAI);
+    } catch (e: any) {
+      console.error('Smart apply error:', e);
+      return { success: false, status: 'failed', error: e.message };
+    }
+  });
+
+  ipcMain.handle('ai:continue-application', async (_, data) => {
+    try {
+      const SmartApplicant = require('./features/smart-applicant');
+      return await SmartApplicant.continueApplicationWithAnswers(data.jobId, data.userId, data.answers);
+    } catch (e: any) {
+      return { success: false, status: 'failed', error: e.message };
+    }
+  });
+
+  ipcMain.handle('ai:cancel-application', async (_, jobId) => {
+    try {
+      const SmartApplicant = require('./features/smart-applicant');
+      await SmartApplicant.cancelApplication(jobId);
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // --- Q&A DATABASE ---
+  ipcMain.handle('qa:get-all', async () => {
+    try {
+      const SmartApplicant = require('./features/smart-applicant');
+      const data = await SmartApplicant.getAllQuestions();
+      return { success: true, data };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('qa:update', async (_, data) => {
+    try {
+      const SmartApplicant = require('./features/smart-applicant');
+      return await SmartApplicant.updateQuestionAnswer(data.questionId, data.answer);
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('qa:delete', async (_, questionId) => {
+    try {
+      const SmartApplicant = require('./features/smart-applicant');
+      return await SmartApplicant.deleteQuestion(questionId);
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
   // Start scheduler (but disabled by default)
   aiService.startHuntingScheduler(1);
   

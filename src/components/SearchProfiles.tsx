@@ -532,7 +532,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
             </div>
 
             <div style={groupStyle}>
-              <h4 style={{ marginTop: 0, marginBottom: '12px' }}>🏢 Company & Timing</h4>
+              <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🏢 Company & Timing</h4>
               
               <label style={labelStyle}>Company Size</label>
               <select style={inputStyle} value={editing.company_size || 'Any'} onChange={e => setEditing({...editing, company_size: e.target.value})}>

@@ -678,7 +678,7 @@ Return ONLY the proposal content.`
 
 // Build Auditor prompt
 function buildAuditorPrompt(docKey: string, docLabel: string, content: string, job: any): string {
-  return `You are the "Auditor" agent. Review this ${docLabel} for accuracy and quality.
+  return `You are the "Auditor" agent. Your job is to review this ${docLabel} for accuracy, quality, and FACTUAL CORRECTNESS.
 
 JOB: ${job.job_title} at ${job.company_name}
 
@@ -686,21 +686,31 @@ CONTENT TO REVIEW:
 ${content}
 
 EVALUATION CRITERIA:
-1. LANGUAGE: Is it in the same language as the job description?
-2. HUMAN-LIKE: Does it avoid AI clichés (thrilled, passionate, fast-paced world)?
-3. NO LONG HYPHENS: Are there any — or – characters? (Should use - instead)
-4. CONTACT INFO: Is the applicant's contact info included (for CV) or proper greeting (for letters)?
-5. ATS FRIENDLY: Is the structure clear and professional?
-6. TAILORED: Does it specifically reference the company or role?
-7. QUANTIFIED: Are achievements quantified where possible?
-8. NO PLACEHOLDERS: Are there any "[Insert...]", "XYZ", or "N/A" in critical fields?
-9. LENGTH: Is it appropriate? (Motivation letter: 400-500 words, Cover letter: 250-300 words)
-10. NO JSON/META: Does it start cleanly without JSON formatting or meta-text like "Here is..."?
-11. NO APOLOGIES: Does it avoid phrases like "I could not find", "research unavailable"?
+
+**CRITICAL - HALLUCINATION CHECK:**
+1. FACTUAL ACCURACY: Does the document contain any information that seems fabricated or not from the applicant's actual profile? Look for:
+   - Specific company names, dates, or achievements that seem invented
+   - Metrics or percentages that appear made up (e.g., "increased sales by 47%" without context)
+   - Job titles or responsibilities that seem inconsistent
+   - Skills or certifications not typically mentioned together
+2. COMPANY FACTS: Are any company facts stated that could be false? (If unsure, flag as potentially fabricated)
+
+**FORMAT & QUALITY:**
+3. LANGUAGE: Is it in the same language as the job description?
+4. HUMAN-LIKE: Does it avoid AI clichés (thrilled, passionate, fast-paced world)?
+5. NO LONG HYPHENS: Are there any — or – characters? (Should use - instead)
+6. PROPER GREETING: Does it start with "Dear Hiring Manager," or similar?
+7. PROPER SIGN-OFF: Does it end with "Kind regards," followed by the applicant's name?
+8. ATS FRIENDLY: Is the structure clear and professional?
+9. TAILORED: Does it specifically reference the company or role?
+10. NO PLACEHOLDERS: Are there any "[Insert...]", "XYZ", or "N/A" in critical fields?
+11. LENGTH: Is it appropriate? (Motivation letter: 400-500 words, Cover letter: 250-300 words)
+12. NO JSON/META: Does it start cleanly without JSON formatting or meta-text like "Here is..."?
+13. NO APOLOGIES: Does it avoid phrases like "I could not find", "research unavailable"?
 
 RESPONSE FORMAT:
 If it passes ALL criteria, respond with exactly: "APPROVED"
-If it fails any criteria, respond with: "REJECTED: " followed by specific feedback on what to fix.`;
+If it fails any criteria (especially hallucination), respond with: "REJECTED: " followed by specific feedback on what to fix.`;
 }
 
 // Export individual document generator for direct calls

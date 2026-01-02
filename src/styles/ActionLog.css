@@ -1,5 +1,5 @@
 /**
- * Action Log Styles
+ * Action Log Styles - Theme Compatible
  * Styling for the real-time activity log display
  */
 
@@ -7,34 +7,46 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #f9fafb;
-  border-radius: 8px;
+  background: var(--bg-secondary);
+  border-radius: var(--radius-lg);
   overflow: hidden;
+  box-shadow: var(--shadow-md);
+  border: var(--card-border);
+}
+
+[data-theme-style="glassmorphism"] .action-log {
+  background: var(--card-bg);
+  backdrop-filter: var(--card-backdrop);
+  -webkit-backdrop-filter: var(--card-backdrop);
 }
 
 .log-header {
   padding: 24px;
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
+}
+
+[data-theme-style="glassmorphism"] .log-header {
+  background: var(--bg-secondary);
 }
 
 .log-header h2 {
   margin: 0 0 8px 0;
   font-size: 24px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
 .log-header p {
   margin: 0;
   font-size: 14px;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .log-controls {
   padding: 16px 24px;
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border-bottom: 1px solid var(--border);
   display: flex;
   gap: 16px;
   align-items: center;
@@ -45,12 +57,18 @@
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #374151;
+  color: var(--text-primary);
   cursor: pointer;
+  transition: var(--transition);
+}
+
+.checkbox-label:hover {
+  color: var(--primary);
 }
 
 .checkbox-label input {
   cursor: pointer;
+  accent-color: var(--primary);
 }
 
 .log-entries {
@@ -66,30 +84,40 @@
   display: flex;
   gap: 12px;
   padding: 16px;
-  background: white;
-  border-left: 4px solid #d1d5db;
-  border-radius: 6px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
+  background: var(--card-bg);
+  border-left: 4px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
 }
 
 .log-entry:hover {
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-md);
+  transform: translateX(4px);
+}
+
+[data-theme-style="neumorphism"] .log-entry {
+  box-shadow: var(--shadow-sm);
+  border-left: none;
+}
+
+[data-theme-style="neumorphism"] .log-entry:hover {
+  box-shadow: var(--shadow-md);
 }
 
 .log-entry-success {
-  border-left-color: #10b981;
-  background: #f0fdf4;
+  border-left-color: var(--success);
+  background: var(--success-light);
 }
 
 .log-entry-error {
-  border-left-color: #ef4444;
-  background: #fef2f2;
+  border-left-color: var(--danger);
+  background: var(--danger-light);
 }
 
 .log-entry-in-progress {
-  border-left-color: #f59e0b;
-  background: #fffbf0;
+  border-left-color: var(--warning);
+  background: var(--warning-light);
 }
 
 .entry-icon {
@@ -116,39 +144,40 @@
   margin: 0;
   font-size: 14px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
   flex: 1;
 }
 
 .status-badge {
   display: inline-block;
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-full);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
+  transition: var(--transition);
 }
 
 .status-success {
-  background: #d1fae5;
-  color: #065f46;
+  background: var(--success-light);
+  color: var(--success);
 }
 
 .status-error {
-  background: #fee2e2;
-  color: #7f1d1d;
+  background: var(--danger-light);
+  color: var(--danger);
 }
 
 .status-in-progress {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--warning-light);
+  color: var(--warning);
 }
 
 .entry-meta {
   display: flex;
   gap: 16px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
@@ -159,44 +188,44 @@
 .error-section {
   margin-top: 8px;
   padding: 8px 12px;
-  background: rgba(239, 68, 68, 0.1);
-  border-radius: 4px;
-  border-left: 2px solid #ef4444;
+  background: var(--danger-light);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--danger);
 }
 
 .error-label {
   margin: 0 0 4px 0;
   font-size: 12px;
   font-weight: 600;
-  color: #7f1d1d;
+  color: var(--danger);
 }
 
 .error-message {
   margin: 0;
   font-size: 13px;
-  color: #991b1b;
+  color: var(--danger);
   word-break: break-word;
 }
 
 .recommendation-section {
   margin-top: 8px;
   padding: 8px 12px;
-  background: rgba(59, 130, 246, 0.1);
-  border-radius: 4px;
-  border-left: 2px solid #3b82f6;
+  background: var(--info-light);
+  border-radius: var(--radius-sm);
+  border-left: 2px solid var(--info);
 }
 
 .recommendation-label {
   margin: 0 0 4px 0;
   font-size: 12px;
   font-weight: 600;
-  color: #1e40af;
+  color: var(--info);
 }
 
 .recommendation-message {
   margin: 0;
   font-size: 13px;
-  color: #1e3a8a;
+  color: var(--info);
   word-break: break-word;
 }
 
@@ -205,7 +234,7 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #6b7280;
+  color: var(--text-secondary);
   text-align: center;
 }
 
@@ -219,16 +248,16 @@
   align-items: center;
   justify-content: center;
   height: 100%;
-  color: #6b7280;
+  color: var(--text-secondary);
   font-size: 14px;
 }
 
 .log-footer {
   padding: 12px 24px;
-  background: white;
-  border-top: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .log-footer p {
@@ -241,14 +270,14 @@
 }
 
 .log-entries::-webkit-scrollbar-track {
-  background: #f3f4f6;
+  background: var(--bg-secondary);
 }
 
 .log-entries::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--border);
   border-radius: 4px;
 }
 
 .log-entries::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
+  background: var(--text-tertiary);
 }

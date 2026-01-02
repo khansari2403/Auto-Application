@@ -1,28 +1,9 @@
 /**
- * Main App Styles
+ * App.css - Additional styles for App component
+ * Works alongside the theme system
  */
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background: #f3f4f6;
-}
-
-.app-container {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background: #f3f4f6;
-}
-
+/* Loading and Error States */
 .app-container.loading,
 .app-container.error {
   display: flex;
@@ -34,204 +15,69 @@ body {
 .error-message {
   text-align: center;
   padding: 40px;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: var(--card-border);
+}
+
+[data-theme-style="glassmorphism"] .loading-spinner,
+[data-theme-style="glassmorphism"] .error-message {
+  backdrop-filter: var(--card-backdrop);
+  -webkit-backdrop-filter: var(--card-backdrop);
 }
 
 .loading-spinner p,
 .error-message p {
   margin: 0;
   font-size: 16px;
-  color: #374151;
+  color: var(--text-primary);
 }
 
-/* Header */
-.app-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 24px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+/* Header specific */
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
-.app-header h1 {
-  margin: 0 0 8px 0;
-  font-size: 28px;
-  font-weight: 700;
+/* Navigation scrollbar */
+.app-nav::-webkit-scrollbar {
+  height: 6px;
 }
 
-.app-header p {
-  margin: 0;
-  font-size: 14px;
-  opacity: 0.9;
+.app-nav::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
 }
 
-/* Navigation */
-.app-nav {
-  display: flex;
-  gap: 8px;
-  padding: 16px 24px;
-  background: white;
-  border-bottom: 1px solid #e5e7eb;
-  overflow-x: auto;
+.app-nav::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
 }
 
-.nav-button {
-  padding: 10px 16px;
-  border: none;
-  background: transparent;
-  color: #6b7280;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.nav-button:hover {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.nav-button.active {
-  background: #667eea;
-  color: white;
-}
-
-/* Main Content */
-.app-main {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px;
-}
-
-.content-section {
-  background: white;
-  border-radius: 8px;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
+/* Content Section */
 .content-section h2 {
   margin: 0 0 16px 0;
   font-size: 24px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--text-primary);
 }
 
 .content-section p {
   margin: 0;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
-/* Footer */
+/* Footer (if needed) */
 .app-footer {
   padding: 16px 24px;
-  background: white;
-  border-top: 1px solid #e5e7eb;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
   text-align: center;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .app-footer p {
   margin: 0;
-}
-
-/* Buttons */
-.btn {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-primary {
-  background: #667eea;
-  color: white;
-}
-
-.btn-primary:hover:not(:disabled) {
-  background: #5568d3;
-  box-shadow: 0 4px 6px rgba(102, 126, 234, 0.4);
-}
-
-.btn-secondary {
-  background: #e5e7eb;
-  color: #374151;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background: #d1d5db;
-}
-
-.btn-danger {
-  background: #ef4444;
-  color: white;
-}
-
-.btn-danger:hover:not(:disabled) {
-  background: #dc2626;
-}
-
-.btn-small {
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
-/* Messages */
-.message {
-  padding: 12px 16px;
-  border-radius: 6px;
-  margin-bottom: 16px;
-  font-size: 14px;
-}
-
-.message-success {
-  background: #d1fae5;
-  color: #065f46;
-  border-left: 4px solid #10b981;
-}
-
-.message-error {
-  background: #fee2e2;
-  color: #7f1d1d;
-  border-left: 4px solid #ef4444;
-}
-
-.message-info {
-  background: #dbeafe;
-  color: #1e40af;
-  border-left: 4px solid #3b82f6;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: #f3f4f6;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #d1d5db;
-  border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af;
 }

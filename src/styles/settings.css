@@ -3,4 +3,57 @@
  * Shared styles for all settings sections
  */
 
-/* Already included in SettingsPanel.css, this file is for any additional shared styles */
+/* Force theme variables on inline styled elements */
+.settings-section input,
+.settings-section select,
+.settings-section textarea,
+.settings-section button {
+  background: var(--input-bg);
+  color: var(--text-primary);
+  border-color: var(--border);
+}
+
+.settings-section h3,
+.settings-section h4,
+.settings-section p,
+.settings-section label {
+  color: var(--text-primary);
+}
+
+/* Website actions button alignment */
+.website-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.website-actions .btn {
+  min-width: 80px;
+}
+
+/* Badge styling */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 500;
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  margin-left: 8px;
+}
+
+/* Status indicators */
+.status.info {
+  color: var(--info);
+}
+
+/* Disabled state for cards */
+.website-card.disabled {
+  opacity: 0.6;
+}
+
+.website-card.disabled .website-info h4 {
+  color: var(--text-tertiary);
+}

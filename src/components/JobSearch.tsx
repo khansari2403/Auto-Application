@@ -126,45 +126,45 @@ export function JobSearch({ userId }: { userId: number }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px', gap: '20px' }}>
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', flex: 1.5 }}>
-          <h4 style={{ marginTop: 0 }}>🔗 Add Job Manually</h4>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <input type='text' value={manualUrl} onChange={e => setManualUrl(e.target.value)} placeholder='Paste Job URL here...' style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid #ccc' }} />
-            <button onClick={() => (window as any).electron.invoke('jobs:add-manual', { userId, url: manualUrl })} style={{ padding: '10px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>Add Job</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'stretch', marginBottom: '20px', gap: '16px', flexWrap: 'wrap' }}>
+        <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', flex: '1 1 280px', minHeight: '140px', display: 'flex', flexDirection: 'column' }}>
+          <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🔗 Add Job Manually</h4>
+          <div style={{ display: 'flex', gap: '10px', flex: 1, alignItems: 'flex-end' }}>
+            <input type='text' value={manualUrl} onChange={e => setManualUrl(e.target.value)} placeholder='Paste Job URL here...' style={{ flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)' }} />
+            <button onClick={() => (window as any).electron.invoke('jobs:add-manual', { userId, url: manualUrl })} style={{ padding: '12px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', height: '44px' }}>Add Job</button>
           </div>
         </div>
 
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #0077b5', flex: 2, position: 'relative' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '12px', border: '1px solid #0077b5', flex: '1 1 320px', minHeight: '140px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <h4 style={{ margin: 0, color: '#0077b5' }}>📄 Application Specific Documentations</h4>
-            <button onClick={() => setShowInfo(true)} style={{ background: '#0077b5', color: '#fff', border: 'none', borderRadius: '50%', width: '20px', height: '20px', cursor: 'pointer', fontSize: '12px' }}>i</button>
+            <button onClick={() => setShowInfo(true)} style={{ background: '#0077b5', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontSize: '12px' }}>i</button>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
             {['CV', 'Motivation Letter', 'Portfolio', 'Proposal', 'Cover Letter'].map(label => {
               const key = label.toLowerCase().replace(' ', '') as keyof typeof docOptions;
               return (
-                <label key={label} style={{ fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
+                <label key={label} style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--text-primary)' }}>
                   <input type="checkbox" checked={!!docOptions[key]} onChange={() => setDocOptions(prev => ({ ...prev, [key]: !prev[key] }))} /> {label}
                 </label>
               );
             })}
           </div>
-          <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#e91e63', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '10px', cursor: 'pointer' }}>
+          <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#e91e63', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '12px', cursor: 'pointer' }}>
             <input type="checkbox" checked={docOptions.manualReview} onChange={() => setDocOptions(prev => ({ ...prev, manualReview: !prev.manualReview }))} /> Review files manually before applying
           </label>
         </div>
 
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center', flex: 1.5 }}>
-          <h4 style={{ marginTop: 0 }}>🚀 Job Hunting</h4>
-          <button onClick={() => (window as any).electron.invoke('hunter:start-search', userId)} disabled={isSearching || !jobHuntingActive} style={{ padding: '12px 20px', background: '#673ab7', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>
+        <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center', flex: '1 1 200px', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🚀 Job Hunting</h4>
+          <button onClick={() => (window as any).electron.invoke('hunter:start-search', userId)} disabled={isSearching || !jobHuntingActive} style={{ padding: '12px 20px', background: '#673ab7', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%', height: '44px' }}>
             {isSearching ? 'Hunting...' : 'Start Job Hunting'}
           </button>
         </div>
         
-        <div style={{ background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #ddd', textAlign: 'center', flex: 1 }}>
-          <h4 style={{ marginTop: 0 }}>🤖 Auto-Apply</h4>
-          <button onClick={() => (window as any).electron.invoke('settings:update', { id: 1, auto_apply: autoApply ? 0 : 1 }).then(loadData)} style={{ padding: '10px 30px', background: autoApply ? '#4CAF50' : '#ccc', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%' }}>
+        <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center', flex: '1 1 160px', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🤖 Auto-Apply</h4>
+          <button onClick={() => (window as any).electron.invoke('settings:update', { id: 1, auto_apply: autoApply ? 0 : 1 }).then(loadData)} style={{ padding: '12px 20px', background: autoApply ? '#4CAF50' : 'var(--border)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%', height: '44px' }}>
             {autoApply ? 'ON' : 'OFF'}
           </button>
         </div>

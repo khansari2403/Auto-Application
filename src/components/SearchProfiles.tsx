@@ -484,7 +484,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
           {/* Column 3: Certifications & Company */}
           <div>
             <div style={groupStyle}>
-              <h4 style={{ marginTop: 0, marginBottom: '12px' }}>📜 Certifications</h4>
+              <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>📜 Certifications</h4>
               
               <TagsDisplay items={selectedCertifications} onRemove={(c) => setSelectedCertifications(selectedCertifications.filter(i => i !== c))} />
               
@@ -493,9 +493,9 @@ export function SearchProfiles({ userId }: { userId: number }) {
                 maxHeight: '120px', 
                 overflowY: 'auto', 
                 padding: '8px', 
-                border: '1px solid #ddd', 
+                border: '1px solid var(--border)', 
                 borderRadius: '6px', 
-                background: '#fff',
+                background: 'var(--card-bg)',
                 marginBottom: '8px'
               }}>
                 {relevantCertifications.map((cert: string) => (
@@ -506,7 +506,8 @@ export function SearchProfiles({ userId }: { userId: number }) {
                     padding: '4px 0', 
                     cursor: 'pointer',
                     fontSize: '11px',
-                    borderBottom: '1px solid #f0f0f0'
+                    borderBottom: '1px solid var(--border-light)',
+                    color: 'var(--text-primary)'
                   }}>
                     <input 
                       type="checkbox" 
@@ -526,7 +527,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
                   onChange={e => setCustomCertification(e.target.value)}
                   placeholder="Type custom certification..."
                 />
-                <button onClick={addCustomCertification} style={{ padding: '8px 12px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>+</button>
+                <button onClick={addCustomCertification} style={{ padding: '8px 12px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '11px' }}>+</button>
               </div>
             </div>
 

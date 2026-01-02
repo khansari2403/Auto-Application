@@ -449,3 +449,204 @@
   --input-border: transparent;
   --input-focus: #818cf8;
 }
+
+
+/* ========================================
+   ROSE PETAL LIGHT (Girlish Theme)
+   ======================================== */
+[data-theme-style="rosePetal"][data-theme-mode="light"] {
+  --primary: #e91e63;
+  --primary-light: #fce4ec;
+  --primary-dark: #c2185b;
+  --secondary: #f48fb1;
+  
+  --bg-primary: #fff5f8;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #fce4ec;
+  
+  --text-primary: #4a1c40;
+  --text-secondary: #7c4a6e;
+  --text-tertiary: #b0849e;
+  
+  --border: #f8bbd9;
+  --border-light: #fce4ec;
+  
+  --success: #81c784;
+  --success-light: #e8f5e9;
+  --danger: #e57373;
+  --danger-light: #ffebee;
+  --warning: #ffb74d;
+  --warning-light: #fff3e0;
+  --info: #64b5f6;
+  --info-light: #e3f2fd;
+  
+  --card-bg: #ffffff;
+  --card-border: 1px solid #f8bbd9;
+  --shadow-sm: 0 2px 8px rgba(233,30,99,0.08);
+  --shadow-md: 0 4px 16px rgba(233,30,99,0.1);
+  --shadow-lg: 0 8px 24px rgba(233,30,99,0.12);
+  --shadow-hover: 0 12px 32px rgba(233,30,99,0.15);
+  
+  --header-bg: linear-gradient(135deg, #f48fb1 0%, #e91e63 100%);
+  --header-text: #ffffff;
+  --header-border: none;
+  
+  --nav-bg: #ffffff;
+  --nav-active-bg: #e91e63;
+  --nav-active-text: #ffffff;
+  --nav-hover-bg: #fce4ec;
+  
+  --input-bg: #ffffff;
+  --input-border: #f8bbd9;
+  --input-focus: #e91e63;
+}
+
+/* ========================================
+   ROSE PETAL DARK (Girlish Theme)
+   ======================================== */
+[data-theme-style="rosePetal"][data-theme-mode="dark"] {
+  --primary: #f48fb1;
+  --primary-light: rgba(244,143,177,0.15);
+  --primary-dark: #e91e63;
+  --secondary: #f8bbd9;
+  
+  --bg-primary: #1a0f14;
+  --bg-secondary: #2d1a23;
+  --bg-tertiary: #3d2532;
+  
+  --text-primary: #fce4ec;
+  --text-secondary: #f8bbd9;
+  --text-tertiary: #c48b9f;
+  
+  --border: #4d3541;
+  --border-light: #3d2532;
+  
+  --success: #a5d6a7;
+  --success-light: rgba(165,214,167,0.15);
+  --danger: #ef9a9a;
+  --danger-light: rgba(239,154,154,0.15);
+  --warning: #ffe082;
+  --warning-light: rgba(255,224,130,0.15);
+  --info: #90caf9;
+  --info-light: rgba(144,202,249,0.15);
+  
+  --card-bg: #2d1a23;
+  --card-border: 1px solid #4d3541;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.35);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+  --shadow-hover: 0 12px 32px rgba(0,0,0,0.45);
+  
+  --header-bg: linear-gradient(135deg, #4d3541 0%, #2d1a23 100%);
+  --header-text: #f48fb1;
+  --header-border: none;
+  
+  --nav-bg: #2d1a23;
+  --nav-active-bg: #f48fb1;
+  --nav-active-text: #1a0f14;
+  --nav-hover-bg: #3d2532;
+  
+  --input-bg: #3d2532;
+  --input-border: #4d3541;
+  --input-focus: #f48fb1;
+}
+
+/* ========================================
+   LAVENDER DREAM LIGHT (Girlish Theme)
+   ======================================== */
+[data-theme-style="lavenderDream"][data-theme-mode="light"] {
+  --primary: #9c27b0;
+  --primary-light: #f3e5f5;
+  --primary-dark: #7b1fa2;
+  --secondary: #ce93d8;
+  
+  --bg-primary: #faf5fc;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f3e5f5;
+  
+  --text-primary: #311b3d;
+  --text-secondary: #5c4166;
+  --text-tertiary: #9575a3;
+  
+  --border: #e1bee7;
+  --border-light: #f3e5f5;
+  
+  --success: #66bb6a;
+  --success-light: #e8f5e9;
+  --danger: #ef5350;
+  --danger-light: #ffebee;
+  --warning: #ffa726;
+  --warning-light: #fff3e0;
+  --info: #42a5f5;
+  --info-light: #e3f2fd;
+  
+  --card-bg: #ffffff;
+  --card-border: 1px solid #e1bee7;
+  --shadow-sm: 0 2px 8px rgba(156,39,176,0.08);
+  --shadow-md: 0 4px 16px rgba(156,39,176,0.1);
+  --shadow-lg: 0 8px 24px rgba(156,39,176,0.12);
+  --shadow-hover: 0 12px 32px rgba(156,39,176,0.15);
+  
+  --header-bg: linear-gradient(135deg, #ce93d8 0%, #9c27b0 100%);
+  --header-text: #ffffff;
+  --header-border: none;
+  
+  --nav-bg: #ffffff;
+  --nav-active-bg: #9c27b0;
+  --nav-active-text: #ffffff;
+  --nav-hover-bg: #f3e5f5;
+  
+  --input-bg: #ffffff;
+  --input-border: #e1bee7;
+  --input-focus: #9c27b0;
+}
+
+/* ========================================
+   LAVENDER DREAM DARK (Girlish Theme)
+   ======================================== */
+[data-theme-style="lavenderDream"][data-theme-mode="dark"] {
+  --primary: #ce93d8;
+  --primary-light: rgba(206,147,216,0.15);
+  --primary-dark: #9c27b0;
+  --secondary: #e1bee7;
+  
+  --bg-primary: #12091a;
+  --bg-secondary: #1f1229;
+  --bg-tertiary: #2d1c38;
+  
+  --text-primary: #f3e5f5;
+  --text-secondary: #e1bee7;
+  --text-tertiary: #b085bd;
+  
+  --border: #3d2548;
+  --border-light: #2d1c38;
+  
+  --success: #81c784;
+  --success-light: rgba(129,199,132,0.15);
+  --danger: #e57373;
+  --danger-light: rgba(229,115,115,0.15);
+  --warning: #ffb74d;
+  --warning-light: rgba(255,183,77,0.15);
+  --info: #64b5f6;
+  --info-light: rgba(100,181,246,0.15);
+  
+  --card-bg: #1f1229;
+  --card-border: 1px solid #3d2548;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 16px rgba(0,0,0,0.35);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.4);
+  --shadow-hover: 0 12px 32px rgba(0,0,0,0.45);
+  
+  --header-bg: linear-gradient(135deg, #3d2548 0%, #1f1229 100%);
+  --header-text: #ce93d8;
+  --header-border: none;
+  
+  --nav-bg: #1f1229;
+  --nav-active-bg: #ce93d8;
+  --nav-active-text: #12091a;
+  --nav-hover-bg: #2d1c38;
+  
+  --input-bg: #2d1c38;
+  --input-border: #3d2548;
+  --input-focus: #ce93d8;
+}

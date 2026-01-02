@@ -267,9 +267,9 @@ export function setupIpcHandlers(): void {
   ipcMain.handle('docs:get-all', async () => {
     try {
       const data = await getAllQuery('SELECT * FROM documents');
-      return { success: true, data };
+      return { success: true, data: data || [] };
     } catch (e: any) {
-      return { success: false, error: e.message };
+      return { success: false, error: e.message, data: [] };
     }
   });
 
@@ -277,6 +277,15 @@ export function setupIpcHandlers(): void {
     try {
       const result = await runQuery('INSERT INTO documents', [data]);
       return { success: true, id: result.id };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('docs:delete', async (_, id) => {
+    try {
+      await runQuery('DELETE FROM documents', { id });
+      return { success: true };
     } catch (e: any) {
       return { success: false, error: e.message };
     }

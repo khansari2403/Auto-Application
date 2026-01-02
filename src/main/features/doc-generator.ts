@@ -509,13 +509,21 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
           await runQuery('UPDATE job_listings', { 
             id: job.id, 
             [`${type.key}_status`]: 'auditor_done',
-            [`${type.key}_path`]: filePath
+            [`${type.key}_path`]: filePath,
+            [`${type.key}_rejection_reason`]: null
           });
           
           await logAction(userId, 'ai_thinker', `📄 ${type.label} saved to: ${filePath}`, 'completed', true);
         } else {
-          await runQuery('UPDATE job_listings', { id: job.id, [`${type.key}_status`]: 'failed' });
-          await logAction(userId, 'ai_thinker', `❌ Failed to generate acceptable ${type.label} after 2 attempts`, 'failed', false);
+          // Document rejected - save reason for user
+          const rejectionMessage = `The document was rejected after 2 generation attempts. Reason: ${feedback}\n\nThis may indicate:\n- Profile data doesn't match job requirements well enough\n- Missing key experiences or skills for this role\n- The AI couldn't find enough relevant information to create a compelling document`;
+          
+          await runQuery('UPDATE job_listings', { 
+            id: job.id, 
+            [`${type.key}_status`]: 'rejected',
+            [`${type.key}_rejection_reason`]: rejectionMessage
+          });
+          await logAction(userId, 'ai_thinker', `❌ Failed to generate acceptable ${type.label} after 2 attempts: ${feedback}`, 'failed', false);
         }
 
       } catch (e: any) {

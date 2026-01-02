@@ -586,28 +586,33 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 4. DO NOT use long em-dashes (—), use regular dashes (-) only
 5. DO NOT use clichés: "I am thrilled", "passionate professional", "fast-paced world"
 6. DO NOT start sentences with "I have..." or "I am..." repeatedly
-7. Output ONLY the letter content, starting with the date and recipient
+7. DO NOT fabricate or hallucinate information - use ONLY data from the provided profile
+8. DO NOT invent company facts not mentioned in the research - if unsure, focus on what's in the job posting
+9. Output ONLY the letter content, starting with the date and recipient
+10. MUST end with proper sign-off: "Kind regards," followed by the applicant's full name
 
 STRUCTURE (follow exactly):
 1. HEADER: Date, Company Address, "Dear Hiring Manager,"
 2. OPENING (1 paragraph): State who you are, what position, and ONE compelling reason why this company
 3. COMPANY CONNECTION (1 paragraph): Reference something specific about the company - their products, services, recent news, or values. If research is limited, focus on what's clear from the job posting
 4. YOUR VALUE (2 paragraphs): 
-   - First: Your most relevant experience with SPECIFIC metrics/achievements
+   - First: Your most relevant experience with SPECIFIC metrics/achievements FROM YOUR ACTUAL PROFILE
    - Second: How your skills directly solve their needs mentioned in the job posting
 5. WHY THIS ROLE (1 paragraph): Personal motivation - career goals, growth opportunity, alignment
-6. CLOSING: Thank them, express enthusiasm for an interview, sign off professionally
+6. CLOSING: Thank them, express enthusiasm for an interview
+7. SIGN-OFF: "Kind regards," + new line + "${userProfile?.name || '[Your Name]'}"
 
 MUST INCLUDE:
-- At least 2 specific achievements with numbers/metrics
+- At least 2 specific achievements with numbers/metrics FROM THE PROVIDED PROFILE
 - At least 1 specific reference to the company (product, service, or value)
 - Smooth transitions between paragraphs
 - Professional but warm tone
+- Proper sign-off with full name
 
 Length: ONE FULL PAGE (400-500 words minimum). This is a formal document.
 Language: Match the job description language.
 
-Return ONLY the motivation letter content, starting directly with the date.`,
+Return ONLY the motivation letter content, starting directly with the date and ending with the sign-off.`,
 
     cover_letter: `You are an expert Cover Letter writer. Create a concise, professional cover letter.
 

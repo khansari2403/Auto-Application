@@ -14,6 +14,40 @@ const getDocsDir = () => {
   return docsPath;
 };
 
+// Clean AI output - remove JSON artifacts and meta-text
+function cleanAIOutput(content: string): string {
+  let cleaned = content;
+  
+  // Remove JSON wrapper patterns
+  cleaned = cleaned.replace(/^\s*\{\s*"(coverLetter|motivationLetter|cv|letter)"\s*:\s*"/i, '');
+  cleaned = cleaned.replace(/"\s*\}\s*$/i, '');
+  
+  // Remove markdown code blocks
+  cleaned = cleaned.replace(/```[a-z]*\n?/gi, '');
+  cleaned = cleaned.replace(/```/g, '');
+  
+  // Remove meta-commentary at the start
+  cleaned = cleaned.replace(/^Here is (the|your|a) (motivation letter|cover letter|CV|resume)[:\s]*/i, '');
+  cleaned = cleaned.replace(/^(Below is|I've created|I have written)[^.]*\.\s*/i, '');
+  
+  // Remove em-dashes and replace with regular dashes
+  cleaned = cleaned.replace(/—/g, '-');
+  cleaned = cleaned.replace(/–/g, '-');
+  
+  // Remove escaped newlines and fix formatting
+  cleaned = cleaned.replace(/\\n/g, '\n');
+  cleaned = cleaned.replace(/\\"/g, '"');
+  
+  // Remove any remaining JSON artifacts
+  cleaned = cleaned.replace(/^\s*[\[{]/, '');
+  cleaned = cleaned.replace(/[\]}]\s*$/, '');
+  
+  // Trim whitespace
+  cleaned = cleaned.trim();
+  
+  return cleaned;
+}
+
 // Document type definitions
 const DOC_TYPES = [
   { key: 'cv', label: 'CV', optionKey: 'cv' },
@@ -443,7 +477,10 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
           // Build the prompt based on document type
           const thinkerPrompt = buildThinkerPrompt(type.key, type.label, userProfile, job, companyResearch, feedback);
           
-          content = await callAI(thinker, thinkerPrompt);
+          let rawContent = await callAI(thinker, thinkerPrompt);
+          
+          // Clean the AI output to remove JSON artifacts and meta-text
+          content = cleanAIOutput(rawContent);
           
           await logAction(userId, 'ai_auditor', `🧐 Auditing ${type.label} (Attempt ${attempts})`, 'in_progress');
           

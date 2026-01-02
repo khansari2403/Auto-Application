@@ -1,4 +1,14 @@
 import { useState, useEffect } from 'react';
+import { AlertsQASection } from './AlertsQASection';
+
+interface PendingQuestion {
+  field: string;
+  label?: string;
+  question: string;
+  type: string;
+  category?: string;
+  options?: string[];
+}
 
 export function JobSearch({ userId }: { userId: number }) {
   const [jobs, setJobs] = useState<any[]>([]);
@@ -9,6 +19,11 @@ export function JobSearch({ userId }: { userId: number }) {
   const [autoApply, setAutoApply] = useState(false);
   const [jobHuntingActive, setJobHuntingActive] = useState(false);
   const [visibleColumns, setVisibleColumns] = useState<string[]>(['job_title', 'company_name', 'location', 'job_type', 'experience_level', 'role', 'date_imported']);
+  
+  // Smart Apply state
+  const [pendingQuestions, setPendingQuestions] = useState<PendingQuestion[]>([]);
+  const [activeJobId, setActiveJobId] = useState<number | null>(null);
+  const [showQAModal, setShowQAModal] = useState(false);
   
   const [docOptions, setDocOptions] = useState({
     cv: true,

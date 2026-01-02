@@ -81,7 +81,14 @@ export function JobSearch({ userId }: { userId: number }) {
   const handleGenerateDocs = async (jobId: number) => {
     setProcessingId(jobId);
     try {
-      await (window as any).electron.invoke('ai:generate-tailored-docs', { jobId, userId, options: docOptions });
+      const result = await (window as any).electron.invoke('ai:generate-tailored-docs', { 
+        jobId, 
+        userId, 
+        docOptions: docOptions 
+      });
+      if (!result.success) {
+        alert('Generation Error: ' + result.error);
+      }
     } catch (e: any) {
       alert('Generation Error: ' + e.message);
     } finally {

@@ -1,177 +1,149 @@
 # Job Application Automation Tool - PRD
 
 ## Original Problem Statement
-Build an Electron-based desktop application for automated job application management with the following features:
-- Multi-theme support (8 themes)
-- Multi-language support (10 languages)
-- Bug report modal
-- LinkedIn profile import
-- Manual profile creation
-- Job search automation
-- Auto-apply functionality
-- Document generation (CV, motivation letters, etc.)
+Build an Electron-based desktop application for automated job application management with comprehensive document generation capabilities.
 
-## User Personas
-1. **Job Seeker** - Primary user who wants to automate job applications
-2. **Secretary** - Secondary user who monitors emails on behalf of job seeker
-
-## Core Requirements
+## Core Features
 
 ### Theming (8 Total) ✅
-- [x] Minimalism (Light/Dark)
-- [x] Material Design (Light/Dark)
-- [x] Glassmorphism (Light/Dark)
-- [x] Neumorphism (Light/Dark)
+- Minimalism (Light/Dark)
+- Material Design (Light/Dark)
+- Glassmorphism (Light/Dark)
+- Neumorphism (Light/Dark)
 
 ### Internationalization (i18n) ✅
-- [x] Multi-language support for 10 most common languages
+- Multi-language support for 10 languages
 
-### Bug Reporting ✅
-- [x] "Report a bug for this page" popup
+### Document Production System ✅ (NEW)
+Full AI-powered document generation with the following document types:
+1. **CV/Resume** - Tailored to job requirements with full profile data
+2. **Motivation Letter** - Formal letter with 6-point structure
+3. **Cover Letter** - Concise introduction and qualifications
+4. **Portfolio** - Project summaries and achievements
+5. **Proposal** - Business approach for the role
 
-### UI/UX Issues Fixed (Session: Dec 2025) ✅
-- [x] Glassmorphism dropdown z-index issue - dropdowns now appear above panels
-- [x] Theme consistency - themes now apply to all elements, not just the ribbon
-- [x] Neumorphism input field consistency - all inputs now use same background
-- [x] LinkedIn settings cleanup - removed extra buttons, cleaned up "Open LinkedIn"
-- [x] Job Websites page - button sizing and spacing fixed
-- [x] Job Search page - box sizing harmonized, removed "(24 Criteria)" text
-- [x] Document generation buttons - fixed to properly trigger doc generation
+**Generation Flow:**
+1. Company Research - Scrapes company mission/history
+2. Thinker AI - Generates tailored content
+3. Auditor AI - Reviews for quality and ATS compatibility
+4. File Saving - Saves as HTML files (can be printed to PDF)
 
-### Backend Implementation (Session: Dec 2025) ✅
-- [x] **P0: Profile Management Backend**
-  - `user:update-profile` - Save/update user profile data
-  - `user:open-linkedin` - Open LinkedIn URL in external browser
-  - `user:capture-linkedin` - Capture LinkedIn data (stub for Playwright)
-  - `profiles:delete` - Delete search profiles
-  
-- [x] **P0: Multi-Select Fields Backend**
-  - Search profiles now store comma-separated values for:
-    - `job_titles` - Multiple job title selection
-    - `industry` - Multiple industry selection
-    - `excluded_industries` - Industry blacklist
-    - `experience_levels` - Multiple experience levels
-    - `certifications` - Multiple certifications
-
-- [x] **P1: Scheduler Control**
-  - `scheduler:toggle` - Enable/disable job hunting scheduler
-  - `scheduler:get-status` - Check scheduler status
-  - Scheduler is OFF by default (prevents auto-scraping)
+### Backend Features ✅
+- Profile Management (create, update, delete)
+- Multi-select search criteria (job titles, industries, experience levels)
+- Industry blacklist (exclude unwanted industries)
+- Scheduler control (disabled by default)
+- Document generation on-demand
 
 ## Technical Architecture
 
 ```
 /app/
-├── electron-main.ts        # Electron main process entry point
-├── package.json
-└── src/
-    ├── main/               # Backend (Electron Main Process)
-    │   ├── database.ts     # LowDB JSON database management
-    │   ├── ipc-handlers.ts # API layer (handles IPC calls from frontend)
-    │   ├── ai-service.ts   # AI orchestration
-    │   └── features/
-    │       ├── scheduler.ts      # Background task scheduler (disabled by default)
-    │       ├── Hunter-engine.ts  # Job search engine
-    │       ├── doc-generator.ts  # CV/Cover letter generation
-    │       └── ...
-    │
-    └── src/
-        ├── App.tsx             # Main React component
-        ├── components/         # React components
-        │   ├── JobSearch.tsx
-        │   ├── SearchProfiles.tsx
-        │   └── settings/
-        │       ├── LinkedInSection.tsx
-        │       ├── JobWebsitesSection.tsx
-        │       └── ...
-        ├── contexts/           # React contexts (Theme, Language)
-        ├── i18n/               # Translation files
-        └── styles/             # CSS stylesheets (themes.css, app.css)
+├── electron-main.ts
+├── src/
+│   ├── main/                    # Backend (Electron Main Process)
+│   │   ├── database.ts          # LowDB database
+│   │   ├── ipc-handlers.ts      # IPC API handlers
+│   │   ├── ai-service.ts        # AI orchestration
+│   │   ├── scraper-service.ts   # Web scraping (Puppeteer)
+│   │   └── features/
+│   │       ├── doc-generator.ts # Document generation (UPDATED)
+│   │       ├── Hunter-engine.ts # Job search
+│   │       ├── scheduler.ts     # Background tasks
+│   │       └── ...
+│   │
+│   └── src/                     # Frontend (React)
+│       ├── components/
+│       │   ├── JobSearch.tsx    # Job list & doc buttons
+│       │   ├── SearchProfiles.tsx
+│       │   └── settings/
+│       │       └── LinkedInSection.tsx
+│       ├── contexts/            # Theme, Language
+│       └── styles/              # CSS themes
 ```
 
-## Database Schema (db.json)
-- `user_profile`: User's profile data (name, title, experiences, skills, etc.)
-- `search_profiles`: Job search criteria with multi-select fields
-- `job_websites`: Configured job boards and career pages
-- `job_listings`: Found jobs
-- `applications`: Application history
-- `settings`: Global settings including `job_hunting_active` flag
-- `ai_models`: Configured AI models for different roles
-- `action_logs`: Activity log
-- `documents`: Generated documents
+## Document Generation Details
 
-## IPC Channels (Backend API)
+### File Structure
+Documents are saved to: `{userData}/generated_docs/`
+- Format: `{docType}_job{jobId}_{timestamp}.html`
+- Example: `cv_job123_1704067200000.html`
+
+### AI Prompts
+Each document type has specialized prompts:
+- **CV**: Focuses on relevant experience, ATS-friendly format
+- **Motivation Letter**: 6-point structure (Purpose, Research, Alignment, Qualifications, Passion, Closing)
+- **Cover Letter**: Concise 250-300 words
+- **Portfolio**: Project-focused with technologies and impact
+- **Proposal**: Business approach with value proposition
+
+### Auditor Criteria
+- Language matches job description
+- No AI clichés ("thrilled", "passionate", "fast-paced world")
+- No long hyphens (—)
+- Contact info included
+- ATS-friendly structure
+- Quantified achievements
+- No placeholders
+
+## IPC Channels
+
+### Document Generation
+- `ai:generate-tailored-docs` - Generate selected documents for a job
+  - Input: `{ jobId, userId, docOptions: { cv, motivationLetter, coverLetter, portfolio, proposal } }`
+  - Output: `{ success: boolean, error?: string }`
+
+- `docs:open-file` - Open generated document
+  - Input: `filePath`
+  - Output: `{ success: boolean }`
 
 ### Profile Management
-- `user:get-profile` - Get user profile
-- `user:update-profile` - Save user profile
-- `user:open-linkedin` - Open LinkedIn in browser
-- `user:capture-linkedin` - Capture LinkedIn data
+- `user:get-profile`, `user:update-profile`
+- `profiles:get-all`, `profiles:save`, `profiles:update`, `profiles:delete`
 
-### Search Profiles
-- `profiles:get-all` - Get all search profiles
-- `profiles:save` - Create new profile
-- `profiles:update` - Update profile (including multi-select fields)
-- `profiles:delete` - Delete profile
+### Job Management
+- `jobs:get-all`, `jobs:add-manual`, `jobs:delete`
+- `jobs:update-doc-confirmation`
 
-### Job Websites
-- `websites:get-all` - Get all websites
-- `websites:add` - Add new website
-- `websites:delete` - Delete website
-- `websites:toggle-active` - Activate/deactivate website
-
-### Jobs
-- `jobs:get-all` - Get all jobs
-- `jobs:add-manual` - Add job manually by URL
-- `jobs:delete` - Delete job
-- `jobs:update-doc-confirmation` - Mark documents as reviewed
-
-### Scheduler
-- `scheduler:toggle` - Enable/disable scheduler
-- `scheduler:get-status` - Get scheduler status
-
-### AI/Documents
-- `ai:generate-tailored-docs` - Generate CV, cover letters
-- `ai:process-application` - Process full application
-- `docs:open-file` - Open generated document
-
-## Completed Work Summary
+## Completed Work
 
 ### Session 1: Theming & i18n
-- 8 themes implemented with CSS variables
-- 10 languages with translation files
-- Bug report modal
+- 8 themes with CSS variables
+- 10 languages with translations
 
 ### Session 2: UI/UX Fixes & Backend
-- Fixed all visual issues (z-index, theme consistency, button sizing)
-- Implemented backend handlers for profile management
-- Added scheduler control (disabled by default)
-- Updated all components to use theme CSS variables
+- Fixed glassmorphism z-index
+- Theme consistency across all components
+- Neumorphism input styling
+- Backend profile management
+- Scheduler control
+
+### Session 3: Document Production (Current)
+- Enhanced doc-generator.ts with file saving
+- HTML template generation for all document types
+- CV-specific two-column layout
+- Improved AI prompts for human-sounding content
+- Auditor review system
+- Updated JobSearch UI with better help modal
+
+## Files Modified This Session
+- `/app/src/main/features/doc-generator.ts` - Complete rewrite with file saving
+- `/app/src/main/ipc-handlers.ts` - Updated document generation handler
+- `/app/src/components/JobSearch.tsx` - Improved help modal, fixed doc generation
 
 ## Remaining Work
 
 ### P2 - Medium Priority
-- [ ] **LinkedIn Profile Scraper** - Requires Playwright integration for browser automation
-- [ ] **CV Generation** - Generate PDF/DOCX from profile data
+- [ ] PDF export (currently HTML)
+- [ ] LinkedIn Profile Scraper (Playwright)
 
 ### P3 - Low Priority
-- [ ] Secretary authentication flow
-- [ ] Local job database export (CSV/SQLite)
-- [ ] Microinteractions and animations
-
-## Files Modified This Session
-- `/app/src/styles/app.css` - Dropdown z-index, theme consistency, neumorphism fixes
-- `/app/src/styles/settings.css` - Settings-specific theme styles
-- `/app/src/components/settings/LinkedInSection.tsx` - Full theme update, profile editor
-- `/app/src/components/settings/JobWebsitesSection.tsx` - Button sizing
-- `/app/src/components/JobSearch.tsx` - Box sizing, theme variables, doc buttons fix
-- `/app/src/components/SearchProfiles.tsx` - Theme variables, dropdown z-index
-- `/app/src/main/ipc-handlers.ts` - Added profile, LinkedIn, scheduler handlers
-- `/app/src/main/features/scheduler.ts` - Added toggle functionality
+- [ ] Secretary authentication
+- [ ] Job database export
+- [ ] Microinteractions
 
 ## Notes for Next Agent
-- This is an **Electron App** - use `yarn dev` for full testing
-- Theme system uses CSS variables defined in `/app/src/styles/themes.css`
-- Scheduler is OFF by default to prevent auto-scraping
-- LinkedIn scraper is a stub - needs Playwright for real implementation
-- All multi-select fields are stored as comma-separated strings
+- Documents are saved as HTML files in `{userData}/generated_docs/`
+- Users can open HTML in browser and print to PDF
+- AI models must be configured in Settings > AI Models before generation works
+- The Thinker role generates content, Auditor role reviews it

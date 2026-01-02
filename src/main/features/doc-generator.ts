@@ -184,21 +184,9 @@ function generateDocumentHTML(content: string, docType: string, userProfile: any
       font-size: 12px;
     }
     
-    .footer {
-      margin-top: 40px;
-      padding-top: 20px;
-      border-top: 1px solid #e0e0e0;
-      font-size: 12px;
-      color: #888;
-      text-align: center;
-    }
-    
     @media print {
       body {
         padding: 20px;
-      }
-      .footer {
-        display: none;
       }
     }
   </style>

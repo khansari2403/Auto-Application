@@ -33,8 +33,7 @@ var import_fs = __toESM(require("fs"), 1);
 var dbData = global.dbData || null;
 var getDbPath = () => {
   const dataDir = import_path.default.join(import_electron.app.getPath("userData"), "data");
-  if (!import_fs.default.existsSync(dataDir))
-    import_fs.default.mkdirSync(dataDir, { recursive: true });
+  if (!import_fs.default.existsSync(dataDir)) import_fs.default.mkdirSync(dataDir, { recursive: true });
   return import_path.default.join(dataDir, "db.json");
 };
 function getDatabase() {
@@ -53,8 +52,7 @@ function getDatabase() {
   }
   const tables = ["user_profile", "email_config", "job_preferences", "ai_models", "job_websites", "company_monitoring", "job_listings", "applications", "action_logs", "email_alerts", "documents", "search_profiles", "settings", "questions"];
   tables.forEach((t) => {
-    if (!dbData[t])
-      dbData[t] = [];
+    if (!dbData[t]) dbData[t] = [];
   });
   return dbData;
 }
@@ -263,8 +261,7 @@ async function handleCookieRoadblock(page, userId, callAI2) {
       const text = document.body.innerText.toLowerCase();
       return text.includes("cookie") || text.includes("accept") || text.includes("agree") || text.includes("zustimmen") || text.includes("akzeptieren");
     });
-    if (!isBannerVisible)
-      return;
+    if (!isBannerVisible) return;
     await logAction(userId, "ai_observer", "\u{1F4F8} Cookie banner detected. Attempting bypass...", "in_progress");
     const clicked = await page.evaluate(() => {
       const selectors = [
@@ -543,8 +540,7 @@ ${text}
     console.error("Company Research Error:", error.message);
     return "Error researching company: " + error.message;
   } finally {
-    if (browser)
-      await browser.close();
+    if (browser) await browser.close();
   }
 }
 async function capturePageScreenshot(page) {
@@ -1029,8 +1025,7 @@ var import_mailparser = require("mailparser");
 async function monitorConfirmations(userId) {
   const configRes = await getAllQuery("SELECT * FROM email_config");
   const config = configRes[0];
-  if (!config || !config.email_user || !config.email_password)
-    return;
+  if (!config || !config.email_user || !config.email_password) return;
   const confirmation = await performImapSearch(config, ["UNSEEN"], (text, subject) => {
     const keywords = ["application received", "thank you for applying", "confirmation", "received your application"];
     const combined = (text + " " + subject).toLowerCase();
@@ -1095,25 +1090,29 @@ async function performImapSearch(config, criteria, extractor) {
 }
 
 // src/main/features/scheduler.ts
+var schedulerEnabled = false;
 function startHuntingScheduler(userId, startHunterSearch3, callAI2) {
   return setInterval(async () => {
     const db = getDatabase();
     const settings = db.settings[0];
-    if (settings && settings.job_hunting_active === 1) {
-      const websites = db.job_websites.filter((w) => w.is_active === 1);
-      const now = /* @__PURE__ */ new Date();
-      for (const website of websites) {
-        const lastChecked = website.last_checked ? new Date(website.last_checked) : /* @__PURE__ */ new Date(0);
-        const hoursSinceLastCheck = (now.getTime() - lastChecked.getTime()) / (1e3 * 60 * 60);
-        const frequency = website.site_type === "career_page" ? 24 : website.check_frequency || 4;
-        if (hoursSinceLastCheck >= frequency) {
-          console.log(`Scheduler: Checking ${website.website_name}...`);
-          await startHunterSearch3(userId, callAI2);
-          await runQuery("UPDATE job_websites", { id: website.id, last_checked: now.toISOString() });
-        }
+    if (!settings || settings.job_hunting_active !== 1) {
+      return;
+    }
+    if (!schedulerEnabled) {
+      console.log("Scheduler: Skipping - not explicitly enabled");
+      return;
+    }
+    const websites = db.job_websites.filter((w) => w.is_active === 1);
+    const now = /* @__PURE__ */ new Date();
+    for (const website of websites) {
+      const lastChecked = website.last_checked ? new Date(website.last_checked) : /* @__PURE__ */ new Date(0);
+      const hoursSinceLastCheck = (now.getTime() - lastChecked.getTime()) / (1e3 * 60 * 60);
+      const frequency = website.site_type === "career_page" ? 24 : website.check_frequency || 4;
+      if (hoursSinceLastCheck >= frequency) {
+        console.log(`Scheduler: Checking ${website.website_name}...`);
+        await startHunterSearch3(userId, callAI2);
+        await runQuery("UPDATE job_websites", { id: website.id, last_checked: now.toISOString() });
       }
-    } else {
-      console.log("Scheduler: Job hunting is currently turned OFF.");
     }
     try {
       await monitorConfirmations(userId);
@@ -1151,14 +1150,10 @@ async function submitApplication(jobId, userId, observerModel, callAI2) {
     console.log("Form coordinates identified:", coordinates);
     for (const coord of coordinates) {
       let value = "";
-      if (coord.field === "first_name")
-        value = userProfile.name.split(" ")[0];
-      else if (coord.field === "last_name")
-        value = userProfile.name.split(" ").slice(1).join(" ");
-      else if (coord.field === "email")
-        value = userProfile.email || "";
-      else if (coord.field === "phone")
-        value = userProfile.phone || "";
+      if (coord.field === "first_name") value = userProfile.name.split(" ")[0];
+      else if (coord.field === "last_name") value = userProfile.name.split(" ").slice(1).join(" ");
+      else if (coord.field === "email") value = userProfile.email || "";
+      else if (coord.field === "phone") value = userProfile.phone || "";
       if (value) {
         await executeMouseAction(page, { type: "type", x: coord.x, y: coord.y, text: value });
       } else if (coord.field.includes("upload") && tailoredDoc) {
@@ -1273,8 +1268,7 @@ async function processApplication(jobId, userId, userConsentGiven = false) {
   try {
     const db = getDatabase();
     const job = db.job_listings.find((j) => j.id === jobId);
-    if (!job)
-      return { success: false, error: "Job not found" };
+    if (!job) return { success: false, error: "Job not found" };
     const models = await getAllQuery("SELECT * FROM ai_models");
     const thinker = models.find((m) => m.role === "Thinker" && m.status === "active");
     const auditor = models.find((m) => m.role === "Auditor" && m.status === "active");
@@ -1289,8 +1283,7 @@ async function processApplication(jobId, userId, userConsentGiven = false) {
   }
 }
 function startHuntingScheduler2(userId) {
-  if (huntingInterval)
-    clearInterval(huntingInterval);
+  if (huntingInterval) clearInterval(huntingInterval);
   huntingInterval = startHuntingScheduler(userId, startHunterSearch2, callAI);
 }
 
@@ -1318,6 +1311,7 @@ function setupIpcHandlers() {
     "websites:get-all",
     "websites:add",
     "websites:delete",
+    "websites:toggle-active",
     "ai-models:get-all",
     "ai-models:add",
     "ai-models:update",
@@ -1524,6 +1518,14 @@ function setupIpcHandlers() {
       return { success: false, error: e.message };
     }
   });
+  import_electron3.ipcMain.handle("websites:toggle-active", async (_, data) => {
+    try {
+      await runQuery("UPDATE job_websites", { id: data.id, is_active: data.isActive });
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
   import_electron3.ipcMain.handle("ai-models:get-all", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM ai_models");
@@ -1597,8 +1599,7 @@ function createWindow() {
   });
   const startUrl = import_electron_is_dev.default ? "http://localhost:5173" : `file://${import_path4.default.join(__dirname, "../dist/index.html")}`;
   mainWindow.loadURL(startUrl);
-  if (import_electron_is_dev.default)
-    mainWindow.webContents.openDevTools();
+  if (import_electron_is_dev.default) mainWindow.webContents.openDevTools();
   mainWindow.webContents.on("context-menu", (event, params) => {
     const menu = new import_electron4.Menu();
     menu.append(new import_electron4.MenuItem({ label: "Cut", role: "cut", enabled: params.editFlags.canCut }));
@@ -1618,13 +1619,11 @@ import_electron4.app.on("ready", async () => {
   createWindow();
 });
 import_electron4.app.on("window-all-closed", () => {
-  if (process.platform !== "darwin")
-    import_electron4.app.quit();
+  if (process.platform !== "darwin") import_electron4.app.quit();
 });
 import_electron4.app.on("second-instance", () => {
   if (mainWindow) {
-    if (mainWindow.isMinimized())
-      mainWindow.restore();
+    if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();
   }
 });

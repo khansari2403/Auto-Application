@@ -148,7 +148,7 @@ function JobWebsitesSection({ userId }: JobWebsitesSectionProps) {
             <div className="website-info">
               <h4>{website.website_name} <span className="badge">{website.site_type === 'career_page' ? '🏢 Career Page' : '📋 Job Board'}</span></h4>
               <p>{website.website_url}</p>
-              <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '8px', flexWrap: 'wrap' }}>
                 <span className={`status ${website.is_active ? 'active' : 'inactive'}`}>{website.is_active ? '✓ Active' : '✗ Inactive'}</span>
                 <span className={`status ${website.login_status === 'verified' ? 'active' : website.login_status === 'failed' ? 'inactive' : 'info'}`}>
                   {website.login_status === 'verifying' ? '⏳ Verifying Login...' : 
@@ -157,11 +157,21 @@ function JobWebsitesSection({ userId }: JobWebsitesSectionProps) {
                 </span>
               </div>
             </div>
-            <div className="website-actions">
-              <button className={`btn btn-small ${website.is_active ? 'btn-secondary' : 'btn-success'}`} onClick={() => handleToggleActive(website.id, website.is_active)}>
+            <div className="website-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center', flexShrink: 0 }}>
+              <button 
+                className={`btn btn-small ${website.is_active ? 'btn-secondary' : 'btn-success'}`} 
+                onClick={() => handleToggleActive(website.id, website.is_active)}
+                style={{ minWidth: '90px', height: '36px', padding: '8px 12px', fontSize: '12px' }}
+              >
                 {website.is_active ? 'Deactivate' : 'Activate'}
               </button>
-              <button className="btn btn-danger btn-small" onClick={() => handleDeleteWebsite(website.id)}>Delete</button>
+              <button 
+                className="btn btn-danger btn-small" 
+                onClick={() => handleDeleteWebsite(website.id)}
+                style={{ minWidth: '70px', height: '36px', padding: '8px 12px', fontSize: '12px' }}
+              >
+                Delete
+              </button>
             </div>
           </div>
         ))}

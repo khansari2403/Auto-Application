@@ -1,4 +1,4 @@
-export type Language = 'en' | 'de' | 'es' | 'fr' | 'it' | 'pt' | 'zh' | 'ja' | 'ko' | 'ar';
+export type Language = 'en' | 'de' | 'es' | 'fr' | 'it' | 'pt' | 'zh' | 'ja' | 'ko';
 
 export interface TranslationKeys {
   appTitle: string;
@@ -8,6 +8,7 @@ export interface TranslationKeys {
   jobWebsites: string;
   searchProfiles: string;
   jobSearch: string;
+  interviewInsider: string;
   applications: string;
   inbox: string;
   alerts: string;
@@ -22,6 +23,8 @@ export interface TranslationKeys {
   material: string;
   glassmorphism: string;
   neumorphism: string;
+  rosePetal: string;
+  lavenderDream: string;
   reportBug: string;
   bugReportTitle: string;
   bugReportDescription: string;
@@ -48,6 +51,7 @@ export const translations: Record<Language, TranslationKeys> = {
     jobWebsites: 'Job Websites',
     searchProfiles: 'Search Profiles',
     jobSearch: 'Job Search',
+    interviewInsider: 'Interview Insider',
     applications: 'Applications',
     inbox: 'Inbox',
     alerts: 'Alerts',
@@ -62,6 +66,8 @@ export const translations: Record<Language, TranslationKeys> = {
     material: 'Material',
     glassmorphism: 'Glass',
     neumorphism: 'Neumorphism',
+    rosePetal: 'Rose Petal',
+    lavenderDream: 'Lavender Dream',
     reportBug: 'Report Bug',
     bugReportTitle: 'Report a Bug',
     bugReportDescription: 'Describe the issue',

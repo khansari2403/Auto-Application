@@ -318,6 +318,7 @@ export function JobSearch({ userId }: { userId: number }) {
   const renderDocIcon = (job: any, type: string, label: string, shortLabel: string) => {
     const status = job[`${type}_status`];
     const path = job[`${type}_path`];
+    const rejectionReason = job[`${type}_rejection_reason`];
 
     const handleDocClick = (e: React.MouseEvent) => {
       e.preventDefault();
@@ -326,21 +327,39 @@ export function JobSearch({ userId }: { userId: number }) {
       if (status === 'auditor_done' && path) {
         // Open the completed document
         (window as any).electron.invoke('docs:open-file', path);
+      } else if (status === 'rejected' && rejectionReason) {
+        // Show rejection reason
+        alert(`⚠️ ${label} was rejected by the Auditor:\n\n${rejectionReason}\n\n💡 Tip: This usually happens when your profile doesn't have enough relevant experience for this position. The AI tried to generate content but couldn't find sufficient matching data.\n\nClick again to retry generation.`);
       } else {
         // Generate ONLY this specific document type
         handleGenerateSingleDoc(job.id, type);
       }
     };
 
+    // Determine background color based on status
+    let bgColor = 'var(--card-bg)';
+    let borderColor = 'var(--border)';
+    
+    if (status === 'auditor_done') {
+      bgColor = 'var(--success-light)';
+      borderColor = 'var(--success)';
+    } else if (status === 'thinker_done') {
+      bgColor = 'var(--info-light)';
+      borderColor = 'var(--info)';
+    } else if (status === 'rejected' || status === 'failed') {
+      bgColor = 'var(--danger-light)';
+      borderColor = 'var(--danger)';
+    }
+
     return (
       <div 
         onClick={handleDocClick}
-        title={`${label}: ${status || 'Not started'} - Click to ${status === 'auditor_done' ? 'open' : 'generate'}`}
+        title={status === 'rejected' ? `${label}: REJECTED - Click to see reason` : `${label}: ${status || 'Not started'} - Click to ${status === 'auditor_done' ? 'open' : 'generate'}`}
         style={{ 
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           width: '28px', height: '28px', borderRadius: '6px', 
-          background: status === 'auditor_done' ? 'var(--success-light)' : status === 'thinker_done' ? 'var(--info-light)' : 'var(--card-bg)', 
-          border: `1px solid ${status === 'auditor_done' ? 'var(--success)' : status === 'thinker_done' ? 'var(--info)' : 'var(--border)'}`,
+          background: bgColor, 
+          border: `1px solid ${borderColor}`,
           fontSize: '10px', position: 'relative', fontWeight: 'bold', color: 'var(--text-primary)',
           transition: 'all 0.2s ease'
         }}
@@ -350,7 +369,8 @@ export function JobSearch({ userId }: { userId: number }) {
         {shortLabel}
         {status === 'thinker_done' && <span style={{ position: 'absolute', bottom: -4, right: -2, color: 'var(--success)', fontSize: '14px' }}>✓</span>}
         {status === 'auditor_done' && <span style={{ position: 'absolute', bottom: -4, right: -2, color: 'var(--success)', fontSize: '14px' }}>✓✓</span>}
-        {(!status || status === 'none' || status === 'failed') && <span style={{ position: 'absolute', bottom: -2, right: -1, fontSize: '8px' }}>🔄</span>}
+        {(status === 'rejected' || status === 'failed') && <span style={{ position: 'absolute', bottom: -4, right: -2, color: 'var(--danger)', fontSize: '14px' }}>⚠</span>}
+        {(!status || status === 'none') && <span style={{ position: 'absolute', bottom: -2, right: -1, fontSize: '8px' }}>🔄</span>}
       </div>
     );
   };

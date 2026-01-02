@@ -252,9 +252,9 @@ export function SearchProfiles({ userId }: { userId: number }) {
         maxHeight, 
         overflowY: 'auto', 
         padding: '8px', 
-        border: '1px solid #ddd', 
+        border: '1px solid var(--border)', 
         borderRadius: '6px', 
-        background: '#fff' 
+        background: 'var(--card-bg)' 
       }}>
         {options.map((opt: string) => (
           <label key={opt} style={{ 
@@ -264,7 +264,8 @@ export function SearchProfiles({ userId }: { userId: number }) {
             padding: '4px 0', 
             cursor: 'pointer',
             fontSize: '11px',
-            borderBottom: '1px solid #f0f0f0'
+            borderBottom: '1px solid var(--border-light)',
+            color: 'var(--text-primary)'
           }}>
             <input 
               type="checkbox" 
@@ -288,8 +289,8 @@ export function SearchProfiles({ userId }: { userId: number }) {
           alignItems: 'center',
           gap: '4px',
           padding: '2px 8px',
-          background: '#e3f2fd',
-          color: '#0077b5',
+          background: 'var(--info-light)',
+          color: 'var(--primary)',
           borderRadius: '12px',
           fontSize: '10px'
         }}>
@@ -298,7 +299,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
             border: 'none', 
             background: 'none', 
             cursor: 'pointer', 
-            color: '#0077b5',
+            color: 'var(--primary)',
             padding: 0,
             fontSize: '12px'
           }}>×</button>

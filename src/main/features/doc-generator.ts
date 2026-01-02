@@ -217,10 +217,6 @@ function generateDocumentHTML(content: string, docType: string, userProfile: any
   <div class="section">
     <div class="content">${content.replace(/\n/g, '<br>')}</div>
   </div>
-  
-  <div class="footer">
-    Generated for ${job?.company_name || 'Company'} - ${job?.job_title || 'Position'} | ${new Date().toLocaleDateString()}
-  </div>
 </body>
 </html>`;
 }

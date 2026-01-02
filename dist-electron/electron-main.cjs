@@ -210,161 +210,7 @@ var init_database = __esm({
   }
 });
 
-// src/main/features/secretary-service.ts
-async function monitorConfirmations(userId) {
-  const configRes = await getAllQuery("SELECT * FROM email_config");
-  const config = configRes[0];
-  if (!config || !config.email_user || !config.email_password) return;
-  const confirmation = await performImapSearch(config, ["UNSEEN"], (text, subject) => {
-    const keywords = ["application received", "thank you for applying", "confirmation", "received your application"];
-    const combined = (text + " " + subject).toLowerCase();
-    if (keywords.some((k) => combined.includes(k))) {
-      return { subject, snippet: text.substring(0, 200) };
-    }
-    return null;
-  });
-  if (confirmation) {
-    await logAction(userId, "ai_secretary", `\u{1F4EC} Received confirmation: ${confirmation.subject}`, "completed", true);
-    await runQuery("INSERT INTO email_alerts", {
-      user_id: userId,
-      alert_type: "confirmation",
-      subject: confirmation.subject,
-      snippet: confirmation.snippet,
-      timestamp: (/* @__PURE__ */ new Date()).toISOString()
-    });
-  }
-}
-async function performImapSearch(config, criteria, extractor) {
-  return new Promise((resolve) => {
-    const imap = new import_imap.default({
-      user: config.email_user,
-      password: config.email_password,
-      host: config.imap_host,
-      port: config.imap_port || 993,
-      tls: true,
-      tlsOptions: { rejectUnauthorized: false }
-    });
-    imap.once("ready", () => {
-      imap.openBox("INBOX", false, (err) => {
-        if (err) {
-          console.error("IMAP: Could not open inbox", err);
-          imap.end();
-          resolve(null);
-          return;
-        }
-        imap.search(criteria, (err2, results) => {
-          if (err2 || !results || results.length === 0) {
-            imap.end();
-            resolve(null);
-            return;
-          }
-          const f = imap.fetch(results[results.length - 1], { bodies: "" });
-          f.on("message", (msg) => {
-            msg.on("body", async (stream) => {
-              const parsed = await (0, import_mailparser.simpleParser)(stream);
-              const result = extractor(parsed.text || "", parsed.subject || "");
-              resolve(result);
-            });
-          });
-          f.once("end", () => imap.end());
-        });
-      });
-    });
-    imap.once("error", (err) => {
-      console.error("IMAP Connection Error:", err);
-      resolve(null);
-    });
-    imap.connect();
-  });
-}
-var import_imap, import_mailparser;
-var init_secretary_service = __esm({
-  "src/main/features/secretary-service.ts"() {
-    import_imap = __toESM(require("imap"), 1);
-    import_mailparser = require("mailparser");
-    init_database();
-  }
-});
-
-// src/main/features/scheduler.ts
-var scheduler_exports = {};
-__export(scheduler_exports, {
-  setSchedulerEnabled: () => setSchedulerEnabled,
-  startHuntingScheduler: () => startHuntingScheduler
-});
-function setSchedulerEnabled(enabled) {
-  schedulerEnabled = enabled;
-  console.log(`Scheduler: ${enabled ? "ENABLED" : "DISABLED"}`);
-}
-function startHuntingScheduler(userId, startHunterSearch3, callAI2) {
-  return setInterval(async () => {
-    const db = getDatabase();
-    const settings = db.settings[0];
-    if (!settings || settings.job_hunting_active !== 1) {
-      return;
-    }
-    if (!schedulerEnabled) {
-      console.log("Scheduler: Skipping - not explicitly enabled");
-      return;
-    }
-    const websites = db.job_websites.filter((w) => w.is_active === 1);
-    const now = /* @__PURE__ */ new Date();
-    for (const website of websites) {
-      const lastChecked = website.last_checked ? new Date(website.last_checked) : /* @__PURE__ */ new Date(0);
-      const hoursSinceLastCheck = (now.getTime() - lastChecked.getTime()) / (1e3 * 60 * 60);
-      const frequency = website.site_type === "career_page" ? 24 : website.check_frequency || 4;
-      if (hoursSinceLastCheck >= frequency) {
-        console.log(`Scheduler: Checking ${website.website_name}...`);
-        await startHunterSearch3(userId, callAI2);
-        await runQuery("UPDATE job_websites", { id: website.id, last_checked: now.toISOString() });
-      }
-    }
-    try {
-      await monitorConfirmations(userId);
-    } catch (e) {
-      console.error("Scheduler: Secretary monitoring failed", e);
-    }
-  }, 6e4);
-}
-var schedulerEnabled;
-var init_scheduler = __esm({
-  "src/main/features/scheduler.ts"() {
-    init_database();
-    init_secretary_service();
-    schedulerEnabled = false;
-  }
-});
-
-// electron-main.ts
-var import_electron4 = require("electron");
-var import_path4 = __toESM(require("path"), 1);
-var import_electron_is_dev = __toESM(require("electron-is-dev"), 1);
-init_database();
-
-// src/main/ipc-handlers.ts
-init_database();
-var import_electron3 = require("electron");
-
-// src/main/ai-service.ts
-init_database();
-var import_axios = __toESM(require("axios"), 1);
-
-// src/main/features/Hunter-engine.ts
-init_database();
-
 // src/main/scraper-service.ts
-var import_puppeteer = __toESM(require("puppeteer"), 1);
-init_database();
-var import_path2 = __toESM(require("path"), 1);
-var app2;
-try {
-  app2 = require("electron").app;
-} catch (e) {
-  app2 = global.electronApp;
-}
-var getUserDataDir = () => {
-  return import_path2.default.join(app2.getPath("userData"), "browser_data");
-};
 async function launchBrowser(options = {}) {
   const db = getDatabase();
   const settings = db.settings[0] || {};
@@ -737,309 +583,29 @@ async function getFormCoordinates(page, userId, observerModel, callAI2) {
     return [];
   }
 }
-
-// src/main/features/Hunter-engine.ts
-async function analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI2) {
-  var _a;
-  console.log(`
-========== ANALYZING JOB ${jobId} ==========`);
-  console.log(`URL: ${url}`);
-  console.log(`Hunter model:`, hunter ? hunter.model_name : "MISSING!");
-  await logAction(userId, "ai_hunter", `\u{1F50D} Analyzing: ${url}`, "in_progress");
-  console.log("Step 1: Getting page content...");
-  const pageData = await getJobPageContent(url, userId, callAI2);
-  console.log(`Scraper result: strategy="${pageData.strategyUsed}", contentLength=${pageData.content.length}`);
-  if (pageData.strategyUsed.includes("Blocked") || pageData.strategyUsed.includes("Failed")) {
-    console.log("\u274C Page was blocked or failed");
-    await logAction(userId, "ai_auditor", `\u274C Blocked: ${url}`, "failed", false);
-    await runQuery("DELETE FROM job_listings", { id: jobId });
-    return;
-  }
-  if (!pageData.content || pageData.content.length < 100) {
-    console.log("\u274C Content too short:", pageData.content.length);
-    await logAction(userId, "ai_auditor", `\u274C Empty content: ${url}`, "failed", false);
-    await runQuery("DELETE FROM job_listings", { id: jobId });
-    return;
-  }
-  console.log("\u2705 Got content, first 500 chars:", pageData.content.substring(0, 500));
-  await logAction(userId, "ai_hunter", `\u{1F4C4} Got ${pageData.content.length} chars via ${pageData.strategyUsed}`, "in_progress");
-  if (!hunter || !hunter.api_key) {
-    console.log("\u274C No Hunter AI model or missing API key!");
-    await logAction(userId, "ai_hunter", `\u274C No Hunter AI configured!`, "failed", false);
-    console.log("Attempting fallback extraction...");
-    const fallbackData = extractBasicInfo(pageData.content, url);
-    if (fallbackData.jobTitle) {
-      await runQuery("UPDATE job_listings", {
-        id: jobId,
-        ...fallbackData,
-        status: "analyzed",
-        date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString()
-      });
-      console.log("\u2705 Saved with fallback data:", fallbackData);
+var import_puppeteer, import_path2, app2, getUserDataDir;
+var init_scraper_service = __esm({
+  "src/main/scraper-service.ts"() {
+    import_puppeteer = __toESM(require("puppeteer"), 1);
+    init_database();
+    import_path2 = __toESM(require("path"), 1);
+    try {
+      app2 = require("electron").app;
+    } catch (e) {
+      app2 = global.electronApp;
     }
-    return;
-  }
-  const isJsonLd = pageData.strategyUsed.includes("JSON-LD");
-  console.log("Is JSON-LD:", isJsonLd);
-  let prompt;
-  if (isJsonLd) {
-    prompt = `You are a job data extractor. Extract job details from this JSON-LD data.
-
-Return ONLY a valid JSON object (no markdown, no explanation):
-{"jobTitle":"exact job title","companyName":"company name","location":"city, country","jobType":"Full-time/Part-time/Contract","experienceLevel":"Junior/Mid/Senior","salaryRange":"salary or N/A","description":"2-3 sentence summary","requiredSkills":"comma separated","remoteOnsite":"Remote/Hybrid/Onsite"}
-
-JSON-LD:
-${pageData.content.substring(0, 6e3)}`;
-  } else {
-    prompt = `You are a job data extractor. Extract job details from this job listing text.
-
-Return ONLY a valid JSON object (no markdown, no explanation):
-{"jobTitle":"exact job title","companyName":"company name","location":"city, country","jobType":"Full-time/Part-time/Contract","experienceLevel":"Junior/Mid/Senior","salaryRange":"salary or N/A","description":"2-3 sentence summary","requiredSkills":"comma separated","remoteOnsite":"Remote/Hybrid/Onsite"}
-
-Job listing:
-${pageData.content.substring(0, 6e3)}`;
-  }
-  console.log("Step 3: Calling AI...");
-  console.log("Prompt length:", prompt.length);
-  let aiResponse;
-  try {
-    aiResponse = await callAI2(hunter, prompt);
-    console.log("AI Response:", aiResponse);
-  } catch (aiError) {
-    console.log("\u274C AI call failed:", aiError.message);
-    await logAction(userId, "ai_hunter", `\u274C AI error: ${aiError.message}`, "failed", false);
-    const fallbackData = extractBasicInfo(pageData.content, url);
-    if (fallbackData.jobTitle) {
-      await runQuery("UPDATE job_listings", { id: jobId, ...fallbackData, status: "analyzed", date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString() });
-    } else {
-      await runQuery("UPDATE job_listings", { id: jobId, status: "manual_review" });
-    }
-    return;
-  }
-  if (aiResponse.toLowerCase().includes("error:") || aiResponse.toLowerCase().includes("invalid api")) {
-    console.log("\u274C AI returned error:", aiResponse);
-    await logAction(userId, "ai_hunter", `\u274C AI error: ${aiResponse.substring(0, 100)}`, "failed", false);
-    await runQuery("UPDATE job_listings", { id: jobId, status: "manual_review" });
-    return;
-  }
-  console.log("Step 5: Parsing AI response...");
-  try {
-    let cleanedResponse = aiResponse.replace(/```json/gi, "").replace(/```/g, "").replace(/^[^{]*/, "").replace(/[^}]*$/, "").trim();
-    const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
-      console.log("\u274C No JSON found in response");
-      throw new Error("No JSON in response");
-    }
-    const data = JSON.parse(jsonMatch[0]);
-    console.log("Parsed data:", data);
-    const jobTitle = data.jobTitle || data.title || data.job_title || "";
-    const companyName = data.companyName || data.company || data.company_name || ((_a = data.hiringOrganization) == null ? void 0 : _a.name) || "";
-    if (!jobTitle || jobTitle.toLowerCase() === "n/a" || jobTitle.toLowerCase() === "unknown") {
-      console.log("\u274C Missing job title");
-      await logAction(userId, "ai_auditor", `\u274C Missing job title`, "failed", false);
-      const fallbackData = extractBasicInfo(pageData.content, url);
-      if (fallbackData.jobTitle) {
-        await runQuery("UPDATE job_listings", { id: jobId, ...fallbackData, status: "analyzed", date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString() });
-      } else {
-        await runQuery("DELETE FROM job_listings", { id: jobId });
-      }
-      return;
-    }
-    console.log("Step 6: Saving to database...");
-    const updateData = {
-      id: jobId,
-      job_title: jobTitle,
-      company_name: companyName || "Unknown Company",
-      location: data.location || data.jobLocation || "N/A",
-      job_type: data.jobType || data.employmentType || "N/A",
-      experience_level: data.experienceLevel || "N/A",
-      salary_range: data.salaryRange || data.salary || data.baseSalary || "N/A",
-      description: data.description || "",
-      required_skills: data.requiredSkills || data.skills || "N/A",
-      remote_onsite: data.remoteOnsite || data.jobLocationType || "N/A",
-      posted_date: data.postedDate || data.datePosted || "N/A",
-      application_url: data.applicationUrl || data.url || url,
-      status: "analyzed",
-      date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString()
+    getUserDataDir = () => {
+      return import_path2.default.join(app2.getPath("userData"), "browser_data");
     };
-    console.log("Update data:", updateData);
-    await runQuery("UPDATE job_listings", updateData);
-    await logAction(userId, "ai_auditor", `\u2705 Extracted: ${jobTitle} at ${companyName}`, "completed", true);
-    console.log(`\u2705 SUCCESS: ${jobTitle} at ${companyName}`);
-  } catch (parseError) {
-    console.log("\u274C Parse error:", parseError.message);
-    await logAction(userId, "ai_auditor", `\u274C Parse failed`, "failed", false);
-    const fallbackData = extractBasicInfo(pageData.content, url);
-    if (fallbackData.jobTitle) {
-      await runQuery("UPDATE job_listings", { id: jobId, ...fallbackData, status: "analyzed", date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString() });
-      console.log("\u2705 Saved with fallback:", fallbackData);
-    } else {
-      await runQuery("UPDATE job_listings", { id: jobId, status: "manual_review" });
-    }
   }
-}
-function extractBasicInfo(content, url) {
-  var _a, _b, _c, _d;
-  console.log("Running fallback extraction...");
-  const data = {
-    application_url: url
-  };
-  try {
-    if (content.startsWith("{")) {
-      const json = JSON.parse(content);
-      data.job_title = json.title || json.jobTitle || json.name || "";
-      data.company_name = ((_a = json.hiringOrganization) == null ? void 0 : _a.name) || json.companyName || json.company || "";
-      data.location = ((_c = (_b = json.jobLocation) == null ? void 0 : _b.address) == null ? void 0 : _c.addressLocality) || json.location || "";
-      data.job_type = json.employmentType || "";
-      data.description = ((_d = json.description) == null ? void 0 : _d.substring(0, 500)) || "";
-      console.log("Extracted from JSON:", data);
-      return data;
-    }
-  } catch (e) {
-  }
-  const lines = content.split("\n").map((l) => l.trim()).filter((l) => l);
-  for (const line of lines.slice(0, 10)) {
-    if (line.length > 5 && line.length < 100 && !line.includes("cookie") && !line.includes("Sign")) {
-      if (!data.job_title) {
-        data.job_title = line;
-        break;
-      }
-    }
-  }
-  const companyPatterns = [
-    /(?:at|@|by|company[:\s]+)([A-Z][A-Za-z0-9\s&.-]+)/i,
-    /([A-Z][A-Za-z0-9\s&.-]+)(?:\s+is hiring|\s+jobs)/i
-  ];
-  for (const pattern of companyPatterns) {
-    const match = content.match(pattern);
-    if (match && match[1]) {
-      data.company_name = match[1].trim();
-      break;
-    }
-  }
-  const locationPatterns = [
-    /(?:location|located in|based in)[:\s]+([A-Za-z\s,]+)/i,
-    /(Berlin|Munich|Hamburg|Frankfurt|London|Paris|Amsterdam|Remote)/i
-  ];
-  for (const pattern of locationPatterns) {
-    const match = content.match(pattern);
-    if (match && match[1]) {
-      data.location = match[1].trim();
-      break;
-    }
-  }
-  console.log("Fallback extracted:", data);
-  return data;
-}
-async function startHunterSearch(userId, callAI2) {
-  var _a;
-  console.log("\n========== STARTING HUNTER SEARCH ==========");
-  try {
-    await logAction(userId, "ai_hunter", "\u{1F680} Starting job hunt...", "in_progress");
-    const db = getDatabase();
-    const profiles = db.search_profiles.filter((p) => p.is_active === 1);
-    const websites = db.job_websites.filter((w) => w.is_active === 1);
-    const models = await getAllQuery("SELECT * FROM ai_models");
-    console.log("Search profiles:", profiles.length);
-    console.log("Job websites:", websites.length);
-    console.log("AI models:", models.length);
-    const hunter = models.find((m) => m.role === "Hunter" && m.status === "active");
-    const auditor = models.find((m) => m.role === "Auditor" && m.status === "active");
-    console.log("Hunter:", hunter ? `${hunter.model_name} (key: ${(_a = hunter.api_key) == null ? void 0 : _a.substring(0, 10)}...)` : "NOT FOUND");
-    console.log("Auditor:", auditor ? auditor.model_name : "NOT FOUND (will use Hunter)");
-    if (!hunter) {
-      const errorMsg = 'No active Hunter AI model. Go to Settings > AI Models and add one with role "Hunter".';
-      console.log("\u274C", errorMsg);
-      await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
-      return { success: false, error: errorMsg };
-    }
-    if (profiles.length === 0) {
-      const errorMsg = "No active search profiles. Go to Search Profiles and create one.";
-      console.log("\u274C", errorMsg);
-      await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
-      return { success: false, error: errorMsg };
-    }
-    if (websites.length === 0) {
-      const errorMsg = "No active job websites. Go to Job Websites and add one.";
-      console.log("\u274C", errorMsg);
-      await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
-      return { success: false, error: errorMsg };
-    }
-    let totalJobsFound = 0;
-    for (const profile of profiles) {
-      console.log(`
-Profile: ${profile.job_title} in ${profile.location}`);
-      for (const website of websites) {
-        console.log(`Website: ${website.website_name} (${website.website_url})`);
-        await logAction(userId, "ai_hunter", `\u{1F310} Searching ${website.website_name}...`, "in_progress");
-        const query = profile.job_title;
-        console.log(`Search query: "${query}"`);
-        const jobUrls = await scrapeJobs(
-          website.website_url,
-          query,
-          profile.location || "",
-          { email: website.email, password: website.password },
-          userId,
-          callAI2
-        );
-        console.log(`Found ${jobUrls.length} URLs`);
-        await logAction(userId, "ai_hunter", `\u{1F4E5} Found ${jobUrls.length} jobs on ${website.website_name}`, "completed", true);
-        for (const url of jobUrls) {
-          const existing = db.job_listings.find((j) => j.url === url);
-          if (existing) {
-            console.log(`Skipping duplicate: ${url}`);
-            continue;
-          }
-          const jobId = Date.now() + Math.floor(Math.random() * 1e3);
-          await runQuery("INSERT INTO job_listings", {
-            id: jobId,
-            url,
-            source: website.website_name,
-            status: "analyzing"
-          });
-          totalJobsFound++;
-          console.log(`Added job ${jobId}: ${url}`);
-          await analyzeJobUrl(jobId, userId, url, hunter, auditor || hunter, callAI2);
-          await new Promise((resolve) => setTimeout(resolve, 2e3));
-        }
-      }
-    }
-    await logAction(userId, "ai_hunter", `\u2705 Done! Processed ${totalJobsFound} jobs.`, "completed", true);
-    console.log(`
-========== HUNT COMPLETE: ${totalJobsFound} jobs ==========
-`);
-    return { success: true, jobsFound: totalJobsFound };
-  } catch (error) {
-    console.error("Hunt error:", error);
-    await logAction(userId, "ai_hunter", `\u274C Error: ${error.message}`, "failed", false);
-    return { success: false, error: error.message };
-  }
-}
+});
 
 // src/main/features/doc-generator.ts
-init_database();
-var fs2 = __toESM(require("fs"), 1);
-var path3 = __toESM(require("path"), 1);
-var app3;
-try {
-  app3 = require("electron").app;
-} catch (e) {
-  app3 = global.electronApp;
-}
-var getDocsDir = () => {
-  const docsPath = path3.join(app3.getPath("userData"), "generated_docs");
-  if (!fs2.existsSync(docsPath)) {
-    fs2.mkdirSync(docsPath, { recursive: true });
-  }
-  return docsPath;
-};
-var DOC_TYPES = [
-  { key: "cv", label: "CV", optionKey: "cv" },
-  { key: "motivation_letter", label: "Motivation Letter", optionKey: "motivationLetter" },
-  { key: "cover_letter", label: "Cover Letter", optionKey: "coverLetter" },
-  { key: "portfolio", label: "Portfolio", optionKey: "portfolio" },
-  { key: "proposal", label: "Proposal", optionKey: "proposal" }
-];
+var doc_generator_exports = {};
+__export(doc_generator_exports, {
+  generateSingleDocument: () => generateSingleDocument,
+  generateTailoredDocs: () => generateTailoredDocs
+});
 function generateDocumentHTML(content, docType, userProfile, job) {
   const title = `${docType} - ${(userProfile == null ? void 0 : userProfile.name) || "Applicant"} - ${(job == null ? void 0 : job.company_name) || "Company"}`;
   return `<!DOCTYPE html>
@@ -1630,12 +1196,481 @@ RESPONSE FORMAT:
 If it passes ALL criteria, respond with exactly: "APPROVED"
 If it fails any criteria, respond with: "REJECTED: " followed by specific feedback on what to fix.`;
 }
+async function generateSingleDocument(jobId, userId, docType, thinker, auditor, callAI2) {
+  var _a, _b, _c, _d;
+  const db = getDatabase();
+  const job = (_a = db.job_listings) == null ? void 0 : _a.find((j) => j.id === jobId);
+  const userProfile = ((_b = db.user_profile) == null ? void 0 : _b.find((p) => p.id === userId)) || ((_c = db.user_profile) == null ? void 0 : _c[0]);
+  if (!job) return { success: false, error: "Job not found" };
+  if (!userProfile) return { success: false, error: "User profile not found" };
+  const options = {};
+  const typeConfig = DOC_TYPES.find((t) => t.key === docType);
+  if (typeConfig) {
+    options[typeConfig.optionKey] = true;
+  }
+  await generateTailoredDocs(job, userId, thinker, auditor, options, callAI2);
+  const updatedJob = (_d = db.job_listings) == null ? void 0 : _d.find((j) => j.id === jobId);
+  const filePath = updatedJob == null ? void 0 : updatedJob[`${docType}_path`];
+  if (filePath) {
+    return { success: true, filePath };
+  }
+  return { success: false, error: "Document generation failed" };
+}
+var fs2, path3, app3, getDocsDir, DOC_TYPES;
+var init_doc_generator = __esm({
+  "src/main/features/doc-generator.ts"() {
+    init_database();
+    init_scraper_service();
+    fs2 = __toESM(require("fs"), 1);
+    path3 = __toESM(require("path"), 1);
+    try {
+      app3 = require("electron").app;
+    } catch (e) {
+      app3 = global.electronApp;
+    }
+    getDocsDir = () => {
+      const docsPath = path3.join(app3.getPath("userData"), "generated_docs");
+      if (!fs2.existsSync(docsPath)) {
+        fs2.mkdirSync(docsPath, { recursive: true });
+      }
+      return docsPath;
+    };
+    DOC_TYPES = [
+      { key: "cv", label: "CV", optionKey: "cv" },
+      { key: "motivation_letter", label: "Motivation Letter", optionKey: "motivationLetter" },
+      { key: "cover_letter", label: "Cover Letter", optionKey: "coverLetter" },
+      { key: "portfolio", label: "Portfolio", optionKey: "portfolio" },
+      { key: "proposal", label: "Proposal", optionKey: "proposal" }
+    ];
+  }
+});
+
+// src/main/features/secretary-service.ts
+async function monitorConfirmations(userId) {
+  const configRes = await getAllQuery("SELECT * FROM email_config");
+  const config = configRes[0];
+  if (!config || !config.email_user || !config.email_password) return;
+  const confirmation = await performImapSearch(config, ["UNSEEN"], (text, subject) => {
+    const keywords = ["application received", "thank you for applying", "confirmation", "received your application"];
+    const combined = (text + " " + subject).toLowerCase();
+    if (keywords.some((k) => combined.includes(k))) {
+      return { subject, snippet: text.substring(0, 200) };
+    }
+    return null;
+  });
+  if (confirmation) {
+    await logAction(userId, "ai_secretary", `\u{1F4EC} Received confirmation: ${confirmation.subject}`, "completed", true);
+    await runQuery("INSERT INTO email_alerts", {
+      user_id: userId,
+      alert_type: "confirmation",
+      subject: confirmation.subject,
+      snippet: confirmation.snippet,
+      timestamp: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  }
+}
+async function performImapSearch(config, criteria, extractor) {
+  return new Promise((resolve) => {
+    const imap = new import_imap.default({
+      user: config.email_user,
+      password: config.email_password,
+      host: config.imap_host,
+      port: config.imap_port || 993,
+      tls: true,
+      tlsOptions: { rejectUnauthorized: false }
+    });
+    imap.once("ready", () => {
+      imap.openBox("INBOX", false, (err) => {
+        if (err) {
+          console.error("IMAP: Could not open inbox", err);
+          imap.end();
+          resolve(null);
+          return;
+        }
+        imap.search(criteria, (err2, results) => {
+          if (err2 || !results || results.length === 0) {
+            imap.end();
+            resolve(null);
+            return;
+          }
+          const f = imap.fetch(results[results.length - 1], { bodies: "" });
+          f.on("message", (msg) => {
+            msg.on("body", async (stream) => {
+              const parsed = await (0, import_mailparser.simpleParser)(stream);
+              const result = extractor(parsed.text || "", parsed.subject || "");
+              resolve(result);
+            });
+          });
+          f.once("end", () => imap.end());
+        });
+      });
+    });
+    imap.once("error", (err) => {
+      console.error("IMAP Connection Error:", err);
+      resolve(null);
+    });
+    imap.connect();
+  });
+}
+var import_imap, import_mailparser;
+var init_secretary_service = __esm({
+  "src/main/features/secretary-service.ts"() {
+    import_imap = __toESM(require("imap"), 1);
+    import_mailparser = require("mailparser");
+    init_database();
+  }
+});
+
+// src/main/features/scheduler.ts
+var scheduler_exports = {};
+__export(scheduler_exports, {
+  setSchedulerEnabled: () => setSchedulerEnabled,
+  startHuntingScheduler: () => startHuntingScheduler
+});
+function setSchedulerEnabled(enabled) {
+  schedulerEnabled = enabled;
+  console.log(`Scheduler: ${enabled ? "ENABLED" : "DISABLED"}`);
+}
+function startHuntingScheduler(userId, startHunterSearch3, callAI2) {
+  return setInterval(async () => {
+    const db = getDatabase();
+    const settings = db.settings[0];
+    if (!settings || settings.job_hunting_active !== 1) {
+      return;
+    }
+    if (!schedulerEnabled) {
+      console.log("Scheduler: Skipping - not explicitly enabled");
+      return;
+    }
+    const websites = db.job_websites.filter((w) => w.is_active === 1);
+    const now = /* @__PURE__ */ new Date();
+    for (const website of websites) {
+      const lastChecked = website.last_checked ? new Date(website.last_checked) : /* @__PURE__ */ new Date(0);
+      const hoursSinceLastCheck = (now.getTime() - lastChecked.getTime()) / (1e3 * 60 * 60);
+      const frequency = website.site_type === "career_page" ? 24 : website.check_frequency || 4;
+      if (hoursSinceLastCheck >= frequency) {
+        console.log(`Scheduler: Checking ${website.website_name}...`);
+        await startHunterSearch3(userId, callAI2);
+        await runQuery("UPDATE job_websites", { id: website.id, last_checked: now.toISOString() });
+      }
+    }
+    try {
+      await monitorConfirmations(userId);
+    } catch (e) {
+      console.error("Scheduler: Secretary monitoring failed", e);
+    }
+  }, 6e4);
+}
+var schedulerEnabled;
+var init_scheduler = __esm({
+  "src/main/features/scheduler.ts"() {
+    init_database();
+    init_secretary_service();
+    schedulerEnabled = false;
+  }
+});
+
+// electron-main.ts
+var import_electron4 = require("electron");
+var import_path4 = __toESM(require("path"), 1);
+var import_electron_is_dev = __toESM(require("electron-is-dev"), 1);
+init_database();
+
+// src/main/ipc-handlers.ts
+init_database();
+var import_electron3 = require("electron");
 
 // src/main/ai-service.ts
+init_database();
+var import_axios = __toESM(require("axios"), 1);
+
+// src/main/features/Hunter-engine.ts
+init_database();
+init_scraper_service();
+async function analyzeJobUrl(jobId, userId, url, hunter, auditor, callAI2) {
+  var _a;
+  console.log(`
+========== ANALYZING JOB ${jobId} ==========`);
+  console.log(`URL: ${url}`);
+  console.log(`Hunter model:`, hunter ? hunter.model_name : "MISSING!");
+  await logAction(userId, "ai_hunter", `\u{1F50D} Analyzing: ${url}`, "in_progress");
+  console.log("Step 1: Getting page content...");
+  const pageData = await getJobPageContent(url, userId, callAI2);
+  console.log(`Scraper result: strategy="${pageData.strategyUsed}", contentLength=${pageData.content.length}`);
+  if (pageData.strategyUsed.includes("Blocked") || pageData.strategyUsed.includes("Failed")) {
+    console.log("\u274C Page was blocked or failed");
+    await logAction(userId, "ai_auditor", `\u274C Blocked: ${url}`, "failed", false);
+    await runQuery("DELETE FROM job_listings", { id: jobId });
+    return;
+  }
+  if (!pageData.content || pageData.content.length < 100) {
+    console.log("\u274C Content too short:", pageData.content.length);
+    await logAction(userId, "ai_auditor", `\u274C Empty content: ${url}`, "failed", false);
+    await runQuery("DELETE FROM job_listings", { id: jobId });
+    return;
+  }
+  console.log("\u2705 Got content, first 500 chars:", pageData.content.substring(0, 500));
+  await logAction(userId, "ai_hunter", `\u{1F4C4} Got ${pageData.content.length} chars via ${pageData.strategyUsed}`, "in_progress");
+  if (!hunter || !hunter.api_key) {
+    console.log("\u274C No Hunter AI model or missing API key!");
+    await logAction(userId, "ai_hunter", `\u274C No Hunter AI configured!`, "failed", false);
+    console.log("Attempting fallback extraction...");
+    const fallbackData = extractBasicInfo(pageData.content, url);
+    if (fallbackData.jobTitle) {
+      await runQuery("UPDATE job_listings", {
+        id: jobId,
+        ...fallbackData,
+        status: "analyzed",
+        date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString()
+      });
+      console.log("\u2705 Saved with fallback data:", fallbackData);
+    }
+    return;
+  }
+  const isJsonLd = pageData.strategyUsed.includes("JSON-LD");
+  console.log("Is JSON-LD:", isJsonLd);
+  let prompt;
+  if (isJsonLd) {
+    prompt = `You are a job data extractor. Extract job details from this JSON-LD data.
+
+Return ONLY a valid JSON object (no markdown, no explanation):
+{"jobTitle":"exact job title","companyName":"company name","location":"city, country","jobType":"Full-time/Part-time/Contract","experienceLevel":"Junior/Mid/Senior","salaryRange":"salary or N/A","description":"2-3 sentence summary","requiredSkills":"comma separated","remoteOnsite":"Remote/Hybrid/Onsite"}
+
+JSON-LD:
+${pageData.content.substring(0, 6e3)}`;
+  } else {
+    prompt = `You are a job data extractor. Extract job details from this job listing text.
+
+Return ONLY a valid JSON object (no markdown, no explanation):
+{"jobTitle":"exact job title","companyName":"company name","location":"city, country","jobType":"Full-time/Part-time/Contract","experienceLevel":"Junior/Mid/Senior","salaryRange":"salary or N/A","description":"2-3 sentence summary","requiredSkills":"comma separated","remoteOnsite":"Remote/Hybrid/Onsite"}
+
+Job listing:
+${pageData.content.substring(0, 6e3)}`;
+  }
+  console.log("Step 3: Calling AI...");
+  console.log("Prompt length:", prompt.length);
+  let aiResponse;
+  try {
+    aiResponse = await callAI2(hunter, prompt);
+    console.log("AI Response:", aiResponse);
+  } catch (aiError) {
+    console.log("\u274C AI call failed:", aiError.message);
+    await logAction(userId, "ai_hunter", `\u274C AI error: ${aiError.message}`, "failed", false);
+    const fallbackData = extractBasicInfo(pageData.content, url);
+    if (fallbackData.jobTitle) {
+      await runQuery("UPDATE job_listings", { id: jobId, ...fallbackData, status: "analyzed", date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString() });
+    } else {
+      await runQuery("UPDATE job_listings", { id: jobId, status: "manual_review" });
+    }
+    return;
+  }
+  if (aiResponse.toLowerCase().includes("error:") || aiResponse.toLowerCase().includes("invalid api")) {
+    console.log("\u274C AI returned error:", aiResponse);
+    await logAction(userId, "ai_hunter", `\u274C AI error: ${aiResponse.substring(0, 100)}`, "failed", false);
+    await runQuery("UPDATE job_listings", { id: jobId, status: "manual_review" });
+    return;
+  }
+  console.log("Step 5: Parsing AI response...");
+  try {
+    let cleanedResponse = aiResponse.replace(/```json/gi, "").replace(/```/g, "").replace(/^[^{]*/, "").replace(/[^}]*$/, "").trim();
+    const jsonMatch = cleanedResponse.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      console.log("\u274C No JSON found in response");
+      throw new Error("No JSON in response");
+    }
+    const data = JSON.parse(jsonMatch[0]);
+    console.log("Parsed data:", data);
+    const jobTitle = data.jobTitle || data.title || data.job_title || "";
+    const companyName = data.companyName || data.company || data.company_name || ((_a = data.hiringOrganization) == null ? void 0 : _a.name) || "";
+    if (!jobTitle || jobTitle.toLowerCase() === "n/a" || jobTitle.toLowerCase() === "unknown") {
+      console.log("\u274C Missing job title");
+      await logAction(userId, "ai_auditor", `\u274C Missing job title`, "failed", false);
+      const fallbackData = extractBasicInfo(pageData.content, url);
+      if (fallbackData.jobTitle) {
+        await runQuery("UPDATE job_listings", { id: jobId, ...fallbackData, status: "analyzed", date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString() });
+      } else {
+        await runQuery("DELETE FROM job_listings", { id: jobId });
+      }
+      return;
+    }
+    console.log("Step 6: Saving to database...");
+    const updateData = {
+      id: jobId,
+      job_title: jobTitle,
+      company_name: companyName || "Unknown Company",
+      location: data.location || data.jobLocation || "N/A",
+      job_type: data.jobType || data.employmentType || "N/A",
+      experience_level: data.experienceLevel || "N/A",
+      salary_range: data.salaryRange || data.salary || data.baseSalary || "N/A",
+      description: data.description || "",
+      required_skills: data.requiredSkills || data.skills || "N/A",
+      remote_onsite: data.remoteOnsite || data.jobLocationType || "N/A",
+      posted_date: data.postedDate || data.datePosted || "N/A",
+      application_url: data.applicationUrl || data.url || url,
+      status: "analyzed",
+      date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString()
+    };
+    console.log("Update data:", updateData);
+    await runQuery("UPDATE job_listings", updateData);
+    await logAction(userId, "ai_auditor", `\u2705 Extracted: ${jobTitle} at ${companyName}`, "completed", true);
+    console.log(`\u2705 SUCCESS: ${jobTitle} at ${companyName}`);
+  } catch (parseError) {
+    console.log("\u274C Parse error:", parseError.message);
+    await logAction(userId, "ai_auditor", `\u274C Parse failed`, "failed", false);
+    const fallbackData = extractBasicInfo(pageData.content, url);
+    if (fallbackData.jobTitle) {
+      await runQuery("UPDATE job_listings", { id: jobId, ...fallbackData, status: "analyzed", date_imported: (/* @__PURE__ */ new Date()).toLocaleDateString() });
+      console.log("\u2705 Saved with fallback:", fallbackData);
+    } else {
+      await runQuery("UPDATE job_listings", { id: jobId, status: "manual_review" });
+    }
+  }
+}
+function extractBasicInfo(content, url) {
+  var _a, _b, _c, _d;
+  console.log("Running fallback extraction...");
+  const data = {
+    application_url: url
+  };
+  try {
+    if (content.startsWith("{")) {
+      const json = JSON.parse(content);
+      data.job_title = json.title || json.jobTitle || json.name || "";
+      data.company_name = ((_a = json.hiringOrganization) == null ? void 0 : _a.name) || json.companyName || json.company || "";
+      data.location = ((_c = (_b = json.jobLocation) == null ? void 0 : _b.address) == null ? void 0 : _c.addressLocality) || json.location || "";
+      data.job_type = json.employmentType || "";
+      data.description = ((_d = json.description) == null ? void 0 : _d.substring(0, 500)) || "";
+      console.log("Extracted from JSON:", data);
+      return data;
+    }
+  } catch (e) {
+  }
+  const lines = content.split("\n").map((l) => l.trim()).filter((l) => l);
+  for (const line of lines.slice(0, 10)) {
+    if (line.length > 5 && line.length < 100 && !line.includes("cookie") && !line.includes("Sign")) {
+      if (!data.job_title) {
+        data.job_title = line;
+        break;
+      }
+    }
+  }
+  const companyPatterns = [
+    /(?:at|@|by|company[:\s]+)([A-Z][A-Za-z0-9\s&.-]+)/i,
+    /([A-Z][A-Za-z0-9\s&.-]+)(?:\s+is hiring|\s+jobs)/i
+  ];
+  for (const pattern of companyPatterns) {
+    const match = content.match(pattern);
+    if (match && match[1]) {
+      data.company_name = match[1].trim();
+      break;
+    }
+  }
+  const locationPatterns = [
+    /(?:location|located in|based in)[:\s]+([A-Za-z\s,]+)/i,
+    /(Berlin|Munich|Hamburg|Frankfurt|London|Paris|Amsterdam|Remote)/i
+  ];
+  for (const pattern of locationPatterns) {
+    const match = content.match(pattern);
+    if (match && match[1]) {
+      data.location = match[1].trim();
+      break;
+    }
+  }
+  console.log("Fallback extracted:", data);
+  return data;
+}
+async function startHunterSearch(userId, callAI2) {
+  var _a;
+  console.log("\n========== STARTING HUNTER SEARCH ==========");
+  try {
+    await logAction(userId, "ai_hunter", "\u{1F680} Starting job hunt...", "in_progress");
+    const db = getDatabase();
+    const profiles = db.search_profiles.filter((p) => p.is_active === 1);
+    const websites = db.job_websites.filter((w) => w.is_active === 1);
+    const models = await getAllQuery("SELECT * FROM ai_models");
+    console.log("Search profiles:", profiles.length);
+    console.log("Job websites:", websites.length);
+    console.log("AI models:", models.length);
+    const hunter = models.find((m) => m.role === "Hunter" && m.status === "active");
+    const auditor = models.find((m) => m.role === "Auditor" && m.status === "active");
+    console.log("Hunter:", hunter ? `${hunter.model_name} (key: ${(_a = hunter.api_key) == null ? void 0 : _a.substring(0, 10)}...)` : "NOT FOUND");
+    console.log("Auditor:", auditor ? auditor.model_name : "NOT FOUND (will use Hunter)");
+    if (!hunter) {
+      const errorMsg = 'No active Hunter AI model. Go to Settings > AI Models and add one with role "Hunter".';
+      console.log("\u274C", errorMsg);
+      await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
+      return { success: false, error: errorMsg };
+    }
+    if (profiles.length === 0) {
+      const errorMsg = "No active search profiles. Go to Search Profiles and create one.";
+      console.log("\u274C", errorMsg);
+      await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
+      return { success: false, error: errorMsg };
+    }
+    if (websites.length === 0) {
+      const errorMsg = "No active job websites. Go to Job Websites and add one.";
+      console.log("\u274C", errorMsg);
+      await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
+      return { success: false, error: errorMsg };
+    }
+    let totalJobsFound = 0;
+    for (const profile of profiles) {
+      console.log(`
+Profile: ${profile.job_title} in ${profile.location}`);
+      for (const website of websites) {
+        console.log(`Website: ${website.website_name} (${website.website_url})`);
+        await logAction(userId, "ai_hunter", `\u{1F310} Searching ${website.website_name}...`, "in_progress");
+        const query = profile.job_title;
+        console.log(`Search query: "${query}"`);
+        const jobUrls = await scrapeJobs(
+          website.website_url,
+          query,
+          profile.location || "",
+          { email: website.email, password: website.password },
+          userId,
+          callAI2
+        );
+        console.log(`Found ${jobUrls.length} URLs`);
+        await logAction(userId, "ai_hunter", `\u{1F4E5} Found ${jobUrls.length} jobs on ${website.website_name}`, "completed", true);
+        for (const url of jobUrls) {
+          const existing = db.job_listings.find((j) => j.url === url);
+          if (existing) {
+            console.log(`Skipping duplicate: ${url}`);
+            continue;
+          }
+          const jobId = Date.now() + Math.floor(Math.random() * 1e3);
+          await runQuery("INSERT INTO job_listings", {
+            id: jobId,
+            url,
+            source: website.website_name,
+            status: "analyzing"
+          });
+          totalJobsFound++;
+          console.log(`Added job ${jobId}: ${url}`);
+          await analyzeJobUrl(jobId, userId, url, hunter, auditor || hunter, callAI2);
+          await new Promise((resolve) => setTimeout(resolve, 2e3));
+        }
+      }
+    }
+    await logAction(userId, "ai_hunter", `\u2705 Done! Processed ${totalJobsFound} jobs.`, "completed", true);
+    console.log(`
+========== HUNT COMPLETE: ${totalJobsFound} jobs ==========
+`);
+    return { success: true, jobsFound: totalJobsFound };
+  } catch (error) {
+    console.error("Hunt error:", error);
+    await logAction(userId, "ai_hunter", `\u274C Error: ${error.message}`, "failed", false);
+    return { success: false, error: error.message };
+  }
+}
+
+// src/main/ai-service.ts
+init_doc_generator();
 init_scheduler();
 
 // src/main/features/application-submitter.ts
 init_database();
+init_scraper_service();
 var import_puppeteer2 = __toESM(require("puppeteer"), 1);
 var import_path3 = __toESM(require("path"), 1);
 var import_electron2 = require("electron");
@@ -2002,9 +2037,32 @@ function setupIpcHandlers() {
     }
   });
   import_electron3.ipcMain.handle("ai:generate-tailored-docs", async (_, data) => {
+    var _a;
     try {
-      return await processApplication(data.jobId, data.userId);
+      const { jobId, userId, docOptions } = data;
+      const db = getDatabase();
+      const job = (_a = db.job_listings) == null ? void 0 : _a.find((j) => j.id === jobId);
+      if (!job) {
+        return { success: false, error: "Job not found" };
+      }
+      const models = await getAllQuery("SELECT * FROM ai_models");
+      const thinker = models.find((m) => m.role === "Thinker" && m.status === "active");
+      const auditor = models.find((m) => m.role === "Auditor" && m.status === "active");
+      if (!thinker) {
+        return { success: false, error: "No Thinker AI model configured. Go to Settings > AI Models." };
+      }
+      const DocGenerator = (init_doc_generator(), __toCommonJS(doc_generator_exports));
+      await DocGenerator.generateTailoredDocs(
+        job,
+        userId,
+        thinker,
+        auditor || thinker,
+        docOptions || { cv: true, motivationLetter: true, coverLetter: true },
+        callAI
+      );
+      return { success: true };
     } catch (e) {
+      console.error("Generate docs error:", e);
       return { success: false, error: e.message };
     }
   });

@@ -212,8 +212,37 @@ export function setupIpcHandlers(): void {
 
   ipcMain.handle('ai:generate-tailored-docs', async (_, data) => {
     try {
-      return await aiService.processApplication(data.jobId, data.userId);
+      const { jobId, userId, docOptions } = data;
+      const db = getDatabase();
+      const job = db.job_listings?.find((j: any) => j.id === jobId);
+      
+      if (!job) {
+        return { success: false, error: 'Job not found' };
+      }
+      
+      // Get AI models
+      const models = await getAllQuery('SELECT * FROM ai_models');
+      const thinker = models.find((m: any) => m.role === 'Thinker' && m.status === 'active');
+      const auditor = models.find((m: any) => m.role === 'Auditor' && m.status === 'active');
+      
+      if (!thinker) {
+        return { success: false, error: 'No Thinker AI model configured. Go to Settings > AI Models.' };
+      }
+      
+      // Import and call doc generator
+      const DocGenerator = require('./features/doc-generator');
+      await DocGenerator.generateTailoredDocs(
+        job, 
+        userId, 
+        thinker, 
+        auditor || thinker, 
+        docOptions || { cv: true, motivationLetter: true, coverLetter: true },
+        aiService.callAI
+      );
+      
+      return { success: true };
     } catch (e: any) {
+      console.error('Generate docs error:', e);
       return { success: false, error: e.message };
     }
   });

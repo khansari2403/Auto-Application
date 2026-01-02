@@ -53,6 +53,58 @@ export function setupIpcHandlers(): void {
     }
   });
 
+  ipcMain.handle('user:update-profile', async (_, data) => {
+    try {
+      const db = getDatabase();
+      // If profile exists, update it; otherwise create it
+      if (db.user_profile.length > 0) {
+        await runQuery('UPDATE user_profile', { ...data, id: db.user_profile[0].id });
+      } else {
+        await runQuery('INSERT INTO user_profile', [{ ...data, id: 1 }]);
+      }
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // --- LINKEDIN HELPERS ---
+  ipcMain.handle('user:open-linkedin', async (_, url) => {
+    try {
+      const linkedinUrl = url || 'https://www.linkedin.com/in/';
+      await shell.openExternal(linkedinUrl);
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('user:capture-linkedin', async () => {
+    try {
+      // This will attempt to capture LinkedIn data from the active browser
+      // For now, return a mock structure that the user can fill in manually
+      // Full implementation would require Playwright/Puppeteer
+      return { 
+        success: true, 
+        data: {
+          name: '',
+          title: '',
+          location: '',
+          photo: '',
+          summary: '',
+          experienceList: [],
+          educationList: [],
+          skillList: [],
+          licenseList: [],
+          languageList: []
+        },
+        message: 'LinkedIn capture requires browser automation. Please use manual entry for now.'
+      };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
   // --- SEARCH PROFILES ---
   ipcMain.handle('profiles:get-all', async () => {
     try {

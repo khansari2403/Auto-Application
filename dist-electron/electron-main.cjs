@@ -1355,6 +1355,50 @@ function setupIpcHandlers() {
       return { success: false, error: e.message };
     }
   });
+  import_electron3.ipcMain.handle("user:update-profile", async (_, data) => {
+    try {
+      const db = getDatabase();
+      if (db.user_profile.length > 0) {
+        await runQuery("UPDATE user_profile", { ...data, id: db.user_profile[0].id });
+      } else {
+        await runQuery("INSERT INTO user_profile", [{ ...data, id: 1 }]);
+      }
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("user:open-linkedin", async (_, url) => {
+    try {
+      const linkedinUrl = url || "https://www.linkedin.com/in/";
+      await import_electron3.shell.openExternal(linkedinUrl);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron3.ipcMain.handle("user:capture-linkedin", async () => {
+    try {
+      return {
+        success: true,
+        data: {
+          name: "",
+          title: "",
+          location: "",
+          photo: "",
+          summary: "",
+          experienceList: [],
+          educationList: [],
+          skillList: [],
+          licenseList: [],
+          languageList: []
+        },
+        message: "LinkedIn capture requires browser automation. Please use manual entry for now."
+      };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
   import_electron3.ipcMain.handle("profiles:get-all", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM search_profiles");

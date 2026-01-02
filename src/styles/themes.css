@@ -1,0 +1,451 @@
+/**
+ * Theme System - CSS Variables
+ * 8 Themes: 4 styles (minimalism, material, glassmorphism, neumorphism) x 2 modes (light, dark)
+ * With Microinteractions
+ */
+
+/* ========================================
+   BASE VARIABLES & TRANSITIONS
+   ======================================== */
+:root {
+  /* Transition for microinteractions */
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+  
+  /* Spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  
+  /* Button sizes - harmonious */
+  --btn-height-sm: 32px;
+  --btn-height-md: 40px;
+  --btn-height-lg: 48px;
+  --btn-padding-sm: 8px 16px;
+  --btn-padding-md: 10px 20px;
+  --btn-padding-lg: 14px 28px;
+  --btn-font-sm: 12px;
+  --btn-font-md: 14px;
+  --btn-font-lg: 16px;
+}
+
+/* ========================================
+   MINIMALISM LIGHT
+   ======================================== */
+[data-theme-style="minimalism"][data-theme-mode="light"] {
+  /* Colors */
+  --primary: #1a1a1a;
+  --primary-light: #f5f5f5;
+  --primary-dark: #000000;
+  --secondary: #666666;
+  
+  --bg-primary: #ffffff;
+  --bg-secondary: #fafafa;
+  --bg-tertiary: #f5f5f5;
+  
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  
+  --border: #e5e5e5;
+  --border-light: #f0f0f0;
+  
+  --success: #22c55e;
+  --success-light: #dcfce7;
+  --danger: #ef4444;
+  --danger-light: #fee2e2;
+  --warning: #f59e0b;
+  --warning-light: #fef3c7;
+  --info: #3b82f6;
+  --info-light: #dbeafe;
+  
+  /* Cards & Shadows */
+  --card-bg: #ffffff;
+  --card-border: 1px solid #e5e5e5;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.08);
+  --shadow-hover: 0 8px 24px rgba(0,0,0,0.1);
+  
+  /* Header */
+  --header-bg: #ffffff;
+  --header-text: #1a1a1a;
+  --header-border: 1px solid #e5e5e5;
+  
+  /* Nav */
+  --nav-bg: #ffffff;
+  --nav-active-bg: #1a1a1a;
+  --nav-active-text: #ffffff;
+  --nav-hover-bg: #f5f5f5;
+  
+  /* Input */
+  --input-bg: #ffffff;
+  --input-border: #e5e5e5;
+  --input-focus: #1a1a1a;
+}
+
+/* ========================================
+   MINIMALISM DARK
+   ======================================== */
+[data-theme-style="minimalism"][data-theme-mode="dark"] {
+  --primary: #ffffff;
+  --primary-light: rgba(255,255,255,0.1);
+  --primary-dark: #f0f0f0;
+  --secondary: #a0a0a0;
+  
+  --bg-primary: #0a0a0a;
+  --bg-secondary: #141414;
+  --bg-tertiary: #1f1f1f;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  --text-tertiary: #666666;
+  
+  --border: #2a2a2a;
+  --border-light: #1f1f1f;
+  
+  --success: #22c55e;
+  --success-light: rgba(34,197,94,0.15);
+  --danger: #ef4444;
+  --danger-light: rgba(239,68,68,0.15);
+  --warning: #f59e0b;
+  --warning-light: rgba(245,158,11,0.15);
+  --info: #3b82f6;
+  --info-light: rgba(59,130,246,0.15);
+  
+  --card-bg: #141414;
+  --card-border: 1px solid #2a2a2a;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,0.4);
+  --shadow-hover: 0 8px 24px rgba(0,0,0,0.5);
+  
+  --header-bg: #0a0a0a;
+  --header-text: #ffffff;
+  --header-border: 1px solid #2a2a2a;
+  
+  --nav-bg: #0a0a0a;
+  --nav-active-bg: #ffffff;
+  --nav-active-text: #0a0a0a;
+  --nav-hover-bg: #1f1f1f;
+  
+  --input-bg: #141414;
+  --input-border: #2a2a2a;
+  --input-focus: #ffffff;
+}
+
+/* ========================================
+   MATERIAL LIGHT
+   ======================================== */
+[data-theme-style="material"][data-theme-mode="light"] {
+  --primary: #6200ee;
+  --primary-light: #ede7f6;
+  --primary-dark: #3700b3;
+  --secondary: #03dac6;
+  
+  --bg-primary: #fafafa;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f5f5f5;
+  
+  --text-primary: #212121;
+  --text-secondary: #757575;
+  --text-tertiary: #9e9e9e;
+  
+  --border: #e0e0e0;
+  --border-light: #eeeeee;
+  
+  --success: #4caf50;
+  --success-light: #e8f5e9;
+  --danger: #f44336;
+  --danger-light: #ffebee;
+  --warning: #ff9800;
+  --warning-light: #fff3e0;
+  --info: #2196f3;
+  --info-light: #e3f2fd;
+  
+  --card-bg: #ffffff;
+  --card-border: none;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  --shadow-md: 0 3px 6px rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.12);
+  --shadow-lg: 0 10px 20px rgba(0,0,0,0.15), 0 3px 6px rgba(0,0,0,0.1);
+  --shadow-hover: 0 14px 28px rgba(0,0,0,0.18), 0 10px 10px rgba(0,0,0,0.12);
+  
+  --header-bg: #6200ee;
+  --header-text: #ffffff;
+  --header-border: none;
+  
+  --nav-bg: #ffffff;
+  --nav-active-bg: #6200ee;
+  --nav-active-text: #ffffff;
+  --nav-hover-bg: #ede7f6;
+  
+  --input-bg: #ffffff;
+  --input-border: #bdbdbd;
+  --input-focus: #6200ee;
+}
+
+/* ========================================
+   MATERIAL DARK
+   ======================================== */
+[data-theme-style="material"][data-theme-mode="dark"] {
+  --primary: #bb86fc;
+  --primary-light: rgba(187,134,252,0.15);
+  --primary-dark: #9a67ea;
+  --secondary: #03dac6;
+  
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --bg-tertiary: #2d2d2d;
+  
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --text-tertiary: #808080;
+  
+  --border: #3d3d3d;
+  --border-light: #2d2d2d;
+  
+  --success: #81c784;
+  --success-light: rgba(129,199,132,0.15);
+  --danger: #e57373;
+  --danger-light: rgba(229,115,115,0.15);
+  --warning: #ffb74d;
+  --warning-light: rgba(255,183,77,0.15);
+  --info: #64b5f6;
+  --info-light: rgba(100,181,246,0.15);
+  
+  --card-bg: #1e1e1e;
+  --card-border: none;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-md: 0 3px 6px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.4);
+  --shadow-lg: 0 10px 20px rgba(0,0,0,0.4), 0 3px 6px rgba(0,0,0,0.35);
+  --shadow-hover: 0 14px 28px rgba(0,0,0,0.45), 0 10px 10px rgba(0,0,0,0.4);
+  
+  --header-bg: #1e1e1e;
+  --header-text: #bb86fc;
+  --header-border: none;
+  
+  --nav-bg: #1e1e1e;
+  --nav-active-bg: #bb86fc;
+  --nav-active-text: #121212;
+  --nav-hover-bg: #2d2d2d;
+  
+  --input-bg: #2d2d2d;
+  --input-border: #3d3d3d;
+  --input-focus: #bb86fc;
+}
+
+/* ========================================
+   GLASSMORPHISM LIGHT
+   ======================================== */
+[data-theme-style="glassmorphism"][data-theme-mode="light"] {
+  --primary: #6366f1;
+  --primary-light: rgba(99,102,241,0.1);
+  --primary-dark: #4f46e5;
+  --secondary: #8b5cf6;
+  
+  --bg-primary: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+  --bg-secondary: rgba(255,255,255,0.7);
+  --bg-tertiary: rgba(255,255,255,0.5);
+  
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-tertiary: #9ca3af;
+  
+  --border: rgba(255,255,255,0.3);
+  --border-light: rgba(255,255,255,0.2);
+  
+  --success: #10b981;
+  --success-light: rgba(16,185,129,0.15);
+  --danger: #ef4444;
+  --danger-light: rgba(239,68,68,0.15);
+  --warning: #f59e0b;
+  --warning-light: rgba(245,158,11,0.15);
+  --info: #3b82f6;
+  --info-light: rgba(59,130,246,0.15);
+  
+  --card-bg: rgba(255,255,255,0.6);
+  --card-border: 1px solid rgba(255,255,255,0.4);
+  --card-backdrop: blur(20px) saturate(180%);
+  --shadow-sm: 0 4px 6px rgba(0,0,0,0.07);
+  --shadow-md: 0 8px 16px rgba(0,0,0,0.1);
+  --shadow-lg: 0 16px 32px rgba(0,0,0,0.12);
+  --shadow-hover: 0 20px 40px rgba(0,0,0,0.15);
+  
+  --header-bg: rgba(255,255,255,0.8);
+  --header-text: #1f2937;
+  --header-border: 1px solid rgba(255,255,255,0.3);
+  
+  --nav-bg: rgba(255,255,255,0.7);
+  --nav-active-bg: rgba(99,102,241,0.9);
+  --nav-active-text: #ffffff;
+  --nav-hover-bg: rgba(255,255,255,0.5);
+  
+  --input-bg: rgba(255,255,255,0.8);
+  --input-border: rgba(255,255,255,0.3);
+  --input-focus: #6366f1;
+}
+
+/* ========================================
+   GLASSMORPHISM DARK
+   ======================================== */
+[data-theme-style="glassmorphism"][data-theme-mode="dark"] {
+  --primary: #818cf8;
+  --primary-light: rgba(129,140,248,0.15);
+  --primary-dark: #6366f1;
+  --secondary: #a78bfa;
+  
+  --bg-primary: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #312e81 100%);
+  --bg-secondary: rgba(30,30,46,0.7);
+  --bg-tertiary: rgba(30,30,46,0.5);
+  
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-tertiary: #64748b;
+  
+  --border: rgba(255,255,255,0.1);
+  --border-light: rgba(255,255,255,0.05);
+  
+  --success: #34d399;
+  --success-light: rgba(52,211,153,0.15);
+  --danger: #f87171;
+  --danger-light: rgba(248,113,113,0.15);
+  --warning: #fbbf24;
+  --warning-light: rgba(251,191,36,0.15);
+  --info: #60a5fa;
+  --info-light: rgba(96,165,250,0.15);
+  
+  --card-bg: rgba(30,30,46,0.6);
+  --card-border: 1px solid rgba(255,255,255,0.1);
+  --card-backdrop: blur(20px) saturate(180%);
+  --shadow-sm: 0 4px 6px rgba(0,0,0,0.2);
+  --shadow-md: 0 8px 16px rgba(0,0,0,0.25);
+  --shadow-lg: 0 16px 32px rgba(0,0,0,0.3);
+  --shadow-hover: 0 20px 40px rgba(0,0,0,0.35);
+  
+  --header-bg: rgba(30,30,46,0.8);
+  --header-text: #f1f5f9;
+  --header-border: 1px solid rgba(255,255,255,0.1);
+  
+  --nav-bg: rgba(30,30,46,0.7);
+  --nav-active-bg: rgba(129,140,248,0.8);
+  --nav-active-text: #ffffff;
+  --nav-hover-bg: rgba(255,255,255,0.1);
+  
+  --input-bg: rgba(30,30,46,0.8);
+  --input-border: rgba(255,255,255,0.1);
+  --input-focus: #818cf8;
+}
+
+/* ========================================
+   NEUMORPHISM LIGHT
+   ======================================== */
+[data-theme-style="neumorphism"][data-theme-mode="light"] {
+  --primary: #6366f1;
+  --primary-light: #e0e5ec;
+  --primary-dark: #4f46e5;
+  --secondary: #8b5cf6;
+  
+  --bg-primary: #e0e5ec;
+  --bg-secondary: #e0e5ec;
+  --bg-tertiary: #d1d9e6;
+  
+  --text-primary: #2d3748;
+  --text-secondary: #4a5568;
+  --text-tertiary: #718096;
+  
+  --border: transparent;
+  --border-light: transparent;
+  
+  --success: #48bb78;
+  --success-light: #c6f6d5;
+  --danger: #f56565;
+  --danger-light: #fed7d7;
+  --warning: #ed8936;
+  --warning-light: #feebc8;
+  --info: #4299e1;
+  --info-light: #bee3f8;
+  
+  --card-bg: #e0e5ec;
+  --card-border: none;
+  --shadow-sm: 6px 6px 12px #b8bec7, -6px -6px 12px #ffffff;
+  --shadow-md: 8px 8px 16px #b8bec7, -8px -8px 16px #ffffff;
+  --shadow-lg: 12px 12px 24px #b8bec7, -12px -12px 24px #ffffff;
+  --shadow-hover: 14px 14px 28px #b8bec7, -14px -14px 28px #ffffff;
+  --shadow-inset: inset 4px 4px 8px #b8bec7, inset -4px -4px 8px #ffffff;
+  --shadow-inset-sm: inset 2px 2px 4px #b8bec7, inset -2px -2px 4px #ffffff;
+  
+  --header-bg: #e0e5ec;
+  --header-text: #2d3748;
+  --header-border: none;
+  
+  --nav-bg: #e0e5ec;
+  --nav-active-bg: #e0e5ec;
+  --nav-active-text: #6366f1;
+  --nav-hover-bg: #e0e5ec;
+  
+  --input-bg: #e0e5ec;
+  --input-border: transparent;
+  --input-focus: #6366f1;
+}
+
+/* ========================================
+   NEUMORPHISM DARK
+   ======================================== */
+[data-theme-style="neumorphism"][data-theme-mode="dark"] {
+  --primary: #818cf8;
+  --primary-light: #2d3748;
+  --primary-dark: #6366f1;
+  --secondary: #a78bfa;
+  
+  --bg-primary: #2d3748;
+  --bg-secondary: #2d3748;
+  --bg-tertiary: #1a202c;
+  
+  --text-primary: #e2e8f0;
+  --text-secondary: #a0aec0;
+  --text-tertiary: #718096;
+  
+  --border: transparent;
+  --border-light: transparent;
+  
+  --success: #68d391;
+  --success-light: rgba(104,211,145,0.15);
+  --danger: #fc8181;
+  --danger-light: rgba(252,129,129,0.15);
+  --warning: #f6ad55;
+  --warning-light: rgba(246,173,85,0.15);
+  --info: #63b3ed;
+  --info-light: rgba(99,179,237,0.15);
+  
+  --card-bg: #2d3748;
+  --card-border: none;
+  --shadow-sm: 6px 6px 12px #1a202c, -6px -6px 12px #3d4a5c;
+  --shadow-md: 8px 8px 16px #1a202c, -8px -8px 16px #3d4a5c;
+  --shadow-lg: 12px 12px 24px #1a202c, -12px -12px 24px #3d4a5c;
+  --shadow-hover: 14px 14px 28px #1a202c, -14px -14px 28px #3d4a5c;
+  --shadow-inset: inset 4px 4px 8px #1a202c, inset -4px -4px 8px #3d4a5c;
+  --shadow-inset-sm: inset 2px 2px 4px #1a202c, inset -2px -2px 4px #3d4a5c;
+  
+  --header-bg: #2d3748;
+  --header-text: #e2e8f0;
+  --header-border: none;
+  
+  --nav-bg: #2d3748;
+  --nav-active-bg: #2d3748;
+  --nav-active-text: #818cf8;
+  --nav-hover-bg: #2d3748;
+  
+  --input-bg: #2d3748;
+  --input-border: transparent;
+  --input-focus: #818cf8;
+}

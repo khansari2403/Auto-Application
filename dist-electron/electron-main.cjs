@@ -1294,9 +1294,13 @@ function setupIpcHandlers() {
     "settings:get",
     "settings:update",
     "user:get-profile",
+    "user:update-profile",
+    "user:open-linkedin",
+    "user:capture-linkedin",
     "profiles:get-all",
     "profiles:save",
     "profiles:update",
+    "profiles:delete",
     "jobs:get-all",
     "jobs:delete",
     "jobs:add-manual",
@@ -1317,7 +1321,9 @@ function setupIpcHandlers() {
     "ai-models:update",
     "ai-models:delete",
     "logs:get-recent-actions",
-    "apps:get-all"
+    "apps:get-all",
+    "scheduler:toggle",
+    "scheduler:get-status"
   ];
   channels.forEach((channel) => {
     try {
@@ -1487,8 +1493,8 @@ function setupIpcHandlers() {
   });
   import_electron3.ipcMain.handle("docs:open-file", async (_, filePath) => {
     try {
-      const { shell } = require("electron");
-      await shell.openPath(filePath);
+      const { shell: shell2 } = require("electron");
+      await shell2.openPath(filePath);
       return { success: true };
     } catch (e) {
       return { success: false, error: e.message };

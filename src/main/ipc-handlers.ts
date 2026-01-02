@@ -1,20 +1,22 @@
-import { runQuery, getAllQuery } from './database';
-import { ipcMain } from 'electron';
+import { runQuery, getAllQuery, getDatabase } from './database';
+import { ipcMain, shell, BrowserWindow } from 'electron';
 import * as aiService from './ai-service';
 import axios from 'axios';
 
 export function setupIpcHandlers(): void {
   // CLEAN SLATE: Remove ALL existing handlers to prevent "second handler" error
   const channels = [
-    'settings:get', 'settings:update', 'user:get-profile', 
-    'profiles:get-all', 'profiles:save', 'profiles:update',
+    'settings:get', 'settings:update', 'user:get-profile', 'user:update-profile',
+    'user:open-linkedin', 'user:capture-linkedin',
+    'profiles:get-all', 'profiles:save', 'profiles:update', 'profiles:delete',
     'jobs:get-all', 'jobs:delete', 'jobs:add-manual', 'jobs:update-doc-confirmation',
     'hunter:start-search', 'ai:process-application', 'ai:generate-tailored-docs',
     'ai:fetch-models',
     'docs:get-all', 'docs:save', 'docs:open-file',
     'websites:get-all', 'websites:add', 'websites:delete', 'websites:toggle-active',
     'ai-models:get-all', 'ai-models:add', 'ai-models:update', 'ai-models:delete',
-    'logs:get-recent-actions', 'apps:get-all'
+    'logs:get-recent-actions', 'apps:get-all',
+    'scheduler:toggle', 'scheduler:get-status'
   ];
   
   // Remove handlers first - prevents duplication on hot reload

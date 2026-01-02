@@ -12,7 +12,7 @@ export function setupIpcHandlers(): void {
     'jobs:get-all', 'jobs:delete', 'jobs:add-manual', 'jobs:update-doc-confirmation',
     'hunter:start-search', 'ai:process-application', 'ai:generate-tailored-docs',
     'ai:smart-apply', 'ai:continue-application', 'ai:cancel-application',
-    'ai:fetch-models',
+    'ai:fetch-models', 'ai:generate-interview-prep',
     'docs:get-all', 'docs:save', 'docs:delete', 'docs:open-file', 'docs:convert-to-pdf', 'docs:convert-all-pdf',
     'websites:get-all', 'websites:add', 'websites:delete', 'websites:toggle-active',
     'ai-models:get-all', 'ai-models:add', 'ai-models:update', 'ai-models:delete',

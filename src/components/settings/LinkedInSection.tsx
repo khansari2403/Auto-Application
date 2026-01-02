@@ -135,17 +135,17 @@ function LinkedInSection({ userId }: { userId: number }) {
     setIsReviewing(false);
   };
 
-  const sectionStyle = { marginBottom: '20px', padding: '15px', border: '1px solid #eee', borderRadius: '8px', background: '#fafafa' };
-  const inputStyle = { width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid #ddd', borderRadius: '6px', fontFamily: 'sans-serif', fontSize: '13px' };
-  const labelStyle: React.CSSProperties = { display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600, color: '#333' };
+  const sectionStyle = { marginBottom: '20px', padding: '15px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-secondary)' };
+  const inputStyle = { width: '100%', padding: '10px', marginBottom: '10px', border: '1px solid var(--border)', borderRadius: '6px', fontFamily: 'sans-serif', fontSize: '13px', background: 'var(--input-bg)', color: 'var(--text-primary)' };
+  const labelStyle: React.CSSProperties = { display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' };
 
   // Import Review Modal
   if (importedData) {
     return (
-      <div style={{ padding: '20px', background: '#fff' }}>
-        <div style={{ background: '#fff3e0', padding: '20px', borderRadius: '12px', marginBottom: '20px' }}>
-          <h3 style={{ margin: '0 0 15px 0', color: '#ef6c00' }}>📥 Review Imported LinkedIn Data</h3>
-          <p style={{ fontSize: '13px', color: '#666' }}>
+      <div style={{ padding: '20px', background: 'var(--bg-primary)' }}>
+        <div style={{ background: 'var(--warning-light)', padding: '20px', borderRadius: '12px', marginBottom: '20px' }}>
+          <h3 style={{ margin: '0 0 15px 0', color: 'var(--warning)' }}>📥 Review Imported LinkedIn Data</h3>
+          <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
             The following data was extracted from your LinkedIn profile. 
             <strong> Please review and delete any items you don't want to import.</strong>
             This data will be used to generate CVs and motivation letters.
@@ -154,21 +154,21 @@ function LinkedInSection({ userId }: { userId: number }) {
 
         {/* Personal Info */}
         <div style={sectionStyle}>
-          <h4>👤 Personal Info</h4>
+          <h4 style={{ color: 'var(--text-primary)' }}>👤 Personal Info</h4>
           {importedData.photo && <img src={importedData.photo} style={{ width: '80px', height: '80px', borderRadius: '8px', marginBottom: '10px' }} alt="" />}
-          <p><strong>Name:</strong> {importedData.name}</p>
-          <p><strong>Title:</strong> {importedData.title}</p>
-          <p><strong>Location:</strong> {importedData.location}</p>
+          <p style={{ color: 'var(--text-primary)' }}><strong>Name:</strong> {importedData.name}</p>
+          <p style={{ color: 'var(--text-primary)' }}><strong>Title:</strong> {importedData.title}</p>
+          <p style={{ color: 'var(--text-primary)' }}><strong>Location:</strong> {importedData.location}</p>
         </div>
 
         {/* Experience */}
         {importedData.experienceList?.length > 0 && (
           <div style={sectionStyle}>
-            <h4>💼 Experience ({importedData.experienceList.length} items)</h4>
+            <h4 style={{ color: 'var(--text-primary)' }}>💼 Experience ({importedData.experienceList.length} items)</h4>
             {importedData.experienceList.map((exp: any, i: number) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', border: '1px solid #eee', borderRadius: '6px', marginBottom: '5px' }}>
-                <span style={{ fontSize: '12px' }}>{typeof exp === 'string' ? exp : `${exp.title} at ${exp.company}`}</span>
-                <button onClick={() => deleteImportedItem('experienceList', i)} style={{ background: '#f44336', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', cursor: 'pointer', fontSize: '11px' }}>Delete</button>
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', border: '1px solid var(--border)', borderRadius: '6px', marginBottom: '5px', background: 'var(--card-bg)' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-primary)' }}>{typeof exp === 'string' ? exp : `${exp.title} at ${exp.company}`}</span>
+                <button onClick={() => deleteImportedItem('experienceList', i)} style={{ background: 'var(--danger)', color: '#fff', border: 'none', borderRadius: '4px', padding: '2px 8px', cursor: 'pointer', fontSize: '11px' }}>Delete</button>
               </div>
             ))}
           </div>
@@ -177,12 +177,12 @@ function LinkedInSection({ userId }: { userId: number }) {
         {/* Skills */}
         {importedData.skillList?.length > 0 && (
           <div style={sectionStyle}>
-            <h4>🛠️ Skills ({importedData.skillList.length} items)</h4>
+            <h4 style={{ color: 'var(--text-primary)' }}>🛠️ Skills ({importedData.skillList.length} items)</h4>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
               {importedData.skillList.map((skill: string, i: number) => (
-                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: '#e3f2fd', borderRadius: '12px', fontSize: '11px' }}>
+                <span key={i} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '4px 10px', background: 'var(--info-light)', borderRadius: '12px', fontSize: '11px', color: 'var(--text-primary)' }}>
                   {skill}
-                  <button onClick={() => deleteImportedItem('skillList', i)} style={{ background: 'none', border: 'none', color: '#f44336', cursor: 'pointer', padding: 0, fontSize: '14px' }}>×</button>
+                  <button onClick={() => deleteImportedItem('skillList', i)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: 0, fontSize: '14px' }}>×</button>
                 </span>
               ))}
             </div>
@@ -190,8 +190,8 @@ function LinkedInSection({ userId }: { userId: number }) {
         )}
 
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center', marginTop: '20px' }}>
-          <button onClick={acceptImportedData} style={{ padding: '12px 30px', background: '#4CAF50', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>✅ Accept & Continue Editing</button>
-          <button onClick={() => setImportedData(null)} style={{ padding: '12px 30px', background: '#ccc', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel Import</button>
+          <button onClick={acceptImportedData} style={{ padding: '12px 30px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>✅ Accept & Continue Editing</button>
+          <button onClick={() => setImportedData(null)} style={{ padding: '12px 30px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel Import</button>
         </div>
       </div>
     );
@@ -200,21 +200,21 @@ function LinkedInSection({ userId }: { userId: number }) {
   // Profile Editor
   if (isReviewing) {
     return (
-      <div style={{ padding: '20px', background: '#fff', maxHeight: '85vh', overflowY: 'auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', position: 'sticky', top: 0, background: '#fff', padding: '10px 0', borderBottom: '1px solid #eee', zIndex: 10 }}>
-          <h3 style={{ margin: 0 }}>📝 Master Profile Editor</h3>
+      <div style={{ padding: '20px', background: 'var(--bg-primary)', maxHeight: '85vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', position: 'sticky', top: 0, background: 'var(--bg-primary)', padding: '10px 0', borderBottom: '1px solid var(--border)', zIndex: 10 }}>
+          <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>📝 Master Profile Editor</h3>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button onClick={() => setIsReviewing(false)} style={{ padding: '10px 20px', background: '#ccc', color: '#333', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>← Back</button>
-            <button onClick={handleSaveFinal} style={{ padding: '10px 25px', background: '#4CAF50', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>💾 Save Profile</button>
+            <button onClick={() => setIsReviewing(false)} style={{ padding: '10px 20px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>← Back</button>
+            <button onClick={handleSaveFinal} style={{ padding: '10px 25px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>💾 Save Profile</button>
           </div>
         </div>
 
         {/* Personal Details */}
         <div style={sectionStyle}>
-          <h4>👤 Personal Details</h4>
+          <h4 style={{ color: 'var(--text-primary)' }}>👤 Personal Details</h4>
           <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '20px', alignItems: 'start' }}>
             <div>
-              {profile.photo && <img src={profile.photo} style={{ width: '100px', height: '100px', borderRadius: '8px', border: '1px solid #ddd' }} alt="" />}
+              {profile.photo && <img src={profile.photo} style={{ width: '100px', height: '100px', borderRadius: '8px', border: '1px solid var(--border)' }} alt="" />}
               <label style={{...labelStyle, marginTop: '10px'}}>Photo URL</label>
               <input style={{...inputStyle, width: '100px'}} value={profile.photo} onChange={e => setProfile({...profile, photo: e.target.value})} />
             </div>

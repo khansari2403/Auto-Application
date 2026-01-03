@@ -31,6 +31,11 @@ export function InterviewInsider({ userId }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [importantApps, setImportantApps] = useState<string[]>([]);
   const [isGeneratingMore, setIsGeneratingMore] = useState(false);
+  
+  // Custom question state
+  const [customQuestion, setCustomQuestion] = useState('');
+  const [customAnswer, setCustomAnswer] = useState<{ question: string; answer: string; tips: string } | null>(null);
+  const [isAskingQuestion, setIsAskingQuestion] = useState(false);
 
   const handleGenerateQuestions = async (generateMore: boolean = false) => {
     if (!jobUrl.trim()) {

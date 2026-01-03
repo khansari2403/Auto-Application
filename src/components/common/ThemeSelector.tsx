@@ -14,6 +14,8 @@ export const ThemeSelector: React.FC = () => {
     { value: 'material', label: 'material' },
     { value: 'rosePetal', label: 'rosePetal' },
     { value: 'lavenderDream', label: 'lavenderDream' },
+    { value: 'forestGreen', label: 'forestGreen' },
+    { value: 'oceanBlue', label: 'oceanBlue' },
   ];
 
   // Close dropdown when clicking outside

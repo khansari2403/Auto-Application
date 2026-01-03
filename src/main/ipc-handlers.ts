@@ -266,56 +266,70 @@ export function setupIpcHandlers(): void {
   // --- HR AI - INTERVIEW PREP ---
   ipcMain.handle('ai:generate-interview-prep', async (_, data) => {
     try {
-      const { jobUrl, userId } = data;
+      const { jobUrl, userId, generateMore } = data;
       
-      // Get AI models
+      // Get AI models - prefer HR AI role, fallback to Thinker
       const models = await getAllQuery('SELECT * FROM ai_models');
-      const hrAI = models.find((m: any) => (m.role === 'HR AI' || m.role === 'Thinker') && m.status === 'active');
+      const hrAI = models.find((m: any) => m.role === 'HR AI' && m.status === 'active') ||
+                   models.find((m: any) => m.role === 'Thinker' && m.status === 'active');
       
       if (!hrAI) {
-        return { success: false, error: 'No HR AI model configured. Please add an AI model with role "HR AI" or use an existing Thinker.' };
+        return { success: false, error: 'No HR AI model configured. Please add an AI model with role "HR AI" in Settings > AI Models.' };
       }
       
       // Get user profile
       const profiles = await getAllQuery('SELECT * FROM user_profile');
       const userProfile = profiles[0];
       
-      // Scrape job info (simplified - in real implementation use Puppeteer)
-      let jobInfo = {
-        title: 'Position',
-        company: 'Company',
-        location: 'Location',
-        description: ''
-      };
-      
       // Try to get job from database if it exists
       const jobs = await getAllQuery('SELECT * FROM job_listings');
       const existingJob = jobs.find((j: any) => j.url === jobUrl);
-      if (existingJob) {
-        jobInfo = {
-          title: existingJob.job_title || 'Position',
-          company: existingJob.company_name || 'Company',
-          location: existingJob.location || 'Location',
-          description: existingJob.description || ''
-        };
+      
+      // Build job info from actual database data
+      let jobInfo = {
+        title: existingJob?.job_title || 'Position',
+        company: existingJob?.company_name || 'Company',
+        location: existingJob?.location || 'Location',
+        description: existingJob?.description || '',
+        required_skills: existingJob?.required_skills || '',
+        job_type: existingJob?.job_type || '',
+        experience_level: existingJob?.experience_level || ''
+      };
+      
+      // If no job found in DB and URL provided, try to scrape basic info
+      if (!existingJob && jobUrl) {
+        // For now, just use the URL to indicate which job
+        jobInfo.description = `Job posting URL: ${jobUrl}. Please analyze this position.`;
       }
       
-      // Generate interview questions using AI
+      // Generate interview questions using AI with STRICT instructions to prevent hallucination
       const prompt = `You are an HR AI assistant helping a candidate prepare for a job interview.
 
-JOB INFORMATION:
+CRITICAL RULES - MUST FOLLOW:
+1. ONLY use information from the JOB INFORMATION section below - DO NOT invent job details
+2. ONLY use information from the CANDIDATE PROFILE section - DO NOT invent candidate experiences
+3. If job description is empty or minimal, generate GENERIC questions appropriate for the job title
+4. For position_specific questions, ONLY reference skills mentioned in the job description OR the candidate's actual profile
+5. DO NOT make up company facts, products, or services unless explicitly mentioned in the job description
+
+JOB INFORMATION (USE ONLY THIS DATA):
 Title: ${jobInfo.title}
 Company: ${jobInfo.company}
 Location: ${jobInfo.location}
-Description: ${jobInfo.description || 'Not available - generate generic questions for this role type'}
+Job Type: ${jobInfo.job_type || 'Not specified'}
+Experience Level: ${jobInfo.experience_level || 'Not specified'}
+Required Skills: ${jobInfo.required_skills || 'Not specified'}
+Description: ${jobInfo.description || 'No description available - generate generic questions for this job title'}
 
-CANDIDATE PROFILE:
+CANDIDATE PROFILE (USE ONLY THIS DATA):
 Name: ${userProfile?.name || 'Candidate'}
-Title: ${userProfile?.title || 'Professional'}
-Skills: ${userProfile?.skills || 'Various professional skills'}
-Experience: ${JSON.stringify(userProfile?.experiences || [])}
+Current Title: ${userProfile?.title || 'Professional'}
+Skills: ${userProfile?.skills ? JSON.stringify(userProfile.skills) : 'Not specified'}
+Experience Summary: ${userProfile?.summary || 'Not specified'}
 
-Generate a comprehensive interview preparation package with the following structure. Return ONLY valid JSON:
+${generateMore ? 'IMPORTANT: Generate 10 NEW and DIFFERENT questions. Do not repeat common questions.' : ''}
+
+Generate a comprehensive interview preparation package. Return ONLY valid JSON in this exact format:
 
 {
   "questions": [
@@ -323,9 +337,9 @@ Generate a comprehensive interview preparation package with the following struct
       "id": "q1",
       "category": "get_to_know",
       "question": "Tell me about yourself",
-      "suggestedAnswer": "A tailored answer based on the candidate's profile...",
+      "suggestedAnswer": "A tailored answer...",
       "difficulty": "easy",
-      "tips": "Focus on professional journey, not personal life"
+      "tips": "Focus on professional journey"
     }
   ],
   "importantApps": ["Tool1", "Tool2"],
@@ -337,19 +351,22 @@ Generate a comprehensive interview preparation package with the following struct
 }
 
 REQUIREMENTS:
-1. Generate 15-20 questions across these categories:
-   - get_to_know (3-4 questions): Background, career goals, strengths/weaknesses
-   - psychological (3-4 questions): Behavioral, situational, stress handling
-   - aptitude (3-4 questions): Problem-solving, analytical thinking
-   - culture (2-3 questions): Team fit, company values alignment
-   - position_specific (4-5 questions): Technical skills, role-specific scenarios
+1. Generate ${generateMore ? '10' : '15-20'} questions across these categories:
+   - get_to_know (${generateMore ? '2' : '3-4'} questions): Background, career goals, strengths/weaknesses
+   - psychological (${generateMore ? '2' : '3-4'} questions): Behavioral, situational, stress handling
+   - aptitude (${generateMore ? '2' : '3-4'} questions): Problem-solving, analytical thinking
+   - culture (${generateMore ? '1-2' : '2-3'} questions): Team fit, company values alignment
+   - position_specific (${generateMore ? '3-4' : '4-5'} questions): Technical skills based on ACTUAL job requirements
 
 2. For position_specific questions:
-   - Identify key technologies/tools from the job description
-   - List them in "importantApps" array
-   - Create questions about experience with these tools
+   - ONLY ask about skills mentioned in "Required Skills" or the candidate's profile
+   - If required_skills is "Not specified", use the candidate's actual skills from their profile
+   - List relevant tools/technologies in "importantApps" - ONLY those mentioned in job or candidate profile
 
-3. Each suggestedAnswer should be personalized to the candidate's profile where possible
+3. Each suggestedAnswer should:
+   - Be personalized to the candidate's ACTUAL profile where possible
+   - Use STAR method format for behavioral questions
+   - NOT invent experiences or achievements
 
 4. Difficulty levels: "easy", "medium", "hard"
 
@@ -369,16 +386,17 @@ Return ONLY the JSON object, no other text.`;
         }
       } catch (parseError) {
         console.error('Failed to parse HR AI response:', parseError);
-        // Return fallback questions
+        // Return fallback questions that are GENERIC and safe
         parsed = {
           questions: [
-            { id: 'q1', category: 'get_to_know', question: 'Tell me about yourself', suggestedAnswer: 'Start with your current role, then briefly mention your background and what excites you about this opportunity.', difficulty: 'easy', tips: 'Keep it under 2 minutes' },
-            { id: 'q2', category: 'get_to_know', question: 'Why are you interested in this position?', suggestedAnswer: 'Connect your skills and career goals to what the role offers.', difficulty: 'easy', tips: 'Research the company beforehand' },
-            { id: 'q3', category: 'psychological', question: 'Describe a challenging situation at work and how you handled it', suggestedAnswer: 'Use the STAR method: Situation, Task, Action, Result.', difficulty: 'medium', tips: 'Choose a story with a positive outcome' },
-            { id: 'q4', category: 'aptitude', question: 'How do you prioritize your work when you have multiple deadlines?', suggestedAnswer: 'Explain your prioritization framework and give an example.', difficulty: 'medium', tips: 'Mention specific tools or methods you use' },
-            { id: 'q5', category: 'culture', question: 'What type of work environment do you thrive in?', suggestedAnswer: 'Be honest but also show flexibility and adaptability.', difficulty: 'easy', tips: 'Align with what you know about the company culture' },
+            { id: 'q1', category: 'get_to_know', question: 'Tell me about yourself and your career journey', suggestedAnswer: 'Start with your current role, then briefly mention your relevant background and what excites you about this opportunity.', difficulty: 'easy', tips: 'Keep it under 2 minutes, focus on professional highlights' },
+            { id: 'q2', category: 'get_to_know', question: 'Why are you interested in this position?', suggestedAnswer: 'Connect your skills and career goals to what the role offers. Research the company beforehand.', difficulty: 'easy', tips: 'Show you understand what the role involves' },
+            { id: 'q3', category: 'psychological', question: 'Describe a challenging situation at work and how you handled it', suggestedAnswer: 'Use the STAR method: Describe the Situation, your Task, the Action you took, and the Result.', difficulty: 'medium', tips: 'Choose a story with a positive outcome' },
+            { id: 'q4', category: 'aptitude', question: 'How do you prioritize your work when you have multiple deadlines?', suggestedAnswer: 'Explain your prioritization framework - urgency vs importance, and give a concrete example.', difficulty: 'medium', tips: 'Mention specific tools or methods you use' },
+            { id: 'q5', category: 'culture', question: 'What type of work environment do you thrive in?', suggestedAnswer: 'Be honest about your preferences while showing flexibility and adaptability.', difficulty: 'easy', tips: 'Research the company culture beforehand' },
+            { id: 'q6', category: 'position_specific', question: `What relevant experience do you have for the ${jobInfo.title} role?`, suggestedAnswer: 'Focus on your most relevant skills and experiences that match the job requirements.', difficulty: 'medium', tips: 'Quantify achievements where possible' },
           ],
-          importantApps: [],
+          importantApps: jobInfo.required_skills ? jobInfo.required_skills.split(',').map((s: string) => s.trim()).slice(0, 5) : [],
           jobInfo: jobInfo
         };
       }

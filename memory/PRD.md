@@ -154,6 +154,18 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [x] **Generate More button** - Added to Interview Insider to generate additional questions
 - [x] **Compatibility score shows N/A** - When score not calculated instead of random values
 
+### Session 6 - Bug Fixes (Latest - Dec 2025)
+- [x] **Profile photo positioning** - Added sliders to adjust horizontal/vertical position and zoom
+- [x] **Fetch Models button fixed** - Now properly fetches models and shows recommendations by Speed/Cost/Quality
+- [x] **AI Model recommendations** - Shows top 3 contestants per category based on selected role
+- [x] **Storage tab document browser** - Now shows all stored documents organized by Company/Position
+- [x] **Document icons checkbox mapping fixed** - Motivation Letter and Cover Letter icons now properly toggle
+- [x] **Removed duplicate Enable checkbox** - From auto-apply criteria section
+- [x] **Interview Insider URL scraping** - Now scrapes job URL to extract actual job details
+- [x] **HR AI uses actual job data** - Generates questions based on scraped job content, not user's profile
+- [x] **Document Librarian processing** - Added AI processing for uploaded documents
+- [x] **Search Profile state bug** - Fixed job titles vanishing when selecting/deselecting criteria
+
 ### P1 - High Priority (Testing Needed)
 - [ ] End-to-end test of Smart Apply flow
 - [ ] CV generation verification

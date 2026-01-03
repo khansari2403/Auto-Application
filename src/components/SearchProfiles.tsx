@@ -229,6 +229,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
       setExcludedIndustries(editing.excluded_industries ? editing.excluded_industries.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
       setSelectedExperienceLevels(editing.experience_levels ? editing.experience_levels.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
       setSelectedCertifications(editing.certifications ? editing.certifications.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+      setSelectedLanguages(editing.languages ? editing.languages.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
     }
   }, [editing]);
 

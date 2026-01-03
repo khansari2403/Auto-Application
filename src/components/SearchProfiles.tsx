@@ -544,8 +544,8 @@ export function SearchProfiles({ userId }: { userId: number }) {
               <ScrollableMultiSelect 
                 label="Languages" 
                 options={LANGUAGES} 
-                selected={editing.languages ? editing.languages.split(',').map((s: string) => s.trim()) : []} 
-                setSelected={(langs: string[]) => setEditing({...editing, languages: langs.join(', ')})}
+                selected={selectedLanguages} 
+                setSelected={setSelectedLanguages}
                 maxHeight="80px"
               />
             </div>

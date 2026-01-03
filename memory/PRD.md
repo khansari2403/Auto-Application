@@ -198,6 +198,20 @@ Settings are stored in `settings.secretary_settings` as JSON:
    - Falls back to safe generic questions on parse failure
 10. **Generate More Button** - Added to Interview Insider to append additional questions
 11. **Compatibility Score N/A State** - Shows dashed "N/A" instead of random values when not calculated
+12. **Ask Your Question Feature** - Custom question input in Interview Insider for personalized answers
+13. **New Themes** - Added Forest Green and Ocean Blue themes (light/dark modes)
+14. **Secretary Authentication** - PIN-based access (4-8 digits) with secure sessions
+15. **Storage Directory Structure** - Documents now saved in organized folders: `Company/Position/Files`
+16. **Compatibility Score Algorithm** - Full scoring system:
+    - Skills matching (40% weight)
+    - Experience level (30% weight)
+    - Education matching (20% weight)
+    - Location compatibility (10% weight)
+17. **Email Service** - Full SMTP integration:
+    - Test email configuration
+    - Send notifications (response, follow-up, verification)
+    - Send follow-up emails
+    - Send thank you confirmations
 
 ### Session 4 - Job Hunting Controls & Interview Decorum
 1. **Job Hunting Control Center** - New component with:

@@ -258,9 +258,30 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                   <button onClick={handleSave} style={{ padding: '12px 25px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
                     💾 Save Configuration
                   </button>
-                  <button onClick={handleConnect} style={{ padding: '12px 25px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                    🔗 Connect Email
+                  <button 
+                    onClick={handleConnect} 
+                    disabled={isConnected}
+                    style={{ 
+                      padding: '12px 25px', 
+                      background: isConnected ? 'var(--success)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+                      color: '#fff', 
+                      border: 'none', 
+                      borderRadius: '6px', 
+                      cursor: isConnected ? 'default' : 'pointer', 
+                      fontWeight: 'bold',
+                      opacity: isConnected ? 1 : 1
+                    }}
+                  >
+                    {isConnected ? '✅ Connected!' : '🔗 Connect Email'}
                   </button>
+                  {isConnected && (
+                    <button 
+                      onClick={() => setIsConnected(false)} 
+                      style={{ padding: '12px 15px', background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+                    >
+                      Disconnect
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

@@ -511,17 +511,6 @@ Return ONLY the JSON object, no other text.`;
           jobInfo.description = `Job URL: ${jobUrl} - Unable to scrape content automatically. Please generate generic questions.`;
         }
       }
-        description: existingJob?.description || '',
-        required_skills: existingJob?.required_skills || '',
-        job_type: existingJob?.job_type || '',
-        experience_level: existingJob?.experience_level || ''
-      };
-      
-      // If no job found in DB and URL provided, try to scrape basic info
-      if (!existingJob && jobUrl) {
-        // For now, just use the URL to indicate which job
-        jobInfo.description = `Job posting URL: ${jobUrl}. Please analyze this position.`;
-      }
       
       // Generate interview questions using AI with STRICT instructions to prevent hallucination
       const prompt = `You are an HR AI assistant helping a candidate prepare for a job interview.

@@ -683,8 +683,9 @@ Return ONLY the JSON object, no other text.`;
     }
   });
 
-  // Start scheduler (but disabled by default)
-  aiService.startHuntingScheduler(1);
+  // Start scheduler (but disabled by default - will only run when user enables)
+  // Do NOT auto-start job hunting
+  // aiService.startHuntingScheduler(1);
   
-  console.log('✅ IPC Handlers registered successfully');
+  console.log('✅ IPC Handlers registered successfully (scheduler disabled by default)');
 }

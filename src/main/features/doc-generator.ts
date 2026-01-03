@@ -431,9 +431,13 @@ function generateCVHTML(content: string, userProfile: any, job: any): string {
 </html>`;
 }
 
-// Save document to file
-function saveDocumentFile(content: string, jobId: number, docType: string, format: 'html' | 'txt' = 'html'): string {
-  const docsDir = getDocsDir();
+// Save document to file with organized directory structure
+function saveDocumentFile(content: string, jobId: number, docType: string, format: 'html' | 'txt' = 'html', companyName?: string, position?: string): string {
+  // Use organized directory if company/position available, otherwise use base directory
+  const docsDir = (companyName && position) 
+    ? getOrganizedDocsDir(companyName, position)
+    : getDocsDir();
+    
   const timestamp = Date.now();
   const fileName = `${docType}_job${jobId}_${timestamp}.${format}`;
   const filePath = path.join(docsDir, fileName);

@@ -156,6 +156,7 @@ Settings are stored in `settings.secretary_settings` as JSON:
 
 ### Session 6 - Bug Fixes (Latest - Dec 2025)
 - [x] **Profile photo positioning** - Added sliders to adjust horizontal/vertical position and zoom
+- [x] **Profile photo persistence** - Fixed: Photos now load when returning to profile page
 - [x] **Fetch Models button fixed** - Now properly fetches models and shows recommendations by Speed/Cost/Quality
 - [x] **AI Model recommendations** - Shows top 3 contestants per category based on selected role
 - [x] **Storage tab document browser** - Now shows all stored documents organized by Company/Position
@@ -165,6 +166,9 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [x] **HR AI uses actual job data** - Generates questions based on scraped job content, not user's profile
 - [x] **Document Librarian processing** - Added AI processing for uploaded documents
 - [x] **Search Profile state bug** - Fixed job titles vanishing when selecting/deselecting criteria
+- [x] **Email connection indicator** - Button now shows "✅ Connected!" when email is connected + Disconnect option
+- [x] **Librarian document summary** - Now shows user-friendly summaries, not JSON/code
+- [x] **Search Profile Languages** - Fixed language selection using separate state variable
 
 ### P1 - High Priority (Testing Needed)
 - [ ] End-to-end test of Smart Apply flow

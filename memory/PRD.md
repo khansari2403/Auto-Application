@@ -142,16 +142,29 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [x] **Compatibility Score Dial** - Vertical gauge on Job Search (Red→Yellow→Green→Gold)
 - [x] **Document Rejection Explanation** - Shows why auditor rejected and tips
 - [x] **Interview Social Decorum** - Online/In-person etiquette, body language, dress code tips
+- [x] **Removed Glassmorphism & Neumorphism themes** - Too buggy, removed from theme options
+- [x] **Job dropdown closes on mouse leave** - Fixed dropdown behavior in SearchProfiles
+- [x] **Expanded job titles database** - Added 150+ new job titles across all industries
+- [x] **Merged Start Job Hunting buttons** - Removed duplicate, kept one in Control Center
+- [x] **Auto-Apply toggle in top bar** - Moved to header next to Start Job Hunting button
+- [x] **Fixed document icons display** - Only shows icons with dashed borders when not generated
+- [x] **HR AI role added** - New AI role option in Settings > AI Models
+- [x] **Auto job hunting disabled by default** - Must be explicitly enabled by user
+- [x] **HR AI hallucination fix** - Uses actual job data, strict instructions to prevent fabrication
+- [x] **Generate More button** - Added to Interview Insider to generate additional questions
+- [x] **Compatibility score shows N/A** - When score not calculated instead of random values
 
 ### P1 - High Priority (Testing Needed)
 - [ ] End-to-end test of Smart Apply flow
 - [ ] CV generation verification
 - [ ] Document quality verification (no hallucinations)
 - [ ] Interview Insider feature testing
+- [ ] HR AI question relevance testing (no more project management Q's for warehouse jobs)
 
 ### P2 - Medium Priority
 - [ ] Secretary Authentication Flow
 - [ ] Storage directory structure (Company/Position/Files)
+- [ ] Compatibility score calculation implementation
 
 ### P3 - Low Priority
 - [ ] Full email integration (SMTP/IMAP)

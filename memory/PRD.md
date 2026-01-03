@@ -173,6 +173,32 @@ Settings are stored in `settings.secretary_settings` as JSON:
 
 ## Changes Made - December 2025
 
+### Session 5 - Bug Fixes & UI Improvements (Latest)
+1. **Removed Glassmorphism & Neumorphism themes** - Removed due to numerous visual bugs
+2. **Job Title Dropdown Fix** - Now closes automatically on mouse leave instead of requiring click
+3. **Expanded Job Titles Database** - Added 150+ job titles across all industries:
+   - Warehouse & Logistics (Warehouse Worker, Forklift Operator, etc.)
+   - Construction & Trades (Electrician, Plumber, etc.)
+   - Retail & Hospitality (Server, Chef, Hotel Manager, etc.)
+   - Healthcare (Nurse, Physician, etc.)
+   - Education (Teacher, Professor, etc.)
+   - And many more...
+4. **Merged Start Job Hunting Buttons** - Removed duplicate button from main view, kept single button in Control Center header with Auto-Apply toggle next to it
+5. **Auto-Apply Toggle in Header** - Visual toggle button with ON/OFF state next to Start Job Hunting
+6. **Document Icons Display Fix** - Icons now show:
+   - Dashed border + 60% opacity when document not yet generated
+   - Solid border + checkmarks when generated
+   - Warning icon when rejected
+7. **HR AI Role Added** - New "🎯 HR AI (Interview & Compatibility)" option in AI Models settings
+8. **Auto Job Hunting Disabled by Default** - Scheduler no longer starts automatically on app launch
+9. **HR AI Hallucination Prevention** - Updated prompt with strict rules:
+   - Only uses actual job data from database
+   - Only references skills from user profile
+   - Generates generic questions if job info is missing
+   - Falls back to safe generic questions on parse failure
+10. **Generate More Button** - Added to Interview Insider to append additional questions
+11. **Compatibility Score N/A State** - Shows dashed "N/A" instead of random values when not calculated
+
 ### Session 4 - Job Hunting Controls & Interview Decorum
 1. **Job Hunting Control Center** - New component with:
    - Schedule Timer: Set start/end time (e.g., 9:00-14:00) for hunting

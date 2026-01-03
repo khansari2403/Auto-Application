@@ -12,8 +12,6 @@ export const ThemeSelector: React.FC = () => {
   const themeStyles: { value: ThemeStyle; label: keyof typeof t }[] = [
     { value: 'minimalism', label: 'minimalism' },
     { value: 'material', label: 'material' },
-    { value: 'glassmorphism', label: 'glassmorphism' },
-    { value: 'neumorphism', label: 'neumorphism' },
     { value: 'rosePetal', label: 'rosePetal' },
     { value: 'lavenderDream', label: 'lavenderDream' },
   ];

@@ -128,23 +128,43 @@ export function InterviewInsider({ userId }: Props) {
             }}
           />
           <button
-            onClick={handleGenerateQuestions}
-            disabled={isLoading}
+            onClick={() => handleGenerateQuestions(false)}
+            disabled={isLoading || isGeneratingMore}
             style={{
               padding: '14px 28px',
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: '#fff',
               border: 'none',
               borderRadius: '10px',
-              cursor: isLoading ? 'wait' : 'pointer',
+              cursor: (isLoading || isGeneratingMore) ? 'wait' : 'pointer',
               fontWeight: 'bold',
               fontSize: '14px',
-              opacity: isLoading ? 0.7 : 1,
+              opacity: (isLoading || isGeneratingMore) ? 0.7 : 1,
               minWidth: '180px'
             }}
           >
             {isLoading ? '⏳ Analyzing...' : '🤖 Generate Questions'}
           </button>
+          {questions.length > 0 && (
+            <button
+              onClick={() => handleGenerateQuestions(true)}
+              disabled={isLoading || isGeneratingMore}
+              style={{
+                padding: '14px 24px',
+                background: 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                cursor: (isLoading || isGeneratingMore) ? 'wait' : 'pointer',
+                fontWeight: 'bold',
+                fontSize: '14px',
+                opacity: (isLoading || isGeneratingMore) ? 0.7 : 1,
+                minWidth: '160px'
+              }}
+            >
+              {isGeneratingMore ? '⏳ Adding...' : '➕ Generate More'}
+            </button>
+          )}
         </div>
         {error && (
           <div style={{ marginTop: '12px', padding: '12px', background: 'var(--danger-light)', borderRadius: '8px', color: 'var(--danger)', fontSize: '13px' }}>

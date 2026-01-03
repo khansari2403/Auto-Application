@@ -52,6 +52,9 @@ function ManualProfileSection({ userId }: { userId: number }) {
   const [profile, setProfile] = useState({
     name: '', title: '', email: '', phone: '', location: '', website: '',
     summary: '', photo: '',
+    photoOffsetX: 0, // For positioning the photo
+    photoOffsetY: 0,
+    photoZoom: 100,
     // Arrays stored as comma-separated for simplicity
     skills: '',
     languages: '',
@@ -62,6 +65,7 @@ function ManualProfileSection({ userId }: { userId: number }) {
   const [educations, setEducations] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [showPhotoAdjust, setShowPhotoAdjust] = useState(false);
 
   const inputStyle: React.CSSProperties = { 
     width: '100%', 

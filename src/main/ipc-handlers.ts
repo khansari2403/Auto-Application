@@ -232,10 +232,18 @@ export function setupIpcHandlers(): void {
   });
 
   // --- AI FETCH MODELS (NEW) ---
-  ipcMain.handle('ai:fetch-models', async (_, data) => {
+  ipcMain.handle('ai:fetch-models', async (_, apiKey: string, role?: string) => {
     try {
-      const { provider, apiKey } = data;
+      // Detect provider from API key format
+      let provider = 'openrouter'; // Default
+      if (apiKey.startsWith('sk-') && apiKey.length > 50) {
+        provider = 'openai';
+      } else if (apiKey.startsWith('sk-ant-')) {
+        provider = 'anthropic';
+      }
+      
       let models: string[] = [];
+      let recommendations: { Speed: any[], Cost: any[], Quality: any[] } = { Speed: [], Cost: [], Quality: [] };
 
       if (provider === 'openai') {
         const response = await axios.get('https://api.openai.com/v1/models', {
@@ -243,31 +251,83 @@ export function setupIpcHandlers(): void {
           timeout: 10000
         });
         models = response.data.data
-          .filter((m: any) => m.id.includes('gpt'))
+          .filter((m: any) => m.id.includes('gpt') || m.id.includes('o1') || m.id.includes('o3'))
           .map((m: any) => m.id)
           .sort();
-      } else if (provider === 'together') {
-        // Together AI models
-        models = [
-          'mistralai/Mixtral-8x7B-Instruct-v0.1',
-          'meta-llama/Llama-3-70b-chat-hf',
-          'meta-llama/Llama-3-8b-chat-hf',
-          'togethercomputer/CodeLlama-34b-Instruct'
-        ];
-      } else if (provider === 'local') {
-        // Try to fetch from Ollama
+        
+        // OpenAI recommendations by role
+        if (role === 'Hunter' || role === 'Observer') {
+          recommendations = {
+            Speed: [{ id: 'gpt-4o-mini', desc: 'Fast & cheap' }],
+            Cost: [{ id: 'gpt-3.5-turbo', desc: 'Most affordable' }],
+            Quality: [{ id: 'gpt-4o', desc: 'Best quality' }]
+          };
+        } else if (role === 'Thinker' || role === 'HR AI') {
+          recommendations = {
+            Speed: [{ id: 'gpt-4o-mini', desc: 'Quick drafts' }],
+            Cost: [{ id: 'gpt-4o-mini', desc: 'Budget friendly' }],
+            Quality: [{ id: 'gpt-4o', desc: 'Best writing' }, { id: 'o1-preview', desc: 'Deep reasoning' }]
+          };
+        } else if (role === 'Auditor') {
+          recommendations = {
+            Speed: [{ id: 'gpt-4o-mini', desc: 'Quick checks' }],
+            Cost: [{ id: 'gpt-3.5-turbo', desc: 'Cost efficient' }],
+            Quality: [{ id: 'gpt-4o', desc: 'Thorough review' }]
+          };
+        }
+      } else if (provider === 'anthropic') {
+        models = ['claude-3-opus-20240229', 'claude-3-sonnet-20240229', 'claude-3-haiku-20240307', 'claude-3-5-sonnet-20241022'];
+        recommendations = {
+          Speed: [{ id: 'claude-3-haiku-20240307', desc: 'Fastest Claude' }],
+          Cost: [{ id: 'claude-3-haiku-20240307', desc: 'Most affordable' }],
+          Quality: [{ id: 'claude-3-5-sonnet-20241022', desc: 'Best quality' }, { id: 'claude-3-opus-20240229', desc: 'Most capable' }]
+        };
+      } else {
+        // OpenRouter or other - fetch available models
         try {
-          const response = await axios.get('http://localhost:11434/api/tags', { timeout: 5000 });
-          models = response.data.models?.map((m: any) => m.name) || ['llama3', 'mistral', 'codellama'];
+          const response = await axios.get('https://openrouter.ai/api/v1/models', {
+            headers: { 'Authorization': `Bearer ${apiKey}` },
+            timeout: 10000
+          });
+          models = response.data.data?.map((m: any) => m.id).slice(0, 50) || [];
+          
+          // OpenRouter recommendations
+          recommendations = {
+            Speed: [
+              { id: 'mistralai/mistral-7b-instruct', desc: 'Very fast' },
+              { id: 'meta-llama/llama-3-8b-instruct', desc: 'Quick & capable' }
+            ],
+            Cost: [
+              { id: 'mistralai/mistral-7b-instruct', desc: 'Free tier' },
+              { id: 'google/gemma-7b-it', desc: 'Very cheap' }
+            ],
+            Quality: [
+              { id: 'anthropic/claude-3-opus', desc: 'Top quality' },
+              { id: 'openai/gpt-4-turbo', desc: 'Excellent' },
+              { id: 'meta-llama/llama-3-70b-instruct', desc: 'Great open source' }
+            ]
+          };
         } catch {
-          models = ['llama3', 'mistral', 'codellama', 'phi3'];
+          // Fallback models
+          models = [
+            'openai/gpt-4-turbo',
+            'openai/gpt-4o',
+            'openai/gpt-4o-mini',
+            'anthropic/claude-3-opus',
+            'anthropic/claude-3-sonnet',
+            'anthropic/claude-3-haiku',
+            'meta-llama/llama-3-70b-instruct',
+            'meta-llama/llama-3-8b-instruct',
+            'mistralai/mixtral-8x7b-instruct',
+            'google/gemini-pro'
+          ];
         }
       }
 
-      return { success: true, models };
+      return { success: true, data: models, recommendations };
     } catch (e: any) {
       console.error('Fetch models error:', e.message);
-      return { success: false, error: e.message, models: [] };
+      return { success: false, error: e.message, data: [], recommendations: { Speed: [], Cost: [], Quality: [] } };
     }
   });
 

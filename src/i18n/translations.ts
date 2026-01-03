@@ -70,6 +70,8 @@ export const translations: Record<Language, TranslationKeys> = {
     neumorphism: 'Neumorphism',
     rosePetal: 'Rose Petal',
     lavenderDream: 'Lavender Dream',
+    forestGreen: 'Forest Green',
+    oceanBlue: 'Ocean Blue',
     reportBug: 'Report Bug',
     bugReportTitle: 'Report a Bug',
     bugReportDescription: 'Describe the issue',

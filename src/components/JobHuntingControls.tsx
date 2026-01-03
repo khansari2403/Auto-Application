@@ -108,29 +108,73 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
           </p>
         </div>
         
-        {/* Main Toggle */}
-        <button
-          onClick={toggleHunting}
-          style={{
-            padding: '14px 28px',
-            borderRadius: '12px',
-            border: 'none',
-            background: isActive 
-              ? 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)'
-              : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            color: '#fff',
-            fontWeight: 'bold',
-            fontSize: '14px',
-            cursor: 'pointer',
-            boxShadow: isActive ? '0 4px 15px rgba(76, 175, 80, 0.4)' : '0 4px 15px rgba(102, 126, 234, 0.4)',
-            transition: 'all 0.3s ease',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
-          }}
-        >
-          {isActive ? '⏹️ Stop Job Hunting' : '▶️ Start Job Hunting'}
-        </button>
+        {/* Top Bar Controls - Start Job Hunting + Auto-Apply */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {/* Auto-Apply Toggle */}
+          <div 
+            onClick={handleAutoApplyToggle}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 16px',
+              borderRadius: '10px',
+              background: autoApplyEnabled ? 'var(--success-light)' : 'var(--bg-tertiary)',
+              border: `2px solid ${autoApplyEnabled ? 'var(--success)' : 'var(--border)'}`,
+              cursor: 'pointer',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <span style={{ fontSize: '14px' }}>🤖</span>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: autoApplyEnabled ? 'var(--success)' : 'var(--text-secondary)' }}>
+              Auto-Apply
+            </span>
+            <div style={{
+              width: '36px',
+              height: '20px',
+              borderRadius: '10px',
+              background: autoApplyEnabled ? 'var(--success)' : 'var(--border)',
+              position: 'relative',
+              transition: 'all 0.2s ease'
+            }}>
+              <div style={{
+                width: '16px',
+                height: '16px',
+                borderRadius: '50%',
+                background: '#fff',
+                position: 'absolute',
+                top: '2px',
+                left: autoApplyEnabled ? '18px' : '2px',
+                transition: 'all 0.2s ease',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+              }} />
+            </div>
+          </div>
+
+          {/* Main Toggle - Start Job Hunting */}
+          <button
+            onClick={toggleHunting}
+            style={{
+              padding: '14px 28px',
+              borderRadius: '12px',
+              border: 'none',
+              background: isActive 
+                ? 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)'
+                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: '#fff',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              cursor: 'pointer',
+              boxShadow: isActive ? '0 4px 15px rgba(76, 175, 80, 0.4)' : '0 4px 15px rgba(102, 126, 234, 0.4)',
+              transition: 'all 0.3s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            {isActive ? '⏹️ Stop Job Hunting' : '▶️ Start Job Hunting'}
+          </button>
+        </div>
       </div>
 
       {/* Two Column Layout */}

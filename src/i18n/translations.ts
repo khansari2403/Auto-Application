@@ -25,6 +25,8 @@ export interface TranslationKeys {
   neumorphism: string;
   rosePetal: string;
   lavenderDream: string;
+  forestGreen: string;
+  oceanBlue: string;
   reportBug: string;
   bugReportTitle: string;
   bugReportDescription: string;

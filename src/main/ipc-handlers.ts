@@ -439,15 +439,78 @@ Return ONLY the JSON object, no other text.`;
       const profiles = await getAllQuery('SELECT * FROM user_profile');
       const userProfile = profiles[0];
       
-      // Try to get job from database if it exists
+      // Try to get job from database first
       const jobs = await getAllQuery('SELECT * FROM job_listings');
-      const existingJob = jobs.find((j: any) => j.url === jobUrl);
+      let existingJob = jobs.find((j: any) => j.url === jobUrl);
       
-      // Build job info from actual database data
+      // Build job info from actual database data or scrape the URL
       let jobInfo = {
-        title: existingJob?.job_title || 'Position',
-        company: existingJob?.company_name || 'Company',
-        location: existingJob?.location || 'Location',
+        title: 'Position',
+        company: 'Company',
+        location: 'Location',
+        description: '',
+        required_skills: '',
+        job_type: '',
+        experience_level: ''
+      };
+      
+      if (existingJob) {
+        // Use existing job data from database
+        jobInfo = {
+          title: existingJob.job_title || 'Position',
+          company: existingJob.company_name || 'Company',
+          location: existingJob.location || 'Location',
+          description: existingJob.description || '',
+          required_skills: existingJob.required_skills || '',
+          job_type: existingJob.job_type || '',
+          experience_level: existingJob.experience_level || ''
+        };
+      } else if (jobUrl && jobUrl.trim()) {
+        // Try to scrape the job URL for content
+        try {
+          console.log('Scraping job URL for Interview Insider:', jobUrl);
+          const response = await axios.get(jobUrl, { 
+            timeout: 15000,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'text/html,application/xhtml+xml'
+            }
+          });
+          
+          const html = response.data;
+          
+          // Extract text content (simple extraction)
+          const textContent = html
+            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .substring(0, 5000); // Limit to 5000 chars
+          
+          // Try to extract job title from HTML
+          const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+          const h1Match = html.match(/<h1[^>]*>([^<]+)<\/h1>/i);
+          
+          jobInfo.title = h1Match?.[1]?.trim() || titleMatch?.[1]?.split(' - ')[0]?.trim() || 'Position from URL';
+          jobInfo.description = textContent;
+          
+          // Try to detect job type from content
+          const contentLower = textContent.toLowerCase();
+          if (contentLower.includes('warehouse') || contentLower.includes('forklift') || contentLower.includes('logistics')) {
+            jobInfo.title = jobInfo.title || 'Warehouse Position';
+          } else if (contentLower.includes('teacher') || contentLower.includes('education') || contentLower.includes('classroom')) {
+            jobInfo.title = jobInfo.title || 'Teaching Position';
+          } else if (contentLower.includes('nurse') || contentLower.includes('healthcare') || contentLower.includes('patient')) {
+            jobInfo.title = jobInfo.title || 'Healthcare Position';
+          }
+          
+          console.log('Scraped job info:', { title: jobInfo.title, descLength: jobInfo.description.length });
+        } catch (scrapeError: any) {
+          console.error('Failed to scrape job URL:', scrapeError.message);
+          jobInfo.description = `Job URL: ${jobUrl} - Unable to scrape content automatically. Please generate generic questions.`;
+        }
+      }
         description: existingJob?.description || '',
         required_skills: existingJob?.required_skills || '',
         job_type: existingJob?.job_type || '',

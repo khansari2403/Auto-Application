@@ -150,3 +150,122 @@ export async function submitApplication(jobId: number, userId: number) {
   
   return await AppSubmitter.submitApplication(jobId, userId, observer, callAI);
 }
+
+/**
+ * Process uploaded document with Librarian AI
+ */
+export async function processDocumentWithLibrarian(docId: number, userId: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Get the document
+    const docs = await getAllQuery('SELECT * FROM documents');
+    const doc = docs.find((d: any) => d.id === docId);
+    
+    if (!doc) {
+      return { success: false, error: 'Document not found' };
+    }
+    
+    // Get Librarian AI model
+    const models = await getAllQuery('SELECT * FROM ai_models');
+    const librarian = models.find((m: any) => m.role === 'Librarian' && m.status === 'active');
+    
+    if (!librarian) {
+      // Update document status to show no Librarian configured
+      await runQuery('UPDATE documents', { id: docId, ai_status: 'failed: No Librarian AI configured' });
+      return { success: false, error: 'No Librarian AI model configured. Add one in Settings > AI Team.' };
+    }
+    
+    // Update status to reading
+    await runQuery('UPDATE documents', { id: docId, ai_status: 'reading' });
+    
+    // Build prompt based on file type
+    let prompt = '';
+    const fileType = doc.file_type || '';
+    const fileName = doc.file_name || 'document';
+    
+    if (fileType.includes('image')) {
+      // For images, we need a vision-capable model
+      prompt = `You are a document analysis AI. Please analyze this image which appears to be a professional document (possibly a CV, certificate, or credential).
+
+Extract and summarize:
+1. Document type (CV, Certificate, Diploma, ID, etc.)
+2. Key information (name, dates, qualifications, skills, etc.)
+3. Any notable achievements or details
+
+Provide a concise 2-3 sentence summary of the document's contents.`;
+      
+      // Update status to analyzing
+      await runQuery('UPDATE documents', { id: docId, ai_status: 'analyzing' });
+      
+      // Call AI with image data
+      const summary = await callAI(librarian, prompt, doc.content);
+      
+      // Update document with AI summary
+      await runQuery('UPDATE documents', { 
+        id: docId, 
+        ai_status: 'verified', 
+        ai_summary: summary 
+      });
+      
+    } else if (fileType.includes('pdf')) {
+      // For PDFs, extract text if possible
+      prompt = `You are a document analysis AI. A PDF document named "${fileName}" has been uploaded.
+
+Based on the filename and context, this appears to be a professional document. Please provide:
+1. What type of document this likely is
+2. Suggested categories (CV, Certificate, Cover Letter, etc.)
+3. A brief description of what such a document typically contains
+
+Note: This is a PDF file and the actual content cannot be directly read. Provide helpful guidance based on the filename.`;
+      
+      await runQuery('UPDATE documents', { id: docId, ai_status: 'analyzing' });
+      
+      const summary = await callAI(librarian, prompt);
+      
+      await runQuery('UPDATE documents', { 
+        id: docId, 
+        ai_status: 'verified', 
+        ai_summary: summary || `PDF Document: ${fileName}. Configure a vision-capable model for detailed analysis.`
+      });
+      
+    } else {
+      // For other document types
+      prompt = `Document "${fileName}" (type: ${fileType}) was uploaded. 
+      
+Provide a brief assessment of what this document type typically contains and how it might be useful for job applications.`;
+      
+      await runQuery('UPDATE documents', { id: docId, ai_status: 'analyzing' });
+      
+      const summary = await callAI(librarian, prompt);
+      
+      await runQuery('UPDATE documents', { 
+        id: docId, 
+        ai_status: 'verified', 
+        ai_summary: summary 
+      });
+    }
+    
+    await logAction(userId, 'librarian', `📚 Analyzed document: ${fileName}`, 'completed', true);
+    return { success: true };
+    
+  } catch (error: any) {
+    console.error('Librarian processing error:', error);
+    await runQuery('UPDATE documents', { id: docId, ai_status: `failed: ${error.message}` });
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Process all pending documents
+ */
+export async function processAllPendingDocuments(userId: number): Promise<void> {
+  try {
+    const docs = await getAllQuery('SELECT * FROM documents');
+    const pending = docs.filter((d: any) => !d.ai_status || d.ai_status === 'pending');
+    
+    for (const doc of pending) {
+      await processDocumentWithLibrarian(doc.id, userId);
+    }
+  } catch (error) {
+    console.error('Failed to process pending documents:', error);
+  }
+}

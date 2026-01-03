@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LinkedInSection from './settings/LinkedInSection';
 import AIModelsSection from './settings/AIModelsSection';
 import EmailMonitoringSection from './settings/EmailMonitoringSection';

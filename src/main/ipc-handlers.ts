@@ -263,6 +263,96 @@ export function setupIpcHandlers(): void {
     }
   });
 
+  // --- HR AI - CUSTOM QUESTION ---
+  ipcMain.handle('ai:ask-custom-question', async (_, data) => {
+    try {
+      const { question, jobUrl, userId } = data;
+      
+      // Get AI models - prefer HR AI role, fallback to Thinker
+      const models = await getAllQuery('SELECT * FROM ai_models');
+      const hrAI = models.find((m: any) => m.role === 'HR AI' && m.status === 'active') ||
+                   models.find((m: any) => m.role === 'Thinker' && m.status === 'active');
+      
+      if (!hrAI) {
+        return { success: false, error: 'No HR AI model configured. Please add an AI model with role "HR AI" in Settings > AI Models.' };
+      }
+      
+      // Get user profile
+      const profiles = await getAllQuery('SELECT * FROM user_profile');
+      const userProfile = profiles[0];
+      
+      // Try to get job from database if it exists
+      const jobs = await getAllQuery('SELECT * FROM job_listings');
+      const existingJob = jobs.find((j: any) => j.url === jobUrl);
+      
+      // Build context
+      const jobContext = existingJob ? `
+Job Title: ${existingJob.job_title || 'Not specified'}
+Company: ${existingJob.company_name || 'Not specified'}
+Description: ${existingJob.description || 'Not available'}
+Required Skills: ${existingJob.required_skills || 'Not specified'}
+` : 'No specific job context available.';
+
+      const prompt = `You are an HR AI assistant helping a candidate prepare for an interview.
+
+CANDIDATE PROFILE (use this for personalization):
+Name: ${userProfile?.name || 'Candidate'}
+Current Title: ${userProfile?.title || 'Professional'}
+Skills: ${userProfile?.skills ? JSON.stringify(userProfile.skills) : 'Not specified'}
+Experience: ${userProfile?.summary || 'Professional with relevant experience'}
+
+JOB CONTEXT:
+${jobContext}
+
+The candidate is asking for help with this interview question:
+"${question}"
+
+Provide a comprehensive, personalized answer that:
+1. Is tailored to the candidate's actual profile and experience
+2. Uses the STAR method if it's a behavioral question
+3. Is professional and confident in tone
+4. Is specific but not fabricated - only reference actual skills/experience from the profile
+5. For future-oriented questions (like "5-year plan"), provide realistic goals aligned with their career path
+
+Return ONLY valid JSON in this exact format:
+{
+  "answer": "A detailed, personalized suggested answer (2-4 paragraphs)",
+  "tips": "3-5 practical tips for answering this type of question effectively"
+}
+
+Return ONLY the JSON object, no other text.`;
+
+      const response = await aiService.callAI(hrAI, prompt);
+      
+      // Parse AI response
+      let parsed;
+      try {
+        const jsonMatch = response.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+        } else {
+          throw new Error('No JSON found in response');
+        }
+      } catch (parseError) {
+        console.error('Failed to parse custom question response:', parseError);
+        // Provide a generic helpful response
+        parsed = {
+          answer: `For the question "${question}", here's a framework for your answer:\n\n1. Start by acknowledging the question and showing you've thought about it\n2. Provide specific examples from your experience\n3. Connect your answer to the role you're applying for\n4. End with a forward-looking statement\n\nRemember to be authentic and specific. Generic answers don't stand out.`,
+          tips: "Be specific and use real examples. Practice your answer out loud. Keep it concise (2-3 minutes max). Show enthusiasm and self-awareness."
+        };
+      }
+      
+      return { 
+        success: true, 
+        answer: parsed.answer || 'Unable to generate answer',
+        tips: parsed.tips || ''
+      };
+    } catch (e: any) {
+      console.error('Custom question error:', e);
+      return { success: false, error: e.message };
+    }
+  });
+
   // --- HR AI - INTERVIEW PREP ---
   ipcMain.handle('ai:generate-interview-prep', async (_, data) => {
     try {

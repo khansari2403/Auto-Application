@@ -1,6 +1,9 @@
 import { runQuery, getAllQuery, getDatabase } from './database';
 import { ipcMain, shell, BrowserWindow } from 'electron';
 import * as aiService from './ai-service';
+import * as EmailService from './features/email-service';
+import * as CompatibilityService from './features/compatibility-service';
+import * as SecretaryAuth from './features/secretary-auth';
 import axios from 'axios';
 
 export function setupIpcHandlers(): void {
@@ -12,13 +15,18 @@ export function setupIpcHandlers(): void {
     'jobs:get-all', 'jobs:delete', 'jobs:add-manual', 'jobs:update-doc-confirmation',
     'hunter:start-search', 'ai:process-application', 'ai:generate-tailored-docs',
     'ai:smart-apply', 'ai:continue-application', 'ai:cancel-application',
-    'ai:fetch-models', 'ai:generate-interview-prep',
+    'ai:fetch-models', 'ai:generate-interview-prep', 'ai:ask-custom-question',
     'docs:get-all', 'docs:save', 'docs:delete', 'docs:open-file', 'docs:convert-to-pdf', 'docs:convert-all-pdf',
     'websites:get-all', 'websites:add', 'websites:delete', 'websites:toggle-active',
     'ai-models:get-all', 'ai-models:add', 'ai-models:update', 'ai-models:delete',
     'logs:get-recent-actions', 'apps:get-all',
     'scheduler:toggle', 'scheduler:get-status',
-    'qa:get-all', 'qa:update', 'qa:delete'
+    'qa:get-all', 'qa:update', 'qa:delete',
+    // New handlers
+    'email:test-config', 'email:send', 'email:send-notification',
+    'compatibility:calculate', 'compatibility:calculate-all', 'compatibility:get-by-level',
+    'secretary:setup-pin', 'secretary:verify-pin', 'secretary:change-pin', 
+    'secretary:reset-pin', 'secretary:is-pin-set', 'secretary:get-settings', 'secretary:update-permissions'
   ];
   
   // Remove handlers first - prevents duplication on hot reload

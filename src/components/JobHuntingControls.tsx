@@ -13,6 +13,7 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
   const [endTime, setEndTime] = useState('14:00');
   const [minCompatibility, setMinCompatibility] = useState<'yellow' | 'green' | 'gold'>('green');
   const [status, setStatus] = useState('idle');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -22,7 +23,16 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
     try {
       const result = await (window as any).electron.invoke('settings:get', userId);
       if (result?.success && result.data) {
-        setIsActive(result.data.job_hunting_active === 1);
+        // Only set active state from DB if it was explicitly enabled by user
+        // On fresh load, always start with hunting disabled
+        if (!isInitialized) {
+          setIsActive(false);
+          setIsInitialized(true);
+          // Ensure scheduler is disabled on app start
+          await (window as any).electron.invoke('scheduler:toggle', { active: false });
+        } else {
+          setIsActive(result.data.job_hunting_active === 1);
+        }
         setAutoApplyEnabled(result.data.auto_apply === 1);
         setScheduleEnabled(result.data.schedule_enabled === 1);
         setStartTime(result.data.schedule_start || '09:00');

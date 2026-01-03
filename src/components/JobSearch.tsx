@@ -493,14 +493,21 @@ export function JobSearch({ userId }: { userId: number }) {
             <button onClick={() => setShowInfo(true)} style={{ background: '#0077b5', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', fontSize: '12px' }}>i</button>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-            {['CV', 'Motivation Letter', 'Portfolio', 'Proposal', 'Cover Letter'].map(label => {
-              const key = label.toLowerCase().replace(' ', '') as keyof typeof docOptions;
-              return (
-                <label key={label} style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--text-primary)' }}>
-                  <input type="checkbox" checked={!!docOptions[key]} onChange={() => setDocOptions(prev => ({ ...prev, [key]: !prev[key] }))} /> {label}
-                </label>
-              );
-            })}
+            {[
+              { label: 'CV', key: 'cv' },
+              { label: 'Motivation Letter', key: 'motivationLetter' },
+              { label: 'Portfolio', key: 'portfolio' },
+              { label: 'Proposal', key: 'proposal' },
+              { label: 'Cover Letter', key: 'coverLetter' }
+            ].map(({ label, key }) => (
+              <label key={key} style={{ fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                <input 
+                  type="checkbox" 
+                  checked={!!docOptions[key as keyof typeof docOptions]} 
+                  onChange={() => setDocOptions(prev => ({ ...prev, [key]: !prev[key as keyof typeof docOptions] }))} 
+                /> {label}
+              </label>
+            ))}
           </div>
           <label style={{ fontSize: '11px', fontWeight: 'bold', color: '#e91e63', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '12px', cursor: 'pointer' }}>
             <input type="checkbox" checked={docOptions.manualReview} onChange={() => setDocOptions(prev => ({ ...prev, manualReview: !prev.manualReview }))} /> Review files manually before applying

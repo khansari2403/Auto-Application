@@ -30,26 +30,37 @@ export function InterviewInsider({ userId }: Props) {
   const [jobInfo, setJobInfo] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [importantApps, setImportantApps] = useState<string[]>([]);
+  const [isGeneratingMore, setIsGeneratingMore] = useState(false);
 
-  const handleGenerateQuestions = async () => {
+  const handleGenerateQuestions = async (generateMore: boolean = false) => {
     if (!jobUrl.trim()) {
       setError('Please enter a job URL');
       return;
     }
 
-    setIsLoading(true);
+    if (generateMore) {
+      setIsGeneratingMore(true);
+    } else {
+      setIsLoading(true);
+      setQuestions([]);
+    }
     setError(null);
-    setQuestions([]);
 
     try {
       // Call HR AI to generate interview questions
       const result = await (window as any).electron.invoke('ai:generate-interview-prep', { 
         jobUrl, 
-        userId 
+        userId,
+        generateMore 
       });
 
       if (result.success) {
-        setQuestions(result.questions || []);
+        if (generateMore) {
+          // Append new questions to existing ones
+          setQuestions(prev => [...prev, ...(result.questions || [])]);
+        } else {
+          setQuestions(result.questions || []);
+        }
         setJobInfo(result.jobInfo || null);
         setImportantApps(result.importantApps || []);
       } else {
@@ -59,6 +70,7 @@ export function InterviewInsider({ userId }: Props) {
       setError(e.message || 'An error occurred');
     } finally {
       setIsLoading(false);
+      setIsGeneratingMore(false);
     }
   };
 

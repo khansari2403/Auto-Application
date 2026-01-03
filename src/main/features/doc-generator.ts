@@ -5,13 +5,33 @@ import * as path from 'path';
 let app: any;
 try { app = require('electron').app; } catch (e) { app = (global as any).electronApp; }
 
-// Get documents directory in user data
-const getDocsDir = () => {
+// Get base documents directory in user data
+const getBaseDocsDir = () => {
   const docsPath = path.join(app.getPath('userData'), 'generated_docs');
   if (!fs.existsSync(docsPath)) {
     fs.mkdirSync(docsPath, { recursive: true });
   }
   return docsPath;
+};
+
+// Get organized documents directory: Company/Position/
+const getOrganizedDocsDir = (companyName: string, position: string) => {
+  // Sanitize folder names (remove invalid characters)
+  const sanitize = (str: string) => str.replace(/[<>:"/\\|?*]/g, '_').trim().substring(0, 50);
+  
+  const company = sanitize(companyName || 'Unknown_Company');
+  const pos = sanitize(position || 'Unknown_Position');
+  
+  const docsPath = path.join(getBaseDocsDir(), company, pos);
+  if (!fs.existsSync(docsPath)) {
+    fs.mkdirSync(docsPath, { recursive: true });
+  }
+  return docsPath;
+};
+
+// Legacy: Get simple documents directory (for backwards compatibility)
+const getDocsDir = () => {
+  return getBaseDocsDir();
 };
 
 // Clean AI output - remove JSON artifacts and meta-text

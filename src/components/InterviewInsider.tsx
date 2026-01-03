@@ -79,6 +79,40 @@ export function InterviewInsider({ userId }: Props) {
     }
   };
 
+  // Handle custom question from user
+  const handleAskQuestion = async () => {
+    if (!customQuestion.trim()) {
+      setError('Please enter your question');
+      return;
+    }
+
+    setIsAskingQuestion(true);
+    setError(null);
+    setCustomAnswer(null);
+
+    try {
+      const result = await (window as any).electron.invoke('ai:ask-custom-question', {
+        question: customQuestion,
+        jobUrl,
+        userId
+      });
+
+      if (result.success) {
+        setCustomAnswer({
+          question: customQuestion,
+          answer: result.answer,
+          tips: result.tips
+        });
+      } else {
+        setError(result.error || 'Failed to get answer');
+      }
+    } catch (e: any) {
+      setError(e.message || 'An error occurred');
+    } finally {
+      setIsAskingQuestion(false);
+    }
+  };
+
   const filteredQuestions = selectedCategory 
     ? questions.filter(q => q.category === selectedCategory)
     : questions;

@@ -466,20 +466,6 @@ export function JobSearch({ userId }: { userId: number }) {
             <input type="checkbox" checked={docOptions.manualReview} onChange={() => setDocOptions(prev => ({ ...prev, manualReview: !prev.manualReview }))} /> Review files manually before applying
           </label>
         </div>
-
-        <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center', flex: '1 1 200px', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🚀 Job Hunting</h4>
-          <button onClick={() => (window as any).electron.invoke('hunter:start-search', userId)} disabled={isSearching || !jobHuntingActive} style={{ padding: '12px 20px', background: '#673ab7', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%', height: '44px' }}>
-            {isSearching ? 'Hunting...' : 'Start Job Hunting'}
-          </button>
-        </div>
-        
-        <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '12px', border: '1px solid var(--border)', textAlign: 'center', flex: '1 1 160px', minHeight: '140px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🤖 Auto-Apply</h4>
-          <button onClick={() => (window as any).electron.invoke('settings:update', { id: 1, auto_apply: autoApply ? 0 : 1 }).then(loadData)} style={{ padding: '12px 20px', background: autoApply ? '#4CAF50' : 'var(--border)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', width: '100%', height: '44px' }}>
-            {autoApply ? 'ON' : 'OFF'}
-          </button>
-        </div>
       </div>
 
       <div style={{ background: 'var(--bg-secondary)', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid var(--border)' }}>

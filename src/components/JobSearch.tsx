@@ -502,7 +502,7 @@ export function JobSearch({ userId }: { userId: number }) {
               <tr key={job.id} style={{ borderBottom: '1px solid var(--border)', background: job.status === 'ghost_job_detected' ? 'var(--warning-light)' : 'transparent' }}>
                 {/* Compatibility Score Dial */}
                 <td style={{ padding: '8px', textAlign: 'center', background: 'rgba(102, 126, 234, 0.05)' }}>
-                  <CompatibilityDial score={job.compatibility_score || Math.floor(Math.random() * 100)} size="small" />
+                  <CompatibilityDial score={job.compatibility_score ?? 0} size="small" />
                 </td>
                 <td style={{ padding: '12px', background: 'var(--bg-tertiary)' }}>
                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>

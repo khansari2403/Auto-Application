@@ -635,8 +635,31 @@ Return ONLY the JSON object, no other text.`;
 
   ipcMain.handle('docs:save', async (_, data) => {
     try {
-      const result = await runQuery('INSERT INTO documents', [data]);
+      const docData = {
+        ...data,
+        ai_status: 'pending',
+        created_at: new Date().toISOString()
+      };
+      const result = await runQuery('INSERT INTO documents', [docData]);
+      
+      // Trigger Librarian processing in background
+      if (result?.id) {
+        setTimeout(() => {
+          aiService.processDocumentWithLibrarian(result.id, data.userId || 1).catch(e => 
+            console.error('Background document processing failed:', e)
+          );
+        }, 100);
+      }
+      
       return { success: true, id: result.id };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  ipcMain.handle('docs:reprocess', async (_, docId, userId) => {
+    try {
+      return await aiService.processDocumentWithLibrarian(docId, userId);
     } catch (e: any) {
       return { success: false, error: e.message };
     }

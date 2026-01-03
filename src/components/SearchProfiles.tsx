@@ -210,6 +210,9 @@ export function SearchProfiles({ userId }: { userId: number }) {
   // Certifications
   const [selectedCertifications, setSelectedCertifications] = useState<string[]>([]);
   const [customCertification, setCustomCertification] = useState('');
+  
+  // Languages
+  const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
   const loadProfiles = async () => {
     const result = await (window as any).electron.invoke('profiles:get-all', userId);

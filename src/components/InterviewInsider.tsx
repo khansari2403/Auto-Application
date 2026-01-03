@@ -270,6 +270,123 @@ export function InterviewInsider({ userId }: Props) {
         </div>
       )}
 
+      {/* Ask Your Question Section */}
+      <div style={{ 
+        background: 'var(--card-bg)', 
+        padding: '24px', 
+        borderRadius: '16px', 
+        marginBottom: '24px',
+        border: '2px solid var(--primary)',
+        boxShadow: '0 4px 20px rgba(102, 126, 234, 0.15)'
+      }}>
+        <h3 style={{ margin: '0 0 12px 0', color: 'var(--text-primary)', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span style={{ fontSize: '24px' }}>💬</span>
+          Ask Your Own Question
+        </h3>
+        <p style={{ margin: '0 0 16px 0', color: 'var(--text-secondary)', fontSize: '13px' }}>
+          Have a specific interview question you're worried about? Type it below and get a personalized answer based on your profile.
+        </p>
+        
+        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px' }}>
+          <input
+            type="text"
+            value={customQuestion}
+            onChange={(e) => setCustomQuestion(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleAskQuestion()}
+            placeholder="e.g., What is your plan for the next 5 years?"
+            style={{
+              flex: 1,
+              padding: '14px 16px',
+              borderRadius: '10px',
+              border: '1px solid var(--border)',
+              background: 'var(--input-bg)',
+              color: 'var(--text-primary)',
+              fontSize: '14px'
+            }}
+          />
+          <button
+            onClick={handleAskQuestion}
+            disabled={isAskingQuestion || !customQuestion.trim()}
+            style={{
+              padding: '14px 28px',
+              background: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '10px',
+              cursor: (isAskingQuestion || !customQuestion.trim()) ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold',
+              fontSize: '14px',
+              opacity: (isAskingQuestion || !customQuestion.trim()) ? 0.6 : 1,
+              minWidth: '140px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px'
+            }}
+          >
+            {isAskingQuestion ? '⏳ Thinking...' : '🎤 Get Answer'}
+          </button>
+        </div>
+
+        {/* Custom Answer Display */}
+        {customAnswer && (
+          <div style={{ 
+            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)', 
+            padding: '20px', 
+            borderRadius: '12px',
+            border: '1px solid rgba(102, 126, 234, 0.3)'
+          }}>
+            <div style={{ marginBottom: '16px' }}>
+              <span style={{ 
+                background: 'var(--primary)', 
+                color: '#fff', 
+                padding: '4px 12px', 
+                borderRadius: '20px', 
+                fontSize: '11px',
+                fontWeight: 'bold',
+                textTransform: 'uppercase'
+              }}>
+                Your Question
+              </span>
+              <p style={{ margin: '8px 0 0 0', color: 'var(--text-primary)', fontWeight: 600, fontSize: '15px' }}>
+                "{customAnswer.question}"
+              </p>
+            </div>
+            
+            <div style={{ marginBottom: '16px' }}>
+              <span style={{ 
+                background: '#4CAF50', 
+                color: '#fff', 
+                padding: '4px 12px', 
+                borderRadius: '20px', 
+                fontSize: '11px',
+                fontWeight: 'bold',
+                textTransform: 'uppercase'
+              }}>
+                Suggested Answer
+              </span>
+              <p style={{ margin: '8px 0 0 0', color: 'var(--text-primary)', fontSize: '14px', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
+                {customAnswer.answer}
+              </p>
+            </div>
+            
+            {customAnswer.tips && (
+              <div style={{ 
+                background: 'rgba(255, 193, 7, 0.15)', 
+                padding: '12px 16px', 
+                borderRadius: '8px',
+                borderLeft: '4px solid #FFC107'
+              }}>
+                <strong style={{ color: '#F57C00', fontSize: '12px' }}>💡 Pro Tips:</strong>
+                <p style={{ margin: '6px 0 0 0', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+                  {customAnswer.tips}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Category Filter */}
       {questions.length > 0 && (
         <div style={{ marginBottom: '20px' }}>

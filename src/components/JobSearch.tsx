@@ -339,11 +339,17 @@ export function JobSearch({ userId }: { userId: number }) {
     // Determine background color based on status
     let bgColor = 'var(--card-bg)';
     let borderColor = 'var(--border)';
+    let showIcon = true;
     
-    if (status === 'auditor_done') {
+    // Only show icon if document has been generated or is in progress
+    if (!status || status === 'none') {
+      // Show dashed border to indicate not yet generated
+      bgColor = 'var(--bg-tertiary)';
+      borderColor = 'var(--border)';
+    } else if (status === 'auditor_done') {
       bgColor = 'var(--success-light)';
       borderColor = 'var(--success)';
-    } else if (status === 'thinker_done') {
+    } else if (status === 'thinker_done' || status === 'generating') {
       bgColor = 'var(--info-light)';
       borderColor = 'var(--info)';
     } else if (status === 'rejected' || status === 'failed') {
@@ -359,18 +365,19 @@ export function JobSearch({ userId }: { userId: number }) {
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           width: '28px', height: '28px', borderRadius: '6px', 
           background: bgColor, 
-          border: `1px solid ${borderColor}`,
+          border: (!status || status === 'none') ? `1px dashed ${borderColor}` : `1px solid ${borderColor}`,
           fontSize: '10px', position: 'relative', fontWeight: 'bold', color: 'var(--text-primary)',
-          transition: 'all 0.2s ease'
+          transition: 'all 0.2s ease',
+          opacity: (!status || status === 'none') ? 0.6 : 1
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.1)'; e.currentTarget.style.opacity = '1'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.opacity = (!status || status === 'none') ? '0.6' : '1'; }}
       >
         {shortLabel}
         {status === 'thinker_done' && <span style={{ position: 'absolute', bottom: -4, right: -2, color: 'var(--success)', fontSize: '14px' }}>✓</span>}
         {status === 'auditor_done' && <span style={{ position: 'absolute', bottom: -4, right: -2, color: 'var(--success)', fontSize: '14px' }}>✓✓</span>}
         {(status === 'rejected' || status === 'failed') && <span style={{ position: 'absolute', bottom: -4, right: -2, color: 'var(--danger)', fontSize: '14px' }}>⚠</span>}
-        {(!status || status === 'none') && <span style={{ position: 'absolute', bottom: -2, right: -1, fontSize: '8px' }}>🔄</span>}
+        {status === 'generating' && <span style={{ position: 'absolute', bottom: -2, right: -1, fontSize: '8px' }}>⏳</span>}
       </div>
     );
   };

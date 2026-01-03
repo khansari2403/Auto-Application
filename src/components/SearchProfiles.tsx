@@ -1,194 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
-
-// ==========================================
-// LOCAL JOB TITLES DATABASE (Extensive List)
-// ==========================================
-const JOB_TITLES_DATABASE = [
-  // Project Management
-  'Project Manager', 'Assistant Project Manager', 'Senior Project Manager', 'Program Manager',
-  'Project Coordinator', 'Project Director', 'Technical Project Manager', 'IT Project Manager',
-  'Construction Project Manager', 'Agile Project Manager', 'Scrum Master', 'PMO Manager',
-  'Portfolio Manager', 'Delivery Manager', 'Release Manager', 'Change Manager',
-  
-  // Software Development
-  'Software Engineer', 'Senior Software Engineer', 'Lead Software Engineer', 'Principal Engineer',
-  'Frontend Developer', 'Backend Developer', 'Full Stack Developer', 'Mobile Developer',
-  'iOS Developer', 'Android Developer', 'React Developer', 'Angular Developer', 'Vue.js Developer',
-  'Node.js Developer', 'Python Developer', 'Java Developer', '.NET Developer', 'PHP Developer',
-  'Ruby Developer', 'Go Developer', 'Rust Developer', 'C++ Developer', 'Embedded Developer',
-  'Web Developer', 'WordPress Developer', 'Shopify Developer', 'E-commerce Developer',
-  'API Developer', 'Microservices Engineer', 'Solutions Architect', 'Technical Lead',
-  'Engineering Manager', 'VP of Engineering', 'CTO', 'Software Architect',
-  
-  // Data & AI
-  'Data Scientist', 'Data Analyst', 'Data Engineer', 'Machine Learning Engineer',
-  'AI Engineer', 'Business Intelligence Analyst', 'Data Architect', 'Analytics Manager',
-  'Deep Learning Engineer', 'NLP Engineer', 'Computer Vision Engineer', 'Research Scientist',
-  'MLOps Engineer', 'AI Researcher', 'Data Science Manager', 'Chief Data Officer',
-  'Quantitative Analyst', 'Statistical Analyst', 'Predictive Modeler',
-  
-  // DevOps & Cloud
-  'DevOps Engineer', 'Site Reliability Engineer', 'Cloud Engineer', 'Cloud Architect',
-  'Platform Engineer', 'Infrastructure Engineer', 'Systems Administrator', 'Network Engineer',
-  'Security Engineer', 'Cybersecurity Analyst', 'Kubernetes Engineer', 'AWS Architect',
-  'Azure Engineer', 'GCP Engineer', 'Linux Administrator', 'Database Administrator',
-  'IT Support Specialist', 'Help Desk Technician', 'IT Manager', 'IT Director',
-  
-  // Design
-  'UX Designer', 'UI Designer', 'Product Designer', 'UX Researcher', 'Graphic Designer',
-  'Visual Designer', 'Interaction Designer', 'Design Lead', 'Creative Director',
-  'Motion Designer', 'Brand Designer', 'Web Designer', '3D Designer', 'Game Designer',
-  'Interior Designer', 'Industrial Designer', 'Fashion Designer', 'Design Manager',
-  
-  // Product & Business
-  'Product Manager', 'Senior Product Manager', 'Product Owner', 'Product Director',
-  'Business Analyst', 'Systems Analyst', 'Requirements Analyst', 'Technical Analyst',
-  'Management Consultant', 'Strategy Consultant', 'Business Development Manager',
-  'Chief Product Officer', 'VP of Product', 'Growth Product Manager',
-  
-  // QA & Testing
-  'QA Engineer', 'QA Analyst', 'Test Engineer', 'Automation Engineer', 'SDET',
-  'Quality Manager', 'Test Lead', 'Performance Engineer', 'QA Manager',
-  'Quality Assurance Director', 'Test Architect', 'Manual Tester',
-  
-  // Marketing & Sales
-  'Marketing Manager', 'Digital Marketing Manager', 'Content Manager', 'SEO Specialist',
-  'Social Media Manager', 'Brand Manager', 'Marketing Director', 'Growth Manager',
-  'Sales Representative', 'Account Executive', 'Sales Manager', 'Business Development Rep',
-  'Customer Success Manager', 'Account Manager', 'Sales Director', 'CMO',
-  'Email Marketing Specialist', 'PPC Specialist', 'Content Writer', 'Copywriter',
-  'Marketing Coordinator', 'Event Manager', 'PR Manager', 'Communications Manager',
-  
-  // HR & People
-  'HR Manager', 'HR Business Partner', 'Recruiter', 'Talent Acquisition Specialist',
-  'People Operations Manager', 'HR Director', 'Compensation Analyst', 'L&D Manager',
-  'HR Coordinator', 'Benefits Administrator', 'Payroll Specialist', 'HR Generalist',
-  'Employee Relations Manager', 'CHRO', 'VP of People', 'Culture Manager',
-  
-  // Finance & Accounting
-  'Financial Analyst', 'Accountant', 'Senior Accountant', 'Controller', 'CFO',
-  'Tax Accountant', 'Auditor', 'FP&A Analyst', 'Treasury Analyst', 'Investment Analyst',
-  'Bookkeeper', 'Accounts Payable Specialist', 'Accounts Receivable Specialist',
-  'Financial Controller', 'Finance Manager', 'Credit Analyst', 'Risk Analyst',
-  
-  // Operations & Management
-  'Operations Manager', 'Operations Director', 'COO', 'General Manager', 'Office Manager',
-  'Facilities Manager', 'Supply Chain Manager', 'Logistics Manager', 'Procurement Manager',
-  'Warehouse Manager', 'Inventory Manager', 'Production Manager', 'Plant Manager',
-  'Shift Supervisor', 'Team Lead', 'Department Manager', 'Branch Manager',
-  
-  // Legal
-  'Legal Counsel', 'Corporate Lawyer', 'Compliance Officer', 'Paralegal', 'Contract Manager',
-  'Legal Assistant', 'IP Lawyer', 'Employment Lawyer', 'General Counsel', 'Legal Manager',
-  
-  // Healthcare
-  'Healthcare Administrator', 'Clinical Manager', 'Medical Director', 'Nurse Manager',
-  'Health Informatics Specialist', 'Clinical Research Coordinator', 'Registered Nurse',
-  'Physician', 'Pharmacist', 'Medical Assistant', 'Healthcare Consultant',
-  'Practice Manager', 'Patient Coordinator', 'Health Coach',
-  
-  // Education
-  'Teacher', 'Professor', 'Instructor', 'Tutor', 'Training Manager', 'Curriculum Developer',
-  'Academic Advisor', 'School Administrator', 'Principal', 'Dean', 'Education Consultant',
-  
-  // Warehouse & Logistics
-  'Warehouse Worker', 'Warehouse Supervisor', 'Forklift Operator', 'Picker/Packer',
-  'Shipping Clerk', 'Receiving Clerk', 'Inventory Clerk', 'Distribution Manager',
-  'Logistics Coordinator', 'Supply Chain Analyst', 'Transportation Manager',
-  'Delivery Driver', 'Courier', 'Fleet Manager',
-  
-  // Construction & Trades
-  'Construction Worker', 'Carpenter', 'Electrician', 'Plumber', 'HVAC Technician',
-  'Welder', 'Mason', 'Painter', 'Roofer', 'Site Supervisor', 'Site Manager',
-  'Construction Manager', 'Civil Engineer', 'Structural Engineer', 'Architect',
-  
-  // Retail & Hospitality
-  'Retail Associate', 'Store Manager', 'Cashier', 'Sales Associate', 'Visual Merchandiser',
-  'Restaurant Manager', 'Chef', 'Cook', 'Server', 'Bartender', 'Host/Hostess',
-  'Hotel Manager', 'Front Desk Agent', 'Concierge', 'Housekeeping Manager',
-  'Event Coordinator', 'Catering Manager', 'Banquet Manager',
-  
-  // Customer Service
-  'Customer Service Representative', 'Support Specialist', 'Call Center Agent',
-  'Client Relations Manager', 'Technical Support', 'Customer Experience Manager',
-  'Complaints Handler', 'Service Desk Analyst', 'Help Desk Support',
-  
-  // Media & Entertainment
-  'Video Editor', 'Film Director', 'Producer', 'Photographer', 'Videographer',
-  'Sound Engineer', 'Music Producer', 'Journalist', 'Reporter', 'Editor',
-  'Content Creator', 'Social Media Influencer', 'Podcast Producer',
-  
-  // Research & Science
-  'Research Scientist', 'Lab Technician', 'Research Assistant', 'Scientist',
-  'Chemist', 'Biologist', 'Physicist', 'Environmental Scientist', 'Research Director',
-  
-  // Other
-  'Technical Writer', 'Documentation Specialist', 'Executive Assistant', 'Administrative Assistant',
-  'Office Administrator', 'Receptionist', 'Virtual Assistant', 'Personal Assistant',
-  'Translator', 'Interpreter', 'Grant Writer', 'Proposal Writer', 'Freelancer', 'Consultant'
-];
-
-// ==========================================
-// INDUSTRIES DATABASE (20+)
-// ==========================================
-const INDUSTRIES = [
-  'Technology/IT',
-  'Healthcare/Medical',
-  'Finance/Banking',
-  'Insurance',
-  'Education',
-  'Manufacturing',
-  'Retail/E-commerce',
-  'Telecommunications',
-  'Energy/Utilities',
-  'Real Estate',
-  'Construction',
-  'Transportation/Logistics',
-  'Media/Entertainment',
-  'Hospitality/Tourism',
-  'Legal Services',
-  'Consulting',
-  'Government/Public Sector',
-  'Non-Profit/NGO',
-  'Automotive',
-  'Aerospace/Defense',
-  'Pharmaceutical',
-  'Agriculture',
-  'Food & Beverage'
-];
-
-// ==========================================
-// CERTIFICATIONS DATABASE (by job category)
-// ==========================================
-const CERTIFICATIONS_DATABASE: Record<string, string[]> = {
-  'project': ['PMP', 'PRINCE2', 'CAPM', 'CSM', 'PMI-ACP', 'Agile Certified Practitioner', 'Six Sigma Green Belt', 'Six Sigma Black Belt', 'Lean Six Sigma'],
-  'software': ['AWS Certified Developer', 'AWS Solutions Architect', 'Azure Developer', 'Google Cloud Professional', 'Kubernetes Administrator (CKA)', 'Docker Certified Associate'],
-  'data': ['AWS Machine Learning', 'Google Data Engineer', 'Azure Data Scientist', 'Databricks Certified', 'Tableau Desktop Specialist', 'Power BI Certification'],
-  'security': ['CISSP', 'CISM', 'CEH', 'CompTIA Security+', 'OSCP', 'CISA', 'GSEC'],
-  'network': ['CCNA', 'CCNP', 'CompTIA Network+', 'JNCIA', 'AWS Networking'],
-  'design': ['Google UX Design', 'Adobe Certified Expert', 'HFI CUA', 'Nielsen Norman Group UX'],
-  'hr': ['SHRM-CP', 'SHRM-SCP', 'PHR', 'SPHR', 'CIPD'],
-  'finance': ['CPA', 'CFA', 'CMA', 'FRM', 'CIA', 'CFP'],
-  'marketing': ['Google Ads Certification', 'HubSpot Certification', 'Facebook Blueprint', 'Google Analytics'],
-  'sales': ['Salesforce Certified', 'HubSpot Sales', 'Sandler Training'],
-  'general': ['ITIL Foundation', 'Scrum Master', 'Product Owner', 'Change Management']
-};
-
-const LANGUAGES = [
-  'English', 'German', 'Spanish', 'French', 'Mandarin Chinese', 'Japanese', 
-  'Russian', 'Italian', 'Portuguese', 'Arabic', 'Dutch', 'Korean', 
-  'Polish', 'Turkish', 'Swedish', 'Hindi'
-];
-
-const EXPERIENCE_LEVELS = [
-  'Entry-Level/Junior',
-  'Mid-Level',
-  'Senior',
-  'Lead',
-  'Manager',
-  'Director',
-  'Executive/C-Level'
-];
+import { 
+  JOB_TITLES_DATABASE, 
+  INDUSTRIES, 
+  CERTIFICATIONS_DATABASE, 
+  LANGUAGES, 
+  EXPERIENCE_LEVELS 
+} from '../data/job-search-data';
+import { TagsDisplay, ScrollableMultiSelect } from './search-profiles';
 
 export function SearchProfiles({ userId }: { userId: number }) {
   const [profiles, setProfiles] = useState<any[]>([]);
@@ -227,254 +45,220 @@ export function SearchProfiles({ userId }: { userId: number }) {
       setSelectedJobTitles(editing.job_titles ? editing.job_titles.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
       setSelectedIndustries(editing.industry ? editing.industry.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
       setExcludedIndustries(editing.excluded_industries ? editing.excluded_industries.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
-      setSelectedExperienceLevels(editing.experience_levels ? editing.experience_levels.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+      setSelectedExperienceLevels(editing.experience_level ? editing.experience_level.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
       setSelectedCertifications(editing.certifications ? editing.certifications.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
       setSelectedLanguages(editing.languages ? editing.languages.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
     }
   }, [editing]);
 
+  // Auto-save when selections change
+  useEffect(() => {
+    if (editing) {
+      const saveData = async () => {
+        const updated = {
+          ...editing,
+          job_titles: selectedJobTitles.join(', '),
+          industry: selectedIndustries.join(', '),
+          excluded_industries: excludedIndustries.join(', '),
+          experience_level: selectedExperienceLevels.join(', '),
+          certifications: selectedCertifications.join(', '),
+          languages: selectedLanguages.join(', ')
+        };
+        await (window as any).electron.invoke('profiles:update', updated);
+        loadProfiles();
+      };
+      const timeout = setTimeout(saveData, 500);
+      return () => clearTimeout(timeout);
+    }
+  }, [selectedJobTitles, selectedIndustries, excludedIndustries, selectedExperienceLevels, selectedCertifications, selectedLanguages]);
+
+  // Filtered job titles for search
+  const filteredJobTitles = useMemo(() => {
+    if (!jobTitleSearch.trim()) return JOB_TITLES_DATABASE.slice(0, 50);
+    const search = jobTitleSearch.toLowerCase();
+    return JOB_TITLES_DATABASE.filter(title => 
+      title.toLowerCase().includes(search)
+    ).slice(0, 50);
+  }, [jobTitleSearch]);
+
   // Get relevant certifications based on selected job titles
   const relevantCertifications = useMemo(() => {
     const certs = new Set<string>();
-    selectedJobTitles.forEach(title => {
-      const lowerTitle = title.toLowerCase();
-      Object.entries(CERTIFICATIONS_DATABASE).forEach(([key, certList]) => {
-        if (lowerTitle.includes(key) || 
-            (key === 'project' && lowerTitle.includes('manager')) ||
-            (key === 'software' && (lowerTitle.includes('developer') || lowerTitle.includes('engineer'))) ||
-            (key === 'data' && (lowerTitle.includes('data') || lowerTitle.includes('analyst'))) ||
-            (key === 'security' && lowerTitle.includes('security')) ||
-            (key === 'hr' && lowerTitle.includes('hr')) ||
-            (key === 'finance' && (lowerTitle.includes('finance') || lowerTitle.includes('account'))) ||
-            (key === 'marketing' && lowerTitle.includes('marketing')) ||
-            (key === 'sales' && lowerTitle.includes('sales'))) {
-          certList.forEach(c => certs.add(c));
-        }
-      });
-    });
-    // Always add general certs
-    CERTIFICATIONS_DATABASE.general.forEach(c => certs.add(c));
+    const jobTitlesLower = selectedJobTitles.map(t => t.toLowerCase());
+    
+    if (jobTitlesLower.some(t => t.includes('project') || t.includes('scrum') || t.includes('agile'))) {
+      CERTIFICATIONS_DATABASE['project'].forEach(c => certs.add(c));
+    }
+    if (jobTitlesLower.some(t => t.includes('software') || t.includes('developer') || t.includes('engineer'))) {
+      CERTIFICATIONS_DATABASE['software'].forEach(c => certs.add(c));
+    }
+    if (jobTitlesLower.some(t => t.includes('data') || t.includes('machine learning') || t.includes('ai'))) {
+      CERTIFICATIONS_DATABASE['data'].forEach(c => certs.add(c));
+    }
+    if (jobTitlesLower.some(t => t.includes('security') || t.includes('cyber'))) {
+      CERTIFICATIONS_DATABASE['security'].forEach(c => certs.add(c));
+    }
+    if (jobTitlesLower.some(t => t.includes('network') || t.includes('infrastructure'))) {
+      CERTIFICATIONS_DATABASE['network'].forEach(c => certs.add(c));
+    }
+    if (jobTitlesLower.some(t => t.includes('design') || t.includes('ux') || t.includes('ui'))) {
+      CERTIFICATIONS_DATABASE['design'].forEach(c => certs.add(c));
+    }
+    if (jobTitlesLower.some(t => t.includes('hr') || t.includes('recruiter') || t.includes('people'))) {
+      CERTIFICATIONS_DATABASE['hr'].forEach(c => certs.add(c));
+    }
+    if (jobTitlesLower.some(t => t.includes('finance') || t.includes('account') || t.includes('cfo'))) {
+      CERTIFICATIONS_DATABASE['finance'].forEach(c => certs.add(c));
+    }
+    if (jobTitlesLower.some(t => t.includes('marketing') || t.includes('seo') || t.includes('content'))) {
+      CERTIFICATIONS_DATABASE['marketing'].forEach(c => certs.add(c));
+    }
+    if (jobTitlesLower.some(t => t.includes('sales') || t.includes('account executive'))) {
+      CERTIFICATIONS_DATABASE['sales'].forEach(c => certs.add(c));
+    }
+    
+    CERTIFICATIONS_DATABASE['general'].forEach(c => certs.add(c));
     return Array.from(certs);
   }, [selectedJobTitles]);
 
-  // Filter job titles based on search
-  const filteredJobTitles = useMemo(() => {
-    if (!jobTitleSearch) return JOB_TITLES_DATABASE.slice(0, 20);
-    return JOB_TITLES_DATABASE.filter(t => 
-      t.toLowerCase().includes(jobTitleSearch.toLowerCase())
-    ).slice(0, 15);
-  }, [jobTitleSearch]);
-
-  const handleSave = async () => {
-    const profileData = {
-      ...editing,
-      job_titles: selectedJobTitles.join(', '),
-      industry: selectedIndustries.join(', '),
-      excluded_industries: excludedIndustries.join(', '),
-      experience_levels: selectedExperienceLevels.join(', '),
-      certifications: selectedCertifications.join(', '),
-      languages: selectedLanguages.join(', '),
-    };
-    await (window as any).electron.invoke('profiles:update', profileData);
-    // Clear states before reloading
-    setSelectedJobTitles([]);
-    setSelectedIndustries([]);
-    setExcludedIndustries([]);
-    setSelectedExperienceLevels([]);
-    setSelectedCertifications([]);
-    setSelectedLanguages([]);
-    setEditing(null);
-    loadProfiles();
-    alert("Search Profile Saved!");
-  };
-
-  // Toggle selection without resetting other fields
-  const toggleSelection = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
-    setList(prev => {
-      if (prev.includes(value)) {
-        return prev.filter(i => i !== value);
-      } else {
-        return [...prev, value];
-      }
-    });
-  };
-
-  const addCustomJobTitle = () => {
-    if (jobTitleSearch && !selectedJobTitles.includes(jobTitleSearch)) {
-      setSelectedJobTitles([...selectedJobTitles, jobTitleSearch]);
-      setJobTitleSearch('');
-    }
+  const toggleSelection = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, item: string) => {
+    setList(prev => prev.includes(item) ? prev.filter(i => i !== item) : [...prev, item]);
   };
 
   const addCustomCertification = () => {
-    if (customCertification && !selectedCertifications.includes(customCertification)) {
-      setSelectedCertifications([...selectedCertifications, customCertification]);
+    if (customCertification.trim() && !selectedCertifications.includes(customCertification.trim())) {
+      setSelectedCertifications(prev => [...prev, customCertification.trim()]);
       setCustomCertification('');
     }
   };
 
-  const inputStyle = { width: '100%', padding: '8px', marginBottom: '8px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '12px', background: 'var(--input-bg)', color: 'var(--text-primary)' };
-  const labelStyle: React.CSSProperties = { display: 'block', fontWeight: 'bold', marginBottom: '4px', color: 'var(--primary)', fontSize: '11px' };
-  const groupStyle = { background: 'var(--bg-secondary)', padding: '12px', borderRadius: '10px', marginBottom: '12px', border: '1px solid var(--border)' };
+  // Styles
+  const inputStyle: React.CSSProperties = { 
+    width: '100%', 
+    padding: '10px', 
+    marginBottom: '10px', 
+    border: '1px solid var(--border)', 
+    borderRadius: '6px', 
+    fontSize: '12px',
+    background: 'var(--input-bg)',
+    color: 'var(--text-primary)'
+  };
+  
+  const labelStyle: React.CSSProperties = { 
+    display: 'block', 
+    marginBottom: '5px', 
+    fontSize: '11px', 
+    fontWeight: 600, 
+    color: 'var(--text-primary)' 
+  };
 
-  // Multi-Select Scrollable Component
-  const ScrollableMultiSelect = ({ label, options, selected, setSelected, maxHeight = '120px' }: any) => (
-    <div style={{ marginBottom: '10px' }}>
-      <label style={labelStyle}>{label} ({selected.length} selected)</label>
-      <div style={{ 
-        maxHeight, 
-        overflowY: 'auto', 
-        padding: '8px', 
-        border: '1px solid var(--border)', 
-        borderRadius: '6px', 
-        background: 'var(--card-bg)' 
-      }}>
-        {options.map((opt: string) => (
-          <label key={opt} style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '6px', 
-            padding: '4px 0', 
-            cursor: 'pointer',
-            fontSize: '11px',
-            borderBottom: '1px solid var(--border-light)',
-            color: 'var(--text-primary)'
-          }}>
-            <input 
-              type="checkbox" 
-              checked={selected.includes(opt)} 
-              onChange={() => toggleSelection(selected, setSelected, opt)}
-              style={{ cursor: 'pointer' }}
-            />
-            {opt}
-          </label>
-        ))}
-      </div>
-    </div>
-  );
-
-  // Selected Tags Display
-  const TagsDisplay = ({ items, onRemove }: { items: string[], onRemove: (item: string) => void }) => (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
-      {items.map(item => (
-        <span key={item} style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '4px',
-          padding: '2px 8px',
-          background: 'var(--info-light)',
-          color: 'var(--primary)',
-          borderRadius: '12px',
-          fontSize: '10px'
-        }}>
-          {item}
-          <button onClick={() => onRemove(item)} style={{ 
-            border: 'none', 
-            background: 'none', 
-            cursor: 'pointer', 
-            color: 'var(--primary)',
-            padding: 0,
-            fontSize: '12px'
-          }}>×</button>
-        </span>
-      ))}
-    </div>
-  );
+  const groupStyle: React.CSSProperties = {
+    background: 'var(--bg-secondary)',
+    padding: '12px',
+    borderRadius: '8px',
+    marginBottom: '12px',
+    border: '1px solid var(--border)'
+  };
 
   if (editing) {
     return (
-      <div style={{ padding: '20px', background: 'var(--card-bg)', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div style={{ padding: '20px', background: 'var(--bg-primary)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h3 style={{ margin: 0, color: 'var(--text-primary)' }}>⚙️ {editing.is_speculative ? '🚀 Speculative Application Settings' : `Criteria: ${editing.profile_name}`}</h3>
-          <button onClick={handleSave} style={{ padding: '10px 30px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>✅ Save Profile</button>
+          <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>⚙️ Configure: {editing.profile_name}</h2>
+          <button onClick={() => setEditing(null)} style={{ padding: '10px 25px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>✓ Done</button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
-          {/* Column 1: Target & Core */}
+        {/* 3-Column Layout */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px' }}>
+          {/* Column 1: Job Preferences */}
           <div>
             <div style={groupStyle}>
-              <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🎯 Target & Core</h4>
+              <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>💼 Job Preferences</h4>
               
-              {/* Job Titles Multi-Select */}
-              <label style={labelStyle}>Job Titles (Multiple Selection)</label>
-              <TagsDisplay items={selectedJobTitles} onRemove={(t) => setSelectedJobTitles(selectedJobTitles.filter(i => i !== t))} />
-              <div 
-                style={{ position: 'relative', zIndex: 100 }}
-                onMouseLeave={() => setShowJobTitleDropdown(false)}
-              >
+              {/* Selected Job Titles Tags */}
+              <TagsDisplay items={selectedJobTitles} onRemove={(title) => setSelectedJobTitles(prev => prev.filter(t => t !== title))} />
+              
+              {/* Job Title Search */}
+              <label style={labelStyle}>Search & Add Job Titles</label>
+              <div style={{ position: 'relative' }}>
                 <input 
-                  style={inputStyle}
-                  value={jobTitleSearch}
-                  onChange={(e) => { setJobTitleSearch(e.target.value); setShowJobTitleDropdown(true); }}
+                  style={inputStyle} 
+                  value={jobTitleSearch} 
+                  onChange={e => { setJobTitleSearch(e.target.value); setShowJobTitleDropdown(true); }}
                   onFocus={() => setShowJobTitleDropdown(true)}
-                  placeholder="Search or type custom job title..."
+                  placeholder="Type to search job titles..." 
                 />
-                <button 
-                  onClick={addCustomJobTitle}
-                  style={{ position: 'absolute', right: '5px', top: '5px', padding: '4px 8px', fontSize: '10px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
-                >
-                  + Add
-                </button>
                 {showJobTitleDropdown && (
                   <div style={{ 
                     position: 'absolute', 
                     top: '100%', 
                     left: 0, 
                     right: 0, 
+                    maxHeight: '200px', 
+                    overflowY: 'auto', 
                     background: 'var(--card-bg)', 
                     border: '1px solid var(--border)', 
                     borderRadius: '6px', 
-                    zIndex: 9999, 
-                    maxHeight: '200px', 
-                    overflowY: 'auto',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                    zIndex: 100,
+                    boxShadow: 'var(--shadow-lg)'
                   }}>
                     {filteredJobTitles.map(title => (
                       <div 
                         key={title}
                         onClick={() => {
                           if (!selectedJobTitles.includes(title)) {
-                            setSelectedJobTitles([...selectedJobTitles, title]);
+                            setSelectedJobTitles(prev => [...prev, title]);
                           }
                           setJobTitleSearch('');
+                          setShowJobTitleDropdown(false);
                         }}
                         style={{ 
                           padding: '8px 12px', 
                           cursor: 'pointer', 
                           fontSize: '12px',
                           borderBottom: '1px solid var(--border-light)',
-                          background: selectedJobTitles.includes(title) ? 'var(--info-light)' : 'transparent',
+                          background: selectedJobTitles.includes(title) ? 'var(--success-light)' : 'transparent',
                           color: 'var(--text-primary)'
                         }}
                       >
-                        {title} {selectedJobTitles.includes(title) && '✓'}
+                        {selectedJobTitles.includes(title) ? '✓ ' : ''}{title}
                       </div>
                     ))}
+                    <div 
+                      onClick={() => setShowJobTitleDropdown(false)}
+                      style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '11px', background: 'var(--bg-tertiary)', textAlign: 'center', color: 'var(--text-secondary)' }}
+                    >
+                      Close
+                    </div>
                   </div>
                 )}
               </div>
 
-              <label style={labelStyle}>Location</label>
-              <input style={inputStyle} value={editing.location || 'Any'} onChange={e => setEditing({...editing, location: e.target.value})} />
-              
-              <label style={labelStyle}>Job Type</label>
-              <select style={inputStyle} value={editing.job_type || 'Any'} onChange={e => setEditing({...editing, job_type: e.target.value})}>
-                <option value="Any">Any</option>
-                <option value="Full-Time">Full-Time</option>
-                <option value="Part-Time">Part-Time</option>
-                <option value="Internship">Internship</option>
-                <option value="Freelance">Freelance</option>
-                <option value="Contract">Contract</option>
-              </select>
-
-              {/* Experience Level Multi-Select */}
+              {/* Experience Levels */}
               <ScrollableMultiSelect 
-                label="Experience Level (Multiple)" 
+                label="Experience Levels" 
                 options={EXPERIENCE_LEVELS} 
                 selected={selectedExperienceLevels} 
                 setSelected={setSelectedExperienceLevels}
                 maxHeight="100px"
               />
+              
+              {/* Location */}
+              <label style={labelStyle}>Location</label>
+              <input style={inputStyle} value={editing.location || ''} onChange={e => setEditing({...editing, location: e.target.value})} placeholder="e.g., Berlin, Remote, Germany..." />
+              
+              {/* Remote/On-site */}
+              <label style={labelStyle}>Work Type</label>
+              <select style={inputStyle} value={editing.remote_preference || 'Any'} onChange={e => setEditing({...editing, remote_preference: e.target.value})}>
+                <option value="Any">Any</option>
+                <option value="Remote Only">Remote Only</option>
+                <option value="Hybrid">Hybrid</option>
+                <option value="On-site Only">On-site Only</option>
+              </select>
+
+              {/* Salary Range */}
+              <label style={labelStyle}>Minimum Salary (Optional)</label>
+              <input style={inputStyle} type="number" value={editing.min_salary || ''} onChange={e => setEditing({...editing, min_salary: e.target.value})} placeholder="e.g., 50000" />
             </div>
           </div>
 
@@ -556,7 +340,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
             <div style={groupStyle}>
               <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>📜 Certifications</h4>
               
-              <TagsDisplay items={selectedCertifications} onRemove={(c) => setSelectedCertifications(selectedCertifications.filter(i => i !== c))} />
+              <TagsDisplay items={selectedCertifications} onRemove={(c) => setSelectedCertifications(prev => prev.filter(i => i !== c))} />
               
               <label style={labelStyle}>Relevant Certifications (based on job titles)</label>
               <div style={{ 

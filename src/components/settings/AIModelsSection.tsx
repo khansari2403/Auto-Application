@@ -129,6 +129,7 @@ function AIModelsSection({ userId }: { userId: number }) {
                 <option value='Hunter'>🚀 The Hunter</option>
                 <option value='Thinker'>🧠 The Thinker</option>
                 <option value='Auditor'>🧐 The Auditor</option>
+                <option value='HR AI'>🎯 HR AI (Interview & Compatibility)</option>
                 <option value='Librarian'>📚 The Librarian</option>
                 <option value='Secretary'>📧 The Secretary</option>
                 <option value='Observer'>👁️ The Observer</option>

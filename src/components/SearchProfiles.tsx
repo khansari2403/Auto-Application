@@ -273,6 +273,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
       excluded_industries: excludedIndustries.join(', '),
       experience_levels: selectedExperienceLevels.join(', '),
       certifications: selectedCertifications.join(', '),
+      languages: selectedLanguages.join(', '),
     };
     await (window as any).electron.invoke('profiles:update', profileData);
     // Clear states before reloading
@@ -281,6 +282,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
     setExcludedIndustries([]);
     setSelectedExperienceLevels([]);
     setSelectedCertifications([]);
+    setSelectedLanguages([]);
     setEditing(null);
     loadProfiles();
     alert("Search Profile Saved!");

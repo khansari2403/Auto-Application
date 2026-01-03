@@ -271,17 +271,26 @@ export function SearchProfiles({ userId }: { userId: number }) {
       certifications: selectedCertifications.join(', '),
     };
     await (window as any).electron.invoke('profiles:update', profileData);
+    // Clear states before reloading
+    setSelectedJobTitles([]);
+    setSelectedIndustries([]);
+    setExcludedIndustries([]);
+    setSelectedExperienceLevels([]);
+    setSelectedCertifications([]);
     setEditing(null);
     loadProfiles();
     alert("Search Profile Saved!");
   };
 
-  const toggleSelection = (list: string[], setList: Function, value: string) => {
-    if (list.includes(value)) {
-      setList(list.filter(i => i !== value));
-    } else {
-      setList([...list, value]);
-    }
+  // Toggle selection without resetting other fields
+  const toggleSelection = (list: string[], setList: React.Dispatch<React.SetStateAction<string[]>>, value: string) => {
+    setList(prev => {
+      if (prev.includes(value)) {
+        return prev.filter(i => i !== value);
+      } else {
+        return [...prev, value];
+      }
+    });
   };
 
   const addCustomJobTitle = () => {

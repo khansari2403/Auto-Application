@@ -1,25 +1,15 @@
 import { useState, useEffect } from 'react';
-
-interface InterviewQuestion {
-  id: string;
-  category: 'get_to_know' | 'psychological' | 'aptitude' | 'culture' | 'position_specific';
-  question: string;
-  suggestedAnswer: string;
-  difficulty: 'easy' | 'medium' | 'hard';
-  tips?: string;
-}
+import { 
+  QUESTION_CATEGORIES, 
+  InterviewQuestion, 
+  getDifficultyColor,
+  InterviewEtiquette,
+  HRAIInfoBox 
+} from './interview-insider';
 
 interface Props {
   userId: number;
 }
-
-const QUESTION_CATEGORIES = [
-  { id: 'get_to_know', label: 'Get to Know You', icon: '👋', description: 'Personal background and career goals' },
-  { id: 'psychological', label: 'Psychological', icon: '🧠', description: 'Behavioral and situational questions' },
-  { id: 'aptitude', label: 'Aptitude', icon: '📊', description: 'Problem-solving and analytical skills' },
-  { id: 'culture', label: 'Culture Fit', icon: '🤝', description: 'Values alignment and team dynamics' },
-  { id: 'position_specific', label: 'Position Specific', icon: '💼', description: 'Technical skills and role requirements' },
-];
 
 export function InterviewInsider({ userId }: Props) {
   const [jobUrl, setJobUrl] = useState('');
@@ -52,7 +42,6 @@ export function InterviewInsider({ userId }: Props) {
     setError(null);
 
     try {
-      // Call HR AI to generate interview questions
       const result = await (window as any).electron.invoke('ai:generate-interview-prep', { 
         jobUrl, 
         userId,
@@ -61,7 +50,6 @@ export function InterviewInsider({ userId }: Props) {
 
       if (result.success) {
         if (generateMore) {
-          // Append new questions to existing ones
           setQuestions(prev => [...prev, ...(result.questions || [])]);
         } else {
           setQuestions(result.questions || []);
@@ -79,7 +67,6 @@ export function InterviewInsider({ userId }: Props) {
     }
   };
 
-  // Handle custom question from user
   const handleAskQuestion = async () => {
     if (!customQuestion.trim()) {
       setError('Please enter your question');
@@ -116,15 +103,6 @@ export function InterviewInsider({ userId }: Props) {
   const filteredQuestions = selectedCategory 
     ? questions.filter(q => q.category === selectedCategory)
     : questions;
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'easy': return 'var(--success)';
-      case 'medium': return 'var(--warning)';
-      case 'hard': return 'var(--danger)';
-      default: return 'var(--text-secondary)';
-    }
-  };
 
   return (
     <div style={{ padding: '24px', fontFamily: 'sans-serif', background: 'var(--bg-primary)', minHeight: '100%' }}>
@@ -214,12 +192,7 @@ export function InterviewInsider({ userId }: Props) {
 
       {/* Job Info & Important Apps */}
       {jobInfo && (
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: '1fr 1fr', 
-          gap: '20px', 
-          marginBottom: '24px' 
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>
           <div style={{ 
             background: 'var(--card-bg)', 
             padding: '20px', 
@@ -306,81 +279,63 @@ export function InterviewInsider({ userId }: Props) {
           />
           <button
             onClick={handleAskQuestion}
-            disabled={isAskingQuestion || !customQuestion.trim()}
+            disabled={isAskingQuestion}
             style={{
               padding: '14px 28px',
-              background: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: '#fff',
               border: 'none',
               borderRadius: '10px',
-              cursor: (isAskingQuestion || !customQuestion.trim()) ? 'not-allowed' : 'pointer',
+              cursor: isAskingQuestion ? 'wait' : 'pointer',
               fontWeight: 'bold',
               fontSize: '14px',
-              opacity: (isAskingQuestion || !customQuestion.trim()) ? 0.6 : 1,
-              minWidth: '140px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
+              opacity: isAskingQuestion ? 0.7 : 1,
+              minWidth: '140px'
             }}
           >
-            {isAskingQuestion ? '⏳ Thinking...' : '🎤 Get Answer'}
+            {isAskingQuestion ? '⏳ Thinking...' : '💡 Get Answer'}
           </button>
         </div>
 
         {/* Custom Answer Display */}
         {customAnswer && (
           <div style={{ 
-            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)', 
-            padding: '20px', 
-            borderRadius: '12px',
-            border: '1px solid rgba(102, 126, 234, 0.3)'
+            background: 'var(--bg-secondary)', 
+            borderRadius: '12px', 
+            padding: '20px',
+            border: '1px solid var(--border)'
           }}>
             <div style={{ marginBottom: '16px' }}>
-              <span style={{ 
-                background: 'var(--primary)', 
-                color: '#fff', 
-                padding: '4px 12px', 
-                borderRadius: '20px', 
-                fontSize: '11px',
-                fontWeight: 'bold',
-                textTransform: 'uppercase'
-              }}>
-                Your Question
-              </span>
-              <p style={{ margin: '8px 0 0 0', color: 'var(--text-primary)', fontWeight: 600, fontSize: '15px' }}>
-                "{customAnswer.question}"
-              </p>
+              <div style={{ fontSize: '12px', color: 'var(--text-tertiary)', marginBottom: '4px' }}>Your Question:</div>
+              <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontStyle: 'italic' }}>"{customAnswer.question}"</div>
             </div>
             
             <div style={{ marginBottom: '16px' }}>
-              <span style={{ 
-                background: '#4CAF50', 
-                color: '#fff', 
-                padding: '4px 12px', 
-                borderRadius: '20px', 
-                fontSize: '11px',
-                fontWeight: 'bold',
-                textTransform: 'uppercase'
+              <div style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 'bold', marginBottom: '8px' }}>💡 Suggested Answer:</div>
+              <div style={{ 
+                fontSize: '14px', 
+                color: 'var(--text-primary)', 
+                lineHeight: '1.7',
+                padding: '12px',
+                background: 'var(--card-bg)',
+                borderRadius: '8px',
+                borderLeft: '3px solid var(--success)'
               }}>
-                Suggested Answer
-              </span>
-              <p style={{ margin: '8px 0 0 0', color: 'var(--text-primary)', fontSize: '14px', lineHeight: '1.7', whiteSpace: 'pre-wrap' }}>
                 {customAnswer.answer}
-              </p>
+              </div>
             </div>
             
             {customAnswer.tips && (
-              <div style={{ 
-                background: 'rgba(255, 193, 7, 0.15)', 
-                padding: '12px 16px', 
-                borderRadius: '8px',
-                borderLeft: '4px solid #FFC107'
-              }}>
-                <strong style={{ color: '#F57C00', fontSize: '12px' }}>💡 Pro Tips:</strong>
-                <p style={{ margin: '6px 0 0 0', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.6' }}>
+              <div>
+                <div style={{ fontSize: '12px', color: 'var(--info)', fontWeight: 'bold', marginBottom: '8px' }}>📝 Tips:</div>
+                <div style={{ 
+                  fontSize: '13px', 
+                  color: 'var(--text-secondary)', 
+                  lineHeight: '1.6',
+                  whiteSpace: 'pre-wrap'
+                }}>
                   {customAnswer.tips}
-                </p>
+                </div>
               </div>
             )}
           </div>
@@ -389,16 +344,16 @@ export function InterviewInsider({ userId }: Props) {
 
       {/* Category Filter */}
       {questions.length > 0 && (
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
             <button
               onClick={() => setSelectedCategory(null)}
               style={{
-                padding: '10px 18px',
-                borderRadius: '20px',
-                border: `2px solid ${!selectedCategory ? 'var(--primary)' : 'var(--border)'}`,
-                background: !selectedCategory ? 'var(--primary-light)' : 'var(--card-bg)',
-                color: !selectedCategory ? 'var(--primary)' : 'var(--text-primary)',
+                padding: '10px 20px',
+                borderRadius: '25px',
+                border: 'none',
+                background: !selectedCategory ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'var(--bg-tertiary)',
+                color: !selectedCategory ? '#fff' : 'var(--text-secondary)',
                 cursor: 'pointer',
                 fontWeight: 500,
                 fontSize: '13px'
@@ -414,17 +369,14 @@ export function InterviewInsider({ userId }: Props) {
                   key={cat.id}
                   onClick={() => setSelectedCategory(cat.id)}
                   style={{
-                    padding: '10px 18px',
-                    borderRadius: '20px',
-                    border: `2px solid ${selectedCategory === cat.id ? 'var(--primary)' : 'var(--border)'}`,
-                    background: selectedCategory === cat.id ? 'var(--primary-light)' : 'var(--card-bg)',
-                    color: selectedCategory === cat.id ? 'var(--primary)' : 'var(--text-primary)',
+                    padding: '10px 20px',
+                    borderRadius: '25px',
+                    border: 'none',
+                    background: selectedCategory === cat.id ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'var(--bg-tertiary)',
+                    color: selectedCategory === cat.id ? '#fff' : 'var(--text-secondary)',
                     cursor: 'pointer',
                     fontWeight: 500,
-                    fontSize: '13px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
+                    fontSize: '13px'
                   }}
                 >
                   {cat.icon} {cat.label} ({count})
@@ -436,110 +388,94 @@ export function InterviewInsider({ userId }: Props) {
       )}
 
       {/* Questions List */}
-      {questions.length > 0 && (
+      {filteredQuestions.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {filteredQuestions.map((q, index) => (
+          {filteredQuestions.map((q) => (
             <div 
               key={q.id}
               style={{ 
                 background: 'var(--card-bg)', 
-                borderRadius: '12px',
-                border: '1px solid var(--border)',
+                borderRadius: '12px', 
                 overflow: 'hidden',
-                transition: 'all 0.2s ease'
+                border: '1px solid var(--border)'
               }}
             >
-              {/* Question Header */}
               <div 
                 onClick={() => setExpandedQuestion(expandedQuestion === q.id ? null : q.id)}
                 style={{ 
-                  padding: '18px 20px',
+                  padding: '20px', 
                   cursor: 'pointer',
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center',
-                  background: expandedQuestion === q.id ? 'var(--bg-secondary)' : 'transparent'
+                  alignItems: 'center'
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
-                  <span style={{ 
-                    width: '32px', 
-                    height: '32px', 
-                    borderRadius: '50%', 
-                    background: 'var(--primary-light)', 
-                    color: 'var(--primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: 'bold',
-                    fontSize: '14px'
-                  }}>
-                    {index + 1}
-                  </span>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '15px' }}>
-                      {q.question}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
+                    <span style={{ 
+                      background: getDifficultyColor(q.difficulty),
+                      color: '#fff',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      textTransform: 'uppercase'
+                    }}>
+                      {q.difficulty}
                     </span>
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
-                      <span style={{ 
-                        fontSize: '11px', 
-                        padding: '2px 8px', 
-                        borderRadius: '10px',
-                        background: 'var(--bg-tertiary)',
-                        color: 'var(--text-secondary)'
-                      }}>
-                        {QUESTION_CATEGORIES.find(c => c.id === q.category)?.label}
-                      </span>
-                      <span style={{ 
-                        fontSize: '11px', 
-                        padding: '2px 8px', 
-                        borderRadius: '10px',
-                        background: getDifficultyColor(q.difficulty),
-                        color: '#fff'
-                      }}>
-                        {q.difficulty.charAt(0).toUpperCase() + q.difficulty.slice(1)}
-                      </span>
-                    </div>
+                    <span style={{ 
+                      background: 'var(--bg-tertiary)',
+                      padding: '4px 10px',
+                      borderRadius: '12px',
+                      fontSize: '11px',
+                      color: 'var(--text-secondary)'
+                    }}>
+                      {QUESTION_CATEGORIES.find(c => c.id === q.category)?.icon} {QUESTION_CATEGORIES.find(c => c.id === q.category)?.label}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {q.question}
                   </div>
                 </div>
-                <span style={{ fontSize: '20px', color: 'var(--text-tertiary)', transition: 'transform 0.2s', transform: expandedQuestion === q.id ? 'rotate(180deg)' : 'none' }}>
-                  ▼
+                <span style={{ fontSize: '20px', color: 'var(--text-tertiary)' }}>
+                  {expandedQuestion === q.id ? '▲' : '▼'}
                 </span>
               </div>
 
-              {/* Expanded Answer */}
               {expandedQuestion === q.id && (
                 <div style={{ 
-                  padding: '20px',
-                  borderTop: '1px solid var(--border)',
-                  background: 'var(--bg-secondary)'
+                  padding: '0 20px 20px 20px',
+                  borderTop: '1px solid var(--border)'
                 }}>
-                  <h4 style={{ margin: '0 0 12px 0', color: 'var(--success)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    ✅ Suggested Answer
-                  </h4>
-                  <p style={{ 
-                    margin: '0 0 16px 0', 
-                    color: 'var(--text-primary)', 
-                    fontSize: '14px',
-                    lineHeight: '1.7',
-                    whiteSpace: 'pre-wrap'
-                  }}>
-                    {q.suggestedAnswer}
-                  </p>
-                  
-                  {q.tips && (
+                  <div style={{ padding: '16px 0' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--success)', fontWeight: 'bold', marginBottom: '8px' }}>
+                      💡 Suggested Answer:
+                    </div>
                     <div style={{ 
-                      padding: '14px', 
-                      background: 'var(--info-light)', 
+                      fontSize: '14px', 
+                      color: 'var(--text-primary)', 
+                      lineHeight: '1.7',
+                      padding: '12px',
+                      background: 'var(--bg-secondary)',
                       borderRadius: '8px',
-                      borderLeft: '4px solid var(--info)'
+                      borderLeft: '3px solid var(--success)'
                     }}>
-                      <h5 style={{ margin: '0 0 6px 0', color: 'var(--info)', fontSize: '13px' }}>
-                        💡 Pro Tip
-                      </h5>
-                      <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
+                      {q.suggestedAnswer}
+                    </div>
+                  </div>
+
+                  {q.tips && (
+                    <div>
+                      <div style={{ fontSize: '12px', color: 'var(--info)', fontWeight: 'bold', marginBottom: '8px' }}>
+                        📝 Tips:
+                      </div>
+                      <div style={{ 
+                        fontSize: '13px', 
+                        color: 'var(--text-secondary)', 
+                        lineHeight: '1.6' 
+                      }}>
                         {q.tips}
-                      </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -550,29 +486,27 @@ export function InterviewInsider({ userId }: Props) {
       )}
 
       {/* Empty State */}
-      {!isLoading && questions.length === 0 && (
+      {questions.length === 0 && !isLoading && (
         <div style={{ 
           textAlign: 'center', 
-          padding: '60px 40px',
-          background: 'var(--card-bg)',
+          padding: '48px', 
+          background: 'var(--bg-secondary)', 
           borderRadius: '16px',
-          border: '1px dashed var(--border)'
+          border: '2px dashed var(--border)'
         }}>
-          <div style={{ fontSize: '64px', marginBottom: '20px' }}>🎓</div>
-          <h3 style={{ margin: '0 0 12px 0', color: 'var(--text-primary)', fontSize: '20px' }}>
-            Prepare for Your Interview
-          </h3>
-          <p style={{ margin: '0 0 24px 0', color: 'var(--text-secondary)', fontSize: '14px', maxWidth: '500px', marginInline: 'auto', lineHeight: '1.6' }}>
-            Paste a job posting URL above and our HR AI will generate tailored interview questions with suggested answers based on:
+          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎯</div>
+          <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Ready to Prepare?</h3>
+          <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>
+            Paste a job URL above and click "Generate Questions" to get started
           </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ marginTop: '20px', display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
             {QUESTION_CATEGORIES.map(cat => (
               <span 
                 key={cat.id}
                 style={{ 
-                  padding: '10px 16px', 
-                  background: 'var(--bg-secondary)', 
-                  borderRadius: '8px',
+                  padding: '6px 12px', 
+                  background: 'var(--card-bg)', 
+                  borderRadius: '20px',
                   fontSize: '13px',
                   color: 'var(--text-secondary)',
                   display: 'flex',
@@ -588,197 +522,10 @@ export function InterviewInsider({ userId }: Props) {
       )}
 
       {/* HR AI Info Box */}
-      <div style={{ 
-        marginTop: '24px',
-        padding: '20px', 
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        borderRadius: '12px',
-        color: '#fff'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-          <span style={{ fontSize: '28px' }}>🤖</span>
-          <h3 style={{ margin: 0, fontSize: '18px' }}>About HR AI</h3>
-        </div>
-        <p style={{ margin: 0, fontSize: '13px', opacity: 0.95, lineHeight: '1.6' }}>
-          HR AI is your dedicated interview preparation assistant. It analyzes job postings to identify key requirements, 
-          generates position-specific questions, and provides suggested answers tailored to your profile. 
-          The compatibility score on the Job Search page shows how well your CV matches each position.
-        </p>
-      </div>
+      <HRAIInfoBox />
 
-      {/* Social Decorum Section */}
-      <div style={{ marginTop: '24px' }}>
-        <h3 style={{ color: 'var(--text-primary)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '28px' }}>🎭</span>
-          Interview Etiquette & Social Decorum
-        </h3>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-          
-          {/* Online Interview Tips */}
-          <div style={{ 
-            background: 'var(--card-bg)', 
-            borderRadius: '12px', 
-            padding: '20px',
-            border: '1px solid var(--border)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <span style={{ 
-                width: '40px', height: '40px', borderRadius: '10px', 
-                background: 'linear-gradient(135deg, #00b4d8 0%, #0077b6 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px'
-              }}>💻</span>
-              <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>Online Interview Tips</h4>
-            </div>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.8' }}>
-              <li><strong>Test technology</strong> - Check camera, mic, and internet 15 min before</li>
-              <li><strong>Background</strong> - Clean, professional, neutral background</li>
-              <li><strong>Lighting</strong> - Face a window or use front-facing light</li>
-              <li><strong>Eye contact</strong> - Look at the camera, not the screen</li>
-              <li><strong>Minimize distractions</strong> - Mute phone, close other apps</li>
-              <li><strong>Keep notes nearby</strong> - But don't read directly from them</li>
-              <li><strong>Dress code</strong> - Professional from head to toe (you might stand up!)</li>
-            </ul>
-          </div>
-
-          {/* In-Person Interview Tips */}
-          <div style={{ 
-            background: 'var(--card-bg)', 
-            borderRadius: '12px', 
-            padding: '20px',
-            border: '1px solid var(--border)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <span style={{ 
-                width: '40px', height: '40px', borderRadius: '10px', 
-                background: 'linear-gradient(135deg, #52b788 0%, #2d6a4f 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px'
-              }}>🏢</span>
-              <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>In-Person Interview Tips</h4>
-            </div>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.8' }}>
-              <li><strong>Arrive early</strong> - 10-15 minutes before scheduled time</li>
-              <li><strong>Bring copies</strong> - CV, references, portfolio (even if sent digitally)</li>
-              <li><strong>Greet everyone</strong> - From receptionist to interviewer, be polite</li>
-              <li><strong>Firm handshake</strong> - Confident but not crushing</li>
-              <li><strong>Sit properly</strong> - Upright, leaning slightly forward shows interest</li>
-              <li><strong>Mind your belongings</strong> - Bag on floor, phone on silent</li>
-              <li><strong>Thank everyone</strong> - Before leaving, thank each person by name</li>
-            </ul>
-          </div>
-
-          {/* Body Language */}
-          <div style={{ 
-            background: 'var(--card-bg)', 
-            borderRadius: '12px', 
-            padding: '20px',
-            border: '1px solid var(--border)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <span style={{ 
-                width: '40px', height: '40px', borderRadius: '10px', 
-                background: 'linear-gradient(135deg, #f72585 0%, #b5179e 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px'
-              }}>🙋</span>
-              <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>Body Language</h4>
-            </div>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.8' }}>
-              <li><strong>Maintain eye contact</strong> - 60-70% of the time, natural breaks are okay</li>
-              <li><strong>Smile genuinely</strong> - Shows warmth and confidence</li>
-              <li><strong>Open posture</strong> - Avoid crossed arms, lean in slightly</li>
-              <li><strong>Nod appropriately</strong> - Shows active listening</li>
-              <li><strong>Control nervous habits</strong> - No fidgeting, hair touching, or leg bouncing</li>
-              <li><strong>Hand gestures</strong> - Use naturally to emphasize points</li>
-              <li><strong>Mirror subtly</strong> - Match interviewer's energy level</li>
-            </ul>
-          </div>
-
-          {/* Dress Code */}
-          <div style={{ 
-            background: 'var(--card-bg)', 
-            borderRadius: '12px', 
-            padding: '20px',
-            border: '1px solid var(--border)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <span style={{ 
-                width: '40px', height: '40px', borderRadius: '10px', 
-                background: 'linear-gradient(135deg, #ffd60a 0%, #ff9e00 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px'
-              }}>👔</span>
-              <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>Dress Code Guide</h4>
-            </div>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.8' }}>
-              <li><strong>Research company culture</strong> - Tech startup vs. law firm = different dress</li>
-              <li><strong>When in doubt, overdress</strong> - Better too formal than too casual</li>
-              <li><strong>Colors</strong> - Navy, gray, black are safe; avoid loud patterns</li>
-              <li><strong>Grooming</strong> - Clean, neat hair; trimmed nails; minimal cologne/perfume</li>
-              <li><strong>Accessories</strong> - Minimal jewelry, classic watch, professional bag</li>
-              <li><strong>Fit matters</strong> - Well-fitted clothes look more professional</li>
-              <li><strong>Comfort</strong> - Don't wear something for the first time to an interview</li>
-            </ul>
-          </div>
-
-          {/* Making a Great Impression */}
-          <div style={{ 
-            background: 'var(--card-bg)', 
-            borderRadius: '12px', 
-            padding: '20px',
-            border: '1px solid var(--border)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <span style={{ 
-                width: '40px', height: '40px', borderRadius: '10px', 
-                background: 'linear-gradient(135deg, #9d4edd 0%, #5a189a 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px'
-              }}>⭐</span>
-              <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>Making a Great Impression</h4>
-            </div>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.8' }}>
-              <li><strong>Be authentic</strong> - Don't try to be someone you're not</li>
-              <li><strong>Show enthusiasm</strong> - Genuine interest in the role and company</li>
-              <li><strong>Listen actively</strong> - Don't just wait for your turn to speak</li>
-              <li><strong>Ask thoughtful questions</strong> - Shows you've done your research</li>
-              <li><strong>Tell stories</strong> - STAR method makes answers memorable</li>
-              <li><strong>Be positive</strong> - Never badmouth previous employers</li>
-              <li><strong>Follow up</strong> - Send a thank-you email within 24 hours</li>
-            </ul>
-          </div>
-
-          {/* Communication Tips */}
-          <div style={{ 
-            background: 'var(--card-bg)', 
-            borderRadius: '12px', 
-            padding: '20px',
-            border: '1px solid var(--border)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <span style={{ 
-                width: '40px', height: '40px', borderRadius: '10px', 
-                background: 'linear-gradient(135deg, #3a86ff 0%, #023e8a 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '20px'
-              }}>💬</span>
-              <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>Communication Tips</h4>
-            </div>
-            <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.8' }}>
-              <li><strong>Speak clearly</strong> - Moderate pace, good enunciation</li>
-              <li><strong>Avoid filler words</strong> - "Um", "like", "you know" - pause instead</li>
-              <li><strong>Be concise</strong> - Answer in 1-2 minutes, then check if they want more</li>
-              <li><strong>Use their language</strong> - Mirror terminology from job description</li>
-              <li><strong>Pause before answering</strong> - Shows thoughtfulness</li>
-              <li><strong>Ask for clarification</strong> - If unsure about a question, ask</li>
-              <li><strong>End strong</strong> - Reiterate interest and fit for the role</li>
-            </ul>
-          </div>
-
-        </div>
-      </div>
+      {/* Interview Etiquette Section */}
+      <InterviewEtiquette />
     </div>
   );
 }

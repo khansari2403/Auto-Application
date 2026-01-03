@@ -153,22 +153,48 @@ function ManualProfileSection({ userId }: { userId: number }) {
         
         {/* Photo Upload Section */}
         <div style={{ display: 'flex', gap: '20px', marginBottom: '20px', alignItems: 'flex-start' }}>
-          <div style={{ 
-            width: '120px', 
-            height: '120px', 
-            borderRadius: '50%', 
-            border: '3px solid #0077b5',
-            background: profile.photo ? `url(${profile.photo}) center/cover` : '#f0f0f0',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '40px',
-            color: '#999',
-            overflow: 'hidden',
-            flexShrink: 0
-          }}>
-            {!profile.photo && '👤'}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+            <div style={{ 
+              width: '120px', 
+              height: '120px', 
+              borderRadius: '50%', 
+              border: '3px solid #0077b5',
+              background: profile.photo 
+                ? `url(${profile.photo}) ${50 + (profile.photoOffsetX || 0)}% ${50 + (profile.photoOffsetY || 0)}% / ${profile.photoZoom || 100}%` 
+                : '#f0f0f0',
+              backgroundRepeat: 'no-repeat',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '40px',
+              color: '#999',
+              overflow: 'hidden',
+              flexShrink: 0,
+              cursor: profile.photo ? 'pointer' : 'default'
+            }}
+            onClick={() => profile.photo && setShowPhotoAdjust(!showPhotoAdjust)}
+            title={profile.photo ? 'Click to adjust position' : ''}
+            >
+              {!profile.photo && '👤'}
+            </div>
+            {profile.photo && (
+              <button 
+                onClick={() => setShowPhotoAdjust(!showPhotoAdjust)}
+                style={{ 
+                  padding: '4px 10px', 
+                  fontSize: '11px', 
+                  background: showPhotoAdjust ? '#0077b5' : '#e0e0e0', 
+                  color: showPhotoAdjust ? '#fff' : '#333',
+                  border: 'none', 
+                  borderRadius: '4px', 
+                  cursor: 'pointer' 
+                }}
+              >
+                🎯 Adjust Position
+              </button>
+            )}
           </div>
+          
           <div style={{ flex: 1 }}>
             <label style={labelStyle}>Profile Headshot</label>
             <p style={{ fontSize: '12px', color: '#666', margin: '0 0 10px 0' }}>
@@ -182,7 +208,8 @@ function ManualProfileSection({ userId }: { userId: number }) {
                 if (file) {
                   const reader = new FileReader();
                   reader.onloadend = () => {
-                    setProfile({...profile, photo: reader.result as string});
+                    setProfile({...profile, photo: reader.result as string, photoOffsetX: 0, photoOffsetY: 0, photoZoom: 100});
+                    setShowPhotoAdjust(true);
                   };
                   reader.readAsDataURL(file);
                 }
@@ -196,6 +223,87 @@ function ManualProfileSection({ userId }: { userId: number }) {
               onChange={e => setProfile({...profile, photo: e.target.value})} 
               placeholder="https://example.com/photo.jpg" 
             />
+            
+            {/* Photo Adjustment Controls */}
+            {showPhotoAdjust && profile.photo && (
+              <div style={{ 
+                marginTop: '15px', 
+                padding: '15px', 
+                background: '#f0f7ff', 
+                borderRadius: '8px',
+                border: '1px solid #bbdefb'
+              }}>
+                <h5 style={{ margin: '0 0 12px 0', color: '#0077b5', fontSize: '13px' }}>🎯 Adjust Photo Position</h5>
+                
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                    Horizontal Position: {profile.photoOffsetX || 0}%
+                  </label>
+                  <input 
+                    type="range" 
+                    min="-50" 
+                    max="50" 
+                    value={profile.photoOffsetX || 0}
+                    onChange={(e) => setProfile({...profile, photoOffsetX: parseInt(e.target.value)})}
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#666' }}>
+                    <span>← Left</span>
+                    <span>Right →</span>
+                  </div>
+                </div>
+                
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                    Vertical Position: {profile.photoOffsetY || 0}%
+                  </label>
+                  <input 
+                    type="range" 
+                    min="-50" 
+                    max="50" 
+                    value={profile.photoOffsetY || 0}
+                    onChange={(e) => setProfile({...profile, photoOffsetY: parseInt(e.target.value)})}
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#666' }}>
+                    <span>↑ Up</span>
+                    <span>Down ↓</span>
+                  </div>
+                </div>
+                
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ fontSize: '11px', fontWeight: 'bold', display: 'block', marginBottom: '4px' }}>
+                    Zoom: {profile.photoZoom || 100}%
+                  </label>
+                  <input 
+                    type="range" 
+                    min="50" 
+                    max="200" 
+                    value={profile.photoZoom || 100}
+                    onChange={(e) => setProfile({...profile, photoZoom: parseInt(e.target.value)})}
+                    style={{ width: '100%' }}
+                  />
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#666' }}>
+                    <span>Zoom Out</span>
+                    <span>Zoom In</span>
+                  </div>
+                </div>
+                
+                <button 
+                  onClick={() => setProfile({...profile, photoOffsetX: 0, photoOffsetY: 0, photoZoom: 100})}
+                  style={{ 
+                    padding: '6px 12px', 
+                    fontSize: '11px', 
+                    background: '#fff', 
+                    border: '1px solid #ddd', 
+                    borderRadius: '4px', 
+                    cursor: 'pointer' 
+                  }}
+                >
+                  Reset to Center
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

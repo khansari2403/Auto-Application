@@ -66,6 +66,52 @@ function ManualProfileSection({ userId }: { userId: number }) {
   const [projects, setProjects] = useState<any[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [showPhotoAdjust, setShowPhotoAdjust] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load saved profile on mount
+  useEffect(() => {
+    loadProfile();
+  }, [userId]);
+
+  const loadProfile = async () => {
+    setIsLoading(true);
+    try {
+      const result = await (window as any).electron.invoke('user:get-profile', userId);
+      if (result?.success && result.data) {
+        const data = result.data;
+        setProfile({
+          name: data.name || '',
+          title: data.title || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          location: data.location || '',
+          website: data.website || '',
+          summary: data.summary || '',
+          photo: data.photo || '',
+          photoOffsetX: data.photoOffsetX || 0,
+          photoOffsetY: data.photoOffsetY || 0,
+          photoZoom: data.photoZoom || 100,
+          skills: data.skills || '',
+          languages: data.languages || '',
+          certifications: data.certifications || '',
+          interests: data.interests || ''
+        });
+        // Parse JSON arrays if stored
+        try {
+          setExperiences(data.experiences ? (typeof data.experiences === 'string' ? JSON.parse(data.experiences) : data.experiences) : []);
+        } catch { setExperiences([]); }
+        try {
+          setEducations(data.educations ? (typeof data.educations === 'string' ? JSON.parse(data.educations) : data.educations) : []);
+        } catch { setEducations([]); }
+        try {
+          setProjects(data.projects ? (typeof data.projects === 'string' ? JSON.parse(data.projects) : data.projects) : []);
+        } catch { setProjects([]); }
+      }
+    } catch (e) {
+      console.error('Failed to load profile:', e);
+    }
+    setIsLoading(false);
+  };
 
   const inputStyle: React.CSSProperties = { 
     width: '100%', 

@@ -383,7 +383,10 @@ export function SearchProfiles({ userId }: { userId: number }) {
               {/* Job Titles Multi-Select */}
               <label style={labelStyle}>Job Titles (Multiple Selection)</label>
               <TagsDisplay items={selectedJobTitles} onRemove={(t) => setSelectedJobTitles(selectedJobTitles.filter(i => i !== t))} />
-              <div style={{ position: 'relative', zIndex: 100 }}>
+              <div 
+                style={{ position: 'relative', zIndex: 100 }}
+                onMouseLeave={() => setShowJobTitleDropdown(false)}
+              >
                 <input 
                   style={inputStyle}
                   value={jobTitleSearch}
@@ -432,12 +435,6 @@ export function SearchProfiles({ userId }: { userId: number }) {
                         {title} {selectedJobTitles.includes(title) && '✓'}
                       </div>
                     ))}
-                    <div 
-                      onClick={() => setShowJobTitleDropdown(false)}
-                      style={{ padding: '8px', textAlign: 'center', fontSize: '11px', color: 'var(--text-secondary)', cursor: 'pointer', background: 'var(--bg-secondary)' }}
-                    >
-                      Close ▲
-                    </div>
                   </div>
                 )}
               </div>

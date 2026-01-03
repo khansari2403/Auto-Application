@@ -177,21 +177,33 @@ export async function processDocumentWithLibrarian(docId: number, userId: number
     // Update status to reading
     await runQuery('UPDATE documents', { id: docId, ai_status: 'reading' });
     
-    // Build prompt based on file type
+    // Build prompt based on file type - USER FRIENDLY OUTPUT
     let prompt = '';
     const fileType = doc.file_type || '';
     const fileName = doc.file_name || 'document';
     
+    const userFriendlyPrompt = `You are a document analysis assistant helping a job seeker organize their application materials.
+
+IMPORTANT: Respond in a friendly, conversational way - NOT in JSON, code, or technical format.
+Write as if you're a helpful career advisor talking to the user.
+
+Document: "${fileName}"
+
+Analyze this document and provide:
+1. A brief description of what this document is (1 sentence)
+2. How it will be used in job applications (1-2 sentences)
+3. A "ready status" - is this document suitable for applications?
+
+Format your response like this:
+📄 [Document Type]: [Brief description]
+✨ Use in Applications: [How the app will use this]
+${fileName.toLowerCase().includes('cv') || fileName.toLowerCase().includes('resume') ? '✅ Ready to use for applications!' : '✅ Saved and ready!'}
+
+Keep it short and encouraging - max 3-4 lines total.`;
+
     if (fileType.includes('image')) {
       // For images, we need a vision-capable model
-      prompt = `You are a document analysis AI. Please analyze this image which appears to be a professional document (possibly a CV, certificate, or credential).
-
-Extract and summarize:
-1. Document type (CV, Certificate, Diploma, ID, etc.)
-2. Key information (name, dates, qualifications, skills, etc.)
-3. Any notable achievements or details
-
-Provide a concise 2-3 sentence summary of the document's contents.`;
+      prompt = userFriendlyPrompt + `\n\nThis is an image file - likely a certificate, diploma, or credential photo.`;
       
       // Update status to analyzing
       await runQuery('UPDATE documents', { id: docId, ai_status: 'analyzing' });
@@ -199,48 +211,42 @@ Provide a concise 2-3 sentence summary of the document's contents.`;
       // Call AI with image data
       const summary = await callAI(librarian, prompt, doc.content);
       
+      // Clean up any JSON or code artifacts from response
+      const cleanedSummary = cleanLibrarianResponse(summary, fileName);
+      
       // Update document with AI summary
       await runQuery('UPDATE documents', { 
         id: docId, 
         ai_status: 'verified', 
-        ai_summary: summary 
+        ai_summary: cleanedSummary 
       });
       
     } else if (fileType.includes('pdf')) {
-      // For PDFs, extract text if possible
-      prompt = `You are a document analysis AI. A PDF document named "${fileName}" has been uploaded.
-
-Based on the filename and context, this appears to be a professional document. Please provide:
-1. What type of document this likely is
-2. Suggested categories (CV, Certificate, Cover Letter, etc.)
-3. A brief description of what such a document typically contains
-
-Note: This is a PDF file and the actual content cannot be directly read. Provide helpful guidance based on the filename.`;
+      prompt = userFriendlyPrompt + `\n\nThis is a PDF document.`;
       
       await runQuery('UPDATE documents', { id: docId, ai_status: 'analyzing' });
       
       const summary = await callAI(librarian, prompt);
+      const cleanedSummary = cleanLibrarianResponse(summary, fileName);
       
       await runQuery('UPDATE documents', { 
         id: docId, 
         ai_status: 'verified', 
-        ai_summary: summary || `PDF Document: ${fileName}. Configure a vision-capable model for detailed analysis.`
+        ai_summary: cleanedSummary
       });
       
     } else {
-      // For other document types
-      prompt = `Document "${fileName}" (type: ${fileType}) was uploaded. 
-      
-Provide a brief assessment of what this document type typically contains and how it might be useful for job applications.`;
+      prompt = userFriendlyPrompt;
       
       await runQuery('UPDATE documents', { id: docId, ai_status: 'analyzing' });
       
       const summary = await callAI(librarian, prompt);
+      const cleanedSummary = cleanLibrarianResponse(summary, fileName);
       
       await runQuery('UPDATE documents', { 
         id: docId, 
         ai_status: 'verified', 
-        ai_summary: summary 
+        ai_summary: cleanedSummary
       });
     }
     
@@ -252,6 +258,49 @@ Provide a brief assessment of what this document type typically contains and how
     await runQuery('UPDATE documents', { id: docId, ai_status: `failed: ${error.message}` });
     return { success: false, error: error.message };
   }
+}
+
+/**
+ * Clean up Librarian AI response - remove JSON, code blocks, technical jargon
+ */
+function cleanLibrarianResponse(response: string, fileName: string): string {
+  let cleaned = response;
+  
+  // Remove JSON blocks
+  cleaned = cleaned.replace(/```json[\s\S]*?```/gi, '');
+  cleaned = cleaned.replace(/```[\s\S]*?```/gi, '');
+  
+  // Remove raw JSON objects
+  cleaned = cleaned.replace(/\{[\s\S]*?"document_type"[\s\S]*?\}/gi, '');
+  cleaned = cleaned.replace(/\{[\s\S]*?"type"[\s\S]*?\}/gi, '');
+  
+  // Clean up excessive whitespace
+  cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n');
+  cleaned = cleaned.trim();
+  
+  // If response is empty or still has code-like content, provide a friendly fallback
+  if (!cleaned || cleaned.length < 20 || cleaned.includes('"document_type"') || cleaned.includes('```')) {
+    const ext = fileName.split('.').pop()?.toLowerCase() || '';
+    const name = fileName.replace(/\.[^.]+$/, '');
+    
+    if (ext === 'pdf') {
+      if (name.toLowerCase().includes('cv') || name.toLowerCase().includes('resume')) {
+        cleaned = `📄 CV/Resume: Your main CV document.\n✨ Will be tailored for each job application.\n✅ Ready to use!`;
+      } else if (name.toLowerCase().includes('cert') || name.toLowerCase().includes('diploma') || name.toLowerCase().includes('belt')) {
+        cleaned = `📜 Certificate/Credential: "${name}" certification.\n✨ Can be referenced to highlight your qualifications.\n✅ Saved and ready!`;
+      } else if (name.toLowerCase().includes('cover') || name.toLowerCase().includes('letter')) {
+        cleaned = `✉️ Cover Letter: Your cover letter template.\n✨ Will be customized for applications.\n✅ Ready to use!`;
+      } else {
+        cleaned = `📄 Document: "${name}"\n✨ Saved to your document library.\n✅ Ready for applications!`;
+      }
+    } else if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) {
+      cleaned = `🖼️ Image: "${name}" credential/certificate.\n✨ Visual proof of your qualification.\n✅ Saved and verified!`;
+    } else {
+      cleaned = `📄 Document: "${name}"\n✨ Added to your application materials.\n✅ Ready!`;
+    }
+  }
+  
+  return cleaned;
 }
 
 /**

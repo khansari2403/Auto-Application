@@ -513,8 +513,8 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
             htmlContent = generateDocumentHTML(content, type.label, userProfile, job);
           }
           
-          // Save to file system
-          const filePath = saveDocumentFile(htmlContent, job.id, type.key, 'html');
+          // Save to file system with organized directory structure (Company/Position/Files)
+          const filePath = saveDocumentFile(htmlContent, job.id, type.key, 'html', job.company_name, job.job_title);
           
           // Save to documents table
           const docId = Date.now() + Math.floor(Math.random() * 1000);

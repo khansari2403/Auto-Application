@@ -12,7 +12,40 @@ interface PendingQuestion {
 }
 
 // Compatibility Score Dial Component
-function CompatibilityDial({ score, size = 'small' }: { score: number; size?: 'small' | 'large' }) {
+function CompatibilityDial({ score, size = 'small' }: { score: number | null | undefined; size?: 'small' | 'large' }) {
+  // If no score, show N/A
+  if (score === null || score === undefined || score === 0) {
+    const height = size === 'large' ? 80 : 40;
+    const width = size === 'large' ? 20 : 12;
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        gap: '4px',
+        minWidth: size === 'large' ? '50px' : '35px'
+      }}>
+        <div style={{ 
+          position: 'relative',
+          width: `${width}px`, 
+          height: `${height}px`, 
+          borderRadius: `${width/2}px`,
+          background: 'var(--bg-tertiary)',
+          border: '1px dashed var(--border)',
+          overflow: 'hidden'
+        }} />
+        <span style={{ 
+          fontSize: size === 'large' ? '11px' : '9px', 
+          fontWeight: 'bold',
+          color: 'var(--text-tertiary)',
+          textTransform: 'uppercase'
+        }}>
+          N/A
+        </span>
+      </div>
+    );
+  }
+
   // score: 0-100, maps to red (0-25), yellow (26-50), green (51-75), gold (76-100)
   const getColor = (s: number) => {
     if (s >= 76) return { color: '#FFD700', label: 'Gold', bg: 'linear-gradient(180deg, #FFD700 0%, #FFA500 100%)' };

@@ -297,15 +297,6 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
             <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               🚀 Auto-Apply Criteria
             </h4>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                checked={autoApplyEnabled} 
-                onChange={handleAutoApplyToggle}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Enable</span>
-            </label>
           </div>
 
           <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 16px 0' }}>

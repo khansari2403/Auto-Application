@@ -81,8 +81,19 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
       // TODO: Implement OAuth flow
       setShowManualCode(true);
     } else if (config.accessMethod === 'app_password') {
-      await handleSave();
+      // Save config with connected status
+      await (window as any).electron.invoke?.('settings:update', { 
+        id: 1,
+        google_client_id: googleClientId, 
+        google_client_secret: googleClientSecret,
+        email_provider: config.provider,
+        email: config.email,
+        email_access_method: config.accessMethod,
+        email_app_password: config.appPassword,
+        email_connected: true  // Persist connection status
+      });
       setIsConnected(true);
+      alert('Email connected successfully!');
     }
   };
 

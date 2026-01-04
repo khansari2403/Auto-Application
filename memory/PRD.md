@@ -170,6 +170,12 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [x] **Librarian document summary** - Now shows user-friendly summaries, not JSON/code
 - [x] **Search Profile Languages** - Fixed language selection using separate state variable
 
+### Session 7 - Code Review & Bug Fixes (Dec 2025)
+- [x] **Code Refactoring Review** - Verified refactored IPC handlers are correctly structured
+- [x] **HR AI Job Import Fixed** - Fixed `ai:generate-interview-prep` handler to use correct function `getJobPageContent` instead of non-existent `scrapeJobPage`
+- [x] **IPC Channel Registration Fixed** - Added missing `ai:test-model` to knownChannels array in ipc/index.ts
+- [x] **JSON-LD Parsing Enhancement** - Improved job data extraction for Interview Insider to parse JSON-LD structured data
+
 ### P1 - High Priority (Testing Needed)
 - [ ] End-to-end test of Smart Apply flow
 - [ ] CV generation verification

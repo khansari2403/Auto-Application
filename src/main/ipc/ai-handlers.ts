@@ -9,12 +9,81 @@ export function registerAIHandlers(): string[] {
     'ai:process-application',
     'ai:generate-tailored-docs',
     'ai:fetch-models',
+    'ai:test-model',
     'ai:generate-interview-prep',
     'ai:ask-custom-question',
     'ai:smart-apply',
     'ai:continue-application',
     'ai:cancel-application'
   ];
+
+  // --- AI MODEL TEST ---
+  ipcMain.handle('ai:test-model', async (_, data) => {
+    try {
+      const { modelName, apiKey, apiEndpoint } = data;
+      
+      if (!apiKey) {
+        return { success: false, message: 'No API key provided' };
+      }
+      
+      // Determine endpoint
+      let endpoint = 'https://api.openai.com/v1/chat/completions';
+      
+      if (apiEndpoint?.includes('localhost')) {
+        endpoint = apiEndpoint;
+      } else if (apiKey.startsWith('tgp_v1_')) {
+        endpoint = 'https://api.together.xyz/v1/chat/completions';
+      } else if (apiKey.startsWith('sk-ant-')) {
+        endpoint = 'https://api.anthropic.com/v1/messages';
+      }
+      
+      // Simple test prompt
+      const testPrompt = 'Respond with only the word "OK" to confirm you are working.';
+      
+      let response;
+      
+      if (apiKey.startsWith('sk-ant-')) {
+        // Anthropic API
+        response = await axios.post(endpoint, {
+          model: modelName || 'claude-3-haiku-20240307',
+          max_tokens: 10,
+          messages: [{ role: 'user', content: testPrompt }]
+        }, {
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000
+        });
+      } else {
+        // OpenAI-compatible API
+        response = await axios.post(endpoint, {
+          model: modelName || 'gpt-3.5-turbo',
+          messages: [{ role: 'user', content: testPrompt }],
+          max_tokens: 10,
+          temperature: 0
+        }, {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          timeout: 15000
+        });
+      }
+      
+      if (response.data) {
+        return { success: true, message: 'Model responding correctly' };
+      } else {
+        return { success: false, message: 'No response from model' };
+      }
+      
+    } catch (e: any) {
+      const errorMsg = e.response?.data?.error?.message || e.message || 'Unknown error';
+      console.error('Model test failed:', errorMsg);
+      return { success: false, message: errorMsg };
+    }
+  });
 
   // --- AI / HUNTER ---
   ipcMain.handle('hunter:start-search', async (_, userId) => {

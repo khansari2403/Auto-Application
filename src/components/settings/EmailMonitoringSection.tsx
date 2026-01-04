@@ -297,7 +297,13 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                   </button>
                   {isConnected && (
                     <button 
-                      onClick={() => setIsConnected(false)} 
+                      onClick={async () => {
+                        await (window as any).electron.invoke?.('settings:update', { 
+                          id: 1,
+                          email_connected: false 
+                        });
+                        setIsConnected(false);
+                      }} 
                       style={{ padding: '12px 15px', background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
                     >
                       Disconnect

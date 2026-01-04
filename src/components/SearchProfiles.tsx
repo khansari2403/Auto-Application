@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   JOB_TITLES_DATABASE, 
   INDUSTRIES, 
@@ -17,6 +17,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
   const [jobTitleSearch, setJobTitleSearch] = useState('');
   const [showJobTitleDropdown, setShowJobTitleDropdown] = useState(false);
   const [selectedJobTitles, setSelectedJobTitles] = useState<string[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   
   // Industries
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([]);
@@ -32,14 +33,22 @@ export function SearchProfiles({ userId }: { userId: number }) {
   // Languages
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
 
+  // Location with distance
+  const [distanceUnit, setDistanceUnit] = useState<'km' | 'miles'>('km');
+  const [searchRadius, setSearchRadius] = useState<number>(50);
+
+  // Track if we're currently saving to prevent reload conflicts
+  const isSavingRef = useRef(false);
+
   const loadProfiles = async () => {
+    if (isSavingRef.current) return; // Don't reload while saving
     const result = await (window as any).electron.invoke('profiles:get-all', userId);
     if (result?.success) setProfiles(result.data);
   };
 
   useEffect(() => { loadProfiles(); }, [userId]);
 
-  // When editing a profile, load existing values
+  // When editing a profile, load existing values ONCE
   useEffect(() => {
     if (editing) {
       setSelectedJobTitles(editing.job_titles ? editing.job_titles.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
@@ -48,13 +57,16 @@ export function SearchProfiles({ userId }: { userId: number }) {
       setSelectedExperienceLevels(editing.experience_level ? editing.experience_level.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
       setSelectedCertifications(editing.certifications ? editing.certifications.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
       setSelectedLanguages(editing.languages ? editing.languages.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
+      setSearchRadius(editing.search_radius || 50);
+      setDistanceUnit(editing.distance_unit || 'km');
     }
-  }, [editing]);
+  }, [editing?.id]); // Only re-run when editing ID changes, not on every editing object change
 
-  // Auto-save when selections change
+  // Auto-save when selections change - WITHOUT reloading profiles
   useEffect(() => {
     if (editing) {
       const saveData = async () => {
+        isSavingRef.current = true;
         const updated = {
           ...editing,
           job_titles: selectedJobTitles.join(', '),
@@ -62,23 +74,38 @@ export function SearchProfiles({ userId }: { userId: number }) {
           excluded_industries: excludedIndustries.join(', '),
           experience_level: selectedExperienceLevels.join(', '),
           certifications: selectedCertifications.join(', '),
-          languages: selectedLanguages.join(', ')
+          languages: selectedLanguages.join(', '),
+          search_radius: searchRadius,
+          distance_unit: distanceUnit
         };
         await (window as any).electron.invoke('profiles:update', updated);
-        loadProfiles();
+        // Update the editing object locally instead of reloading
+        setEditing(updated);
+        isSavingRef.current = false;
       };
       const timeout = setTimeout(saveData, 500);
       return () => clearTimeout(timeout);
     }
-  }, [selectedJobTitles, selectedIndustries, excludedIndustries, selectedExperienceLevels, selectedCertifications, selectedLanguages]);
+  }, [selectedJobTitles, selectedIndustries, excludedIndustries, selectedExperienceLevels, selectedCertifications, selectedLanguages, searchRadius, distanceUnit]);
+
+  // Close dropdown when clicking outside or mouse leaves
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowJobTitleDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Filtered job titles for search
   const filteredJobTitles = useMemo(() => {
-    if (!jobTitleSearch.trim()) return JOB_TITLES_DATABASE.slice(0, 50);
+    if (!jobTitleSearch.trim()) return JOB_TITLES_DATABASE.slice(0, 100);
     const search = jobTitleSearch.toLowerCase();
     return JOB_TITLES_DATABASE.filter(title => 
       title.toLowerCase().includes(search)
-    ).slice(0, 50);
+    ).slice(0, 100);
   }, [jobTitleSearch]);
 
   // Get relevant certifications based on selected job titles
@@ -132,6 +159,11 @@ export function SearchProfiles({ userId }: { userId: number }) {
     }
   };
 
+  // Handle editing field changes without losing job titles
+  const handleEditingFieldChange = (field: string, value: any) => {
+    setEditing((prev: any) => ({ ...prev, [field]: value }));
+  };
+
   // Styles
   const inputStyle: React.CSSProperties = { 
     width: '100%', 
@@ -160,12 +192,20 @@ export function SearchProfiles({ userId }: { userId: number }) {
     border: '1px solid var(--border)'
   };
 
+  const hintStyle: React.CSSProperties = {
+    fontSize: '10px',
+    color: 'var(--text-tertiary)',
+    marginTop: '-5px',
+    marginBottom: '8px',
+    fontStyle: 'italic'
+  };
+
   if (editing) {
     return (
-      <div style={{ padding: '20px', background: 'var(--bg-primary)' }}>
+      <div style={{ padding: '20px', background: 'var(--bg-primary)' }} tabIndex={-1}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h2 style={{ margin: 0, color: 'var(--text-primary)' }}>⚙️ Configure: {editing.profile_name}</h2>
-          <button onClick={() => setEditing(null)} style={{ padding: '10px 25px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>✓ Done</button>
+          <button onClick={() => { loadProfiles(); setEditing(null); }} style={{ padding: '10px 25px', background: 'var(--success)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>✓ Done</button>
         </div>
 
         {/* 3-Column Layout */}
@@ -180,7 +220,11 @@ export function SearchProfiles({ userId }: { userId: number }) {
               
               {/* Job Title Search */}
               <label style={labelStyle}>Search & Add Job Titles</label>
-              <div style={{ position: 'relative' }}>
+              <div 
+                ref={dropdownRef}
+                style={{ position: 'relative' }}
+                onMouseLeave={() => setShowJobTitleDropdown(false)}
+              >
                 <input 
                   style={inputStyle} 
                   value={jobTitleSearch} 
@@ -189,19 +233,22 @@ export function SearchProfiles({ userId }: { userId: number }) {
                   placeholder="Type to search job titles..." 
                 />
                 {showJobTitleDropdown && (
-                  <div style={{ 
-                    position: 'absolute', 
-                    top: '100%', 
-                    left: 0, 
-                    right: 0, 
-                    maxHeight: '200px', 
-                    overflowY: 'auto', 
-                    background: 'var(--card-bg)', 
-                    border: '1px solid var(--border)', 
-                    borderRadius: '6px', 
-                    zIndex: 100,
-                    boxShadow: 'var(--shadow-lg)'
-                  }}>
+                  <div 
+                    style={{ 
+                      position: 'absolute', 
+                      top: '100%', 
+                      left: 0, 
+                      right: 0, 
+                      maxHeight: '250px', 
+                      overflowY: 'auto', 
+                      background: 'var(--card-bg)', 
+                      border: '1px solid var(--border)', 
+                      borderRadius: '6px', 
+                      zIndex: 100,
+                      boxShadow: 'var(--shadow-lg)'
+                    }}
+                    onMouseEnter={() => setShowJobTitleDropdown(true)}
+                  >
                     {filteredJobTitles.map(title => (
                       <div 
                         key={title}
@@ -210,7 +257,6 @@ export function SearchProfiles({ userId }: { userId: number }) {
                             setSelectedJobTitles(prev => [...prev, title]);
                           }
                           setJobTitleSearch('');
-                          setShowJobTitleDropdown(false);
                         }}
                         style={{ 
                           padding: '8px 12px', 
@@ -224,12 +270,6 @@ export function SearchProfiles({ userId }: { userId: number }) {
                         {selectedJobTitles.includes(title) ? '✓ ' : ''}{title}
                       </div>
                     ))}
-                    <div 
-                      onClick={() => setShowJobTitleDropdown(false)}
-                      style={{ padding: '8px 12px', cursor: 'pointer', fontSize: '11px', background: 'var(--bg-tertiary)', textAlign: 'center', color: 'var(--text-secondary)' }}
-                    >
-                      Close
-                    </div>
                   </div>
                 )}
               </div>
@@ -245,11 +285,44 @@ export function SearchProfiles({ userId }: { userId: number }) {
               
               {/* Location */}
               <label style={labelStyle}>Location</label>
-              <input style={inputStyle} value={editing.location || ''} onChange={e => setEditing({...editing, location: e.target.value})} placeholder="e.g., Berlin, Remote, Germany..." />
+              <input 
+                style={inputStyle} 
+                value={editing.location || ''} 
+                onChange={e => handleEditingFieldChange('location', e.target.value)} 
+                placeholder="e.g., Berlin, Germany, Europe..." 
+              />
+              <p style={hintStyle}>
+                💡 Enter a country, state/province, or city. You can also type "Remote" for remote-only jobs.
+              </p>
+
+              {/* Distance Radius Slider */}
+              <label style={labelStyle}>Search Radius: {searchRadius} {distanceUnit}</label>
+              <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '10px' }}>
+                <input 
+                  type="range" 
+                  min="5" 
+                  max="500" 
+                  step="5"
+                  value={searchRadius}
+                  onChange={e => setSearchRadius(parseInt(e.target.value))}
+                  style={{ flex: 1 }}
+                />
+                <select 
+                  value={distanceUnit} 
+                  onChange={e => setDistanceUnit(e.target.value as 'km' | 'miles')}
+                  style={{ padding: '5px', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)', fontSize: '11px' }}
+                >
+                  <option value="km">Kilometers</option>
+                  <option value="miles">Miles</option>
+                </select>
+              </div>
+              <p style={hintStyle}>
+                Distance from the location above where jobs will be searched.
+              </p>
               
               {/* Remote/On-site */}
               <label style={labelStyle}>Work Type</label>
-              <select style={inputStyle} value={editing.remote_preference || 'Any'} onChange={e => setEditing({...editing, remote_preference: e.target.value})}>
+              <select style={inputStyle} value={editing.remote_preference || 'Any'} onChange={e => handleEditingFieldChange('remote_preference', e.target.value)}>
                 <option value="Any">Any</option>
                 <option value="Remote Only">Remote Only</option>
                 <option value="Hybrid">Hybrid</option>
@@ -258,7 +331,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
 
               {/* Salary Range */}
               <label style={labelStyle}>Minimum Salary (Optional)</label>
-              <input style={inputStyle} type="number" value={editing.min_salary || ''} onChange={e => setEditing({...editing, min_salary: e.target.value})} placeholder="e.g., 50000" />
+              <input style={inputStyle} type="number" value={editing.min_salary || ''} onChange={e => handleEditingFieldChange('min_salary', e.target.value)} placeholder="e.g., 50000" />
             </div>
           </div>
 
@@ -313,10 +386,10 @@ export function SearchProfiles({ userId }: { userId: number }) {
               <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🛠️ Skills & Education</h4>
               
               <label style={labelStyle}>Required Skills</label>
-              <textarea style={{ ...inputStyle, height: '50px' }} value={editing.required_skills || ''} onChange={e => setEditing({...editing, required_skills: e.target.value})} placeholder="e.g., Python, JavaScript, SQL..." />
+              <textarea style={{ ...inputStyle, height: '50px' }} value={editing.required_skills || ''} onChange={e => handleEditingFieldChange('required_skills', e.target.value)} placeholder="e.g., Python, JavaScript, SQL..." />
               
               <label style={labelStyle}>Education Level</label>
-              <select style={inputStyle} value={editing.education_level || 'Any'} onChange={e => setEditing({...editing, education_level: e.target.value})}>
+              <select style={inputStyle} value={editing.education_level || 'Any'} onChange={e => handleEditingFieldChange('education_level', e.target.value)}>
                 <option value="Any">Any</option>
                 <option value="High School">High School</option>
                 <option value="Vocational">Vocational / Ausbildung</option>
@@ -389,7 +462,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
               <h4 style={{ marginTop: 0, marginBottom: '12px', color: 'var(--text-primary)' }}>🏢 Company & Timing</h4>
               
               <label style={labelStyle}>Company Size</label>
-              <select style={inputStyle} value={editing.company_size || 'Any'} onChange={e => setEditing({...editing, company_size: e.target.value})}>
+              <select style={inputStyle} value={editing.company_size || 'Any'} onChange={e => handleEditingFieldChange('company_size', e.target.value)}>
                 <option value="Any">Any</option>
                 <option value="1-10">1-10 employees</option>
                 <option value="11-50">11-50 employees</option>
@@ -399,7 +472,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
               </select>
 
               <label style={labelStyle}>Company Rating</label>
-              <select style={inputStyle} value={editing.company_rating || 'Any'} onChange={e => setEditing({...editing, company_rating: e.target.value})}>
+              <select style={inputStyle} value={editing.company_rating || 'Any'} onChange={e => handleEditingFieldChange('company_rating', e.target.value)}>
                 <option value="Any">Any</option>
                 <option value="3.0+">3.0+ Stars</option>
                 <option value="3.5+">3.5+ Stars</option>
@@ -407,7 +480,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
               </select>
               
               <label style={labelStyle}>Posted Date (Within)</label>
-              <select style={inputStyle} value={editing.posted_within || 'Any'} onChange={e => setEditing({...editing, posted_within: e.target.value})}>
+              <select style={inputStyle} value={editing.posted_within || 'Any'} onChange={e => handleEditingFieldChange('posted_within', e.target.value)}>
                 <option value="Any">Any Time</option>
                 <option value="4h">Last 4 Hours</option>
                 <option value="8h">Last 8 Hours</option>
@@ -419,10 +492,10 @@ export function SearchProfiles({ userId }: { userId: number }) {
               </select>
 
               <label style={labelStyle}>Target Company Name (Optional)</label>
-              <input style={inputStyle} value={editing.company_name || ''} onChange={e => setEditing({...editing, company_name: e.target.value})} placeholder="e.g., Google, Microsoft..." />
+              <input style={inputStyle} value={editing.company_name || ''} onChange={e => handleEditingFieldChange('company_name', e.target.value)} placeholder="e.g., Google, Microsoft..." />
               
               <label style={labelStyle}>Visa Sponsorship</label>
-              <select style={inputStyle} value={editing.visa_sponsorship || 'Any'} onChange={e => setEditing({...editing, visa_sponsorship: e.target.value})}>
+              <select style={inputStyle} value={editing.visa_sponsorship || 'Any'} onChange={e => handleEditingFieldChange('visa_sponsorship', e.target.value)}>
                 <option value="Any">Any</option>
                 <option value="Required">Required</option>
                 <option value="Not Required">Not Required</option>
@@ -433,7 +506,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
         </div>
         
         <div style={{ textAlign: 'center', marginTop: '15px' }}>
-          <button onClick={() => setEditing(null)} style={{ padding: '10px 30px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
+          <button onClick={() => { loadProfiles(); setEditing(null); }} style={{ padding: '10px 30px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>Cancel</button>
         </div>
       </div>
     );

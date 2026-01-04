@@ -353,17 +353,48 @@ Description: ${job.description || 'Not available'}`;
       } else if (jobUrl) {
         try {
           const ScraperService = require('../scraper-service');
-          const pageContent = await ScraperService.scrapeJobPage(jobUrl);
-          if (pageContent) {
-            jobDescription = `Job posting content from ${jobUrl}:\n${pageContent.substring(0, 3000)}`;
+          // Use getJobPageContent instead of non-existent scrapeJobPage
+          const pageData = await ScraperService.getJobPageContent(jobUrl, userId, aiService.callAI);
+          if (pageData && pageData.content && pageData.content.length > 100) {
+            jobDescription = `Job posting content from ${jobUrl}:\n${pageData.content.substring(0, 3000)}`;
             
-            const titleMatch = pageContent.match(/(?:job\s*title|position)[:\s]*([^\n]+)/i);
-            const companyMatch = pageContent.match(/(?:company|employer)[:\s]*([^\n]+)/i);
+            // Try to extract basic info from the content
+            const titleMatch = pageData.content.match(/(?:job\s*title|position)[:\s]*([^\n]+)/i);
+            const companyMatch = pageData.content.match(/(?:company|employer)[:\s]*([^\n]+)/i);
+            const locationMatch = pageData.content.match(/(?:location|located)[:\s]*([^\n]+)/i);
+            
+            // Try to parse JSON-LD data if available
+            let parsedTitle = titleMatch?.[1]?.trim();
+            let parsedCompany = companyMatch?.[1]?.trim();
+            let parsedLocation = locationMatch?.[1]?.trim();
+            
+            // If content looks like JSON (from JSON-LD extraction), try to parse it
+            if (pageData.strategyUsed?.includes('JSON-LD') && pageData.content.startsWith('{')) {
+              try {
+                const jsonData = JSON.parse(pageData.content);
+                parsedTitle = jsonData.title || jsonData.jobTitle || jsonData.name || parsedTitle;
+                parsedCompany = jsonData.hiringOrganization?.name || jsonData.companyName || parsedCompany;
+                parsedLocation = jsonData.jobLocation?.address?.addressLocality || 
+                                 jsonData.jobLocation?.name || 
+                                 jsonData.location || parsedLocation;
+                
+                // Extract skills from JSON if available
+                if (jsonData.skills || jsonData.requiredSkills) {
+                  const skills = jsonData.skills || jsonData.requiredSkills;
+                  importantApps = (typeof skills === 'string' ? skills.split(',') : skills)
+                    .map((s: string) => s.trim())
+                    .filter(Boolean)
+                    .slice(0, 8);
+                }
+              } catch (parseError) {
+                console.log('Could not parse JSON-LD data:', parseError);
+              }
+            }
             
             jobInfo = {
-              title: titleMatch?.[1]?.trim() || 'Position from URL',
-              company: companyMatch?.[1]?.trim() || 'Company',
-              location: 'See job posting'
+              title: parsedTitle || 'Position from URL',
+              company: parsedCompany || 'Company',
+              location: parsedLocation || 'See job posting'
             };
           }
         } catch (e) {

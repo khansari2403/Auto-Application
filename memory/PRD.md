@@ -180,8 +180,11 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [ ] End-to-end test of Smart Apply flow
 - [ ] CV generation verification
 - [ ] Document quality verification (no hallucinations)
-- [ ] Interview Insider feature testing
+- [ ] Interview Insider feature testing (Bug fixed - `getJobPageContent` function now used correctly)
 - [ ] HR AI question relevance testing (no more project management Q's for warehouse jobs)
+- [ ] AI Model "Test" button verification
+- [ ] Hunter engine and scraper service testing
+- [ ] SearchProfiles state management verification
 
 ### P2 - Medium Priority - ✅ ALL COMPLETED
 - [x] Secretary Authentication Flow - PIN-based access with sessions

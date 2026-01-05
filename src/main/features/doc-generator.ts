@@ -676,7 +676,18 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
 }
 
 // Build Thinker prompt based on document type
-function buildThinkerPrompt(docKey: string, docLabel: string, userProfile: any, job: any, companyResearch: string, feedback: string): string {
+function buildThinkerPrompt(
+  docKey: string, 
+  docLabel: string, 
+  userProfile: any, 
+  job: any, 
+  companyResearch: string, 
+  feedback: string,
+  wordLimits?: { motivationLetterWordLimit: string; coverLetterWordLimit: string }
+): string {
+  const motivationWordLimit = wordLimits?.motivationLetterWordLimit || '450';
+  const coverWordLimit = wordLimits?.coverLetterWordLimit || '280';
+  
   const baseContext = `
 USER PROFILE:
 Name: ${userProfile?.name || 'N/A'}
@@ -715,6 +726,8 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 2. DO NOT invent job titles, companies, dates, or achievements not in the profile
 3. DO NOT include any JSON formatting or markdown code blocks
 4. DO NOT add meta-commentary like "Here is your CV"
+
+NOTE: CV generation is NOT subject to word limits. Use the full profile data.
 
 REQUIREMENTS:
 1. Tailor the CV specifically to the job requirements

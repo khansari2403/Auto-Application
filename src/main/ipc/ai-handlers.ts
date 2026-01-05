@@ -656,5 +656,153 @@ Respond ONLY with a valid JSON array in this exact format:
     }
   });
 
+  // --- ASK ABOUT CV (HR AI grilling based on Job + CV) ---
+  ipcMain.handle('ai:ask-about-cv', async (_, data) => {
+    try {
+      const { jobUrl, userId, difficultyLevel } = data;
+      
+      const models = await getAllQuery('SELECT * FROM ai_models');
+      const hrAI = models.find((m: any) => m.role === 'HR AI' && m.status === 'active') ||
+                   models.find((m: any) => m.role === 'Thinker' && m.status === 'active');
+      
+      if (!hrAI) {
+        return { success: false, error: 'No HR AI model configured. Please add an AI model with role "HR AI" in Settings > AI Models.' };
+      }
+      
+      // Get user profile (CV data)
+      const profiles = await getAllQuery('SELECT * FROM user_profile');
+      const userProfile = profiles[0];
+      
+      if (!userProfile) {
+        return { success: false, error: 'No profile found. Please set up your LinkedIn Profile or Manual Profile in Settings first.' };
+      }
+      
+      // Get job info
+      const db = getDatabase();
+      const jobs = db.job_listings || [];
+      let job = jobs.find((j: any) => j.url === jobUrl);
+      
+      let jobContext = '';
+      if (job) {
+        jobContext = `
+Job Title: ${job.job_title || 'Unknown'}
+Company: ${job.company_name || 'Unknown'}
+Requirements: ${job.required_skills || 'Not specified'}
+Experience Level: ${job.experience_level || 'Not specified'}
+Description: ${job.description?.substring(0, 1500) || 'Not available'}`;
+      } else if (jobUrl) {
+        // Try to scrape job info
+        try {
+          const ScraperService = require('../scraper-service');
+          const pageData = await ScraperService.getJobPageContent(jobUrl, userId, aiService.callAI);
+          if (pageData?.content) {
+            jobContext = `Job posting from ${jobUrl}:\n${pageData.content.substring(0, 2000)}`;
+          }
+        } catch (e) {
+          jobContext = `Job URL: ${jobUrl} (Could not fetch details)`;
+        }
+      }
+      
+      // Build CV context
+      let cvContext = `
+Candidate Name: ${userProfile.name || 'Not provided'}
+Professional Title: ${userProfile.title || 'Not provided'}
+Location: ${userProfile.location || 'Not provided'}
+Summary: ${userProfile.summary || 'Not provided'}`;
+      
+      // Parse experiences
+      try {
+        const experiences = userProfile.experiences ? JSON.parse(userProfile.experiences) : [];
+        if (experiences.length > 0) {
+          cvContext += '\n\nWork Experience:';
+          experiences.slice(0, 5).forEach((exp: any, i: number) => {
+            cvContext += `\n${i + 1}. ${exp.title || 'Role'} at ${exp.company || 'Company'} (${exp.startDate || '?'} - ${exp.endDate || 'Present'}): ${exp.description?.substring(0, 200) || 'No description'}`;
+          });
+        }
+      } catch (e) {}
+      
+      // Parse skills
+      try {
+        const skills = userProfile.skills ? JSON.parse(userProfile.skills) : [];
+        if (skills.length > 0) {
+          cvContext += `\n\nSkills: ${skills.join(', ')}`;
+        }
+      } catch (e) {}
+      
+      // Parse education
+      try {
+        const educations = userProfile.educations ? JSON.parse(userProfile.educations) : [];
+        if (educations.length > 0) {
+          cvContext += '\n\nEducation:';
+          educations.slice(0, 3).forEach((edu: any, i: number) => {
+            cvContext += `\n${i + 1}. ${edu.degree || 'Degree'} in ${edu.field || 'Field'} from ${edu.school || 'School'}`;
+          });
+        }
+      } catch (e) {}
+      
+      // Determine question style based on difficulty
+      let difficultyInstruction = '';
+      if (difficultyLevel <= 3) {
+        difficultyInstruction = 'Ask EASY questions - basic background, motivation, and simple experience verification. Be friendly and encouraging.';
+      } else if (difficultyLevel <= 6) {
+        difficultyInstruction = 'Ask MEDIUM difficulty questions - probe into specific experiences, ask for examples, test technical knowledge at a moderate level.';
+      } else if (difficultyLevel <= 8) {
+        difficultyInstruction = 'Ask HARD questions - challenge gaps in experience, ask tough behavioral questions, probe for weaknesses, test deep technical knowledge.';
+      } else {
+        difficultyInstruction = 'Ask EXTREME questions - be a tough interviewer, find inconsistencies, ask stress-test questions, challenge every claim, probe for failures and how they handled them.';
+      }
+      
+      const prompt = `You are an expert HR interviewer conducting a tough interview. Your job is to grill the candidate based on their CV and the job requirements.
+
+${difficultyInstruction}
+
+JOB REQUIREMENTS:
+${jobContext || 'No specific job context provided'}
+
+CANDIDATE'S CV:
+${cvContext}
+
+Generate exactly 5 interview questions that:
+1. Probe the candidate's experience relative to this specific job
+2. Challenge potential gaps between their CV and job requirements
+3. Test their claimed skills with specific scenarios
+4. Include behavioral questions about their past experiences
+5. Match the difficulty level requested
+
+For each question, also provide a suggested answer the candidate could give.
+
+Respond ONLY with a valid JSON array in this exact format:
+[
+  {
+    "question": "Tell me about a time when...",
+    "answer": "A strong answer would be...",
+    "difficulty": "easy|medium|hard"
+  }
+]`;
+
+      const response = await aiService.callAI(hrAI, prompt);
+      
+      let questions = [];
+      try {
+        const jsonMatch = response.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          questions = JSON.parse(jsonMatch[0]);
+        }
+      } catch (e) {
+        console.error('Failed to parse CV questions:', e);
+        questions = [{
+          question: 'Tell me about your most relevant experience for this role.',
+          answer: 'Focus on specific achievements and how they relate to the job requirements.',
+          difficulty: 'medium'
+        }];
+      }
+      
+      return { success: true, questions };
+    } catch (e: any) {
+      console.error('Ask about CV error:', e);
+      return { success: false, error: e.message };
+    }
+  });
+
   return channels;
 }

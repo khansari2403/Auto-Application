@@ -54,13 +54,16 @@ export function CompatibilityDial({ score, size = 'small', source }: Compatibili
   const fillHeight = (score / 100) * height;
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      gap: '4px',
-      minWidth: size === 'large' ? '50px' : '35px'
-    }}>
+    <div 
+      style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        gap: '4px',
+        minWidth: size === 'large' ? '50px' : '35px'
+      }}
+      title={source ? `Based on: ${source}` : undefined}
+    >
       {/* Vertical Gauge */}
       <div style={{ 
         position: 'relative',
@@ -99,6 +102,21 @@ export function CompatibilityDial({ score, size = 'small', source }: Compatibili
       }}>
         {label}
       </span>
+      
+      {/* Source indicator (only for large size) */}
+      {size === 'large' && source && (
+        <span style={{ 
+          fontSize: '8px', 
+          color: 'var(--text-tertiary)',
+          maxWidth: '60px',
+          textAlign: 'center',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          {source.replace('All Sources (Combined)', 'All').replace(' Profile', '').replace('Uploaded CV: ', '📄')}
+        </span>
+      )}
     </div>
   );
 }

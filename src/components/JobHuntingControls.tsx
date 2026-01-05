@@ -181,31 +181,72 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
             </div>
           </div>
 
-          {/* Main Toggle - Start Job Hunting */}
+          {/* Direct Hunter Trigger Button */}
           <button
-            onClick={toggleHunting}
+            onClick={startHunterSearch}
+            disabled={isSearching}
             style={{
               padding: '14px 28px',
               borderRadius: '12px',
               border: 'none',
-              background: isActive 
-                ? 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)'
+              background: isSearching 
+                ? 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)'
                 : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: '#fff',
               fontWeight: 'bold',
               fontSize: '14px',
-              cursor: 'pointer',
-              boxShadow: isActive ? '0 4px 15px rgba(76, 175, 80, 0.4)' : '0 4px 15px rgba(102, 126, 234, 0.4)',
+              cursor: isSearching ? 'not-allowed' : 'pointer',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
               transition: 'all 0.3s ease',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px'
+              gap: '8px',
+              opacity: isSearching ? 0.8 : 1
             }}
           >
-            {isActive ? '⏹️ Stop Job Hunting' : '▶️ Start Job Hunting'}
+            {isSearching ? '🔄 Searching...' : '🔍 Hunt Now'}
           </button>
         </div>
       </div>
+
+      {/* Search Result Feedback */}
+      {searchResult && (
+        <div style={{ 
+          marginBottom: '16px',
+          padding: '12px 16px',
+          background: searchResult.success 
+            ? 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(46, 125, 50, 0.1) 100%)'
+            : 'linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(198, 40, 40, 0.1) 100%)',
+          borderRadius: '10px',
+          border: `1px solid ${searchResult.success ? 'var(--success)' : 'var(--danger)'}`,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <span style={{ 
+            color: searchResult.success ? 'var(--success)' : 'var(--danger)', 
+            fontWeight: 600, 
+            fontSize: '14px' 
+          }}>
+            {searchResult.success 
+              ? `✅ Hunt complete! Found ${searchResult.jobsFound} jobs.`
+              : `❌ ${searchResult.message}`
+            }
+          </span>
+          <button 
+            onClick={() => setSearchResult(null)}
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer', 
+              fontSize: '16px',
+              color: 'var(--text-secondary)'
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* Two Column Layout */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>

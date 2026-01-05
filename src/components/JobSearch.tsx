@@ -427,7 +427,34 @@ export function JobSearch({ userId }: { userId: number }) {
         </div>
       </div>
 
-      <h2 style={{ color: 'var(--text-primary)' }}>🎯 Found Jobs</h2>
+      <h2 style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span>🎯 Found Jobs</span>
+        <button
+          onClick={async () => {
+            try {
+              const result = await (window as any).electron.invoke('compatibility:calculate-all', userId);
+              if (result?.success) {
+                alert(`✅ Recalculated compatibility for ${result.processed || 0} jobs`);
+                loadData();
+              }
+            } catch (e: any) {
+              alert('Failed to calculate: ' + e.message);
+            }
+          }}
+          style={{
+            padding: '6px 12px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            color: '#fff',
+            border: 'none',
+            borderRadius: '6px',
+            fontSize: '11px',
+            cursor: 'pointer',
+            fontWeight: 'bold'
+          }}
+        >
+          📊 Recalculate All Match Scores
+        </button>
+      </h2>
       <div style={{ overflowX: 'auto', background: 'var(--card-bg)', borderRadius: '12px', border: '1px solid var(--border)' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
           <thead>

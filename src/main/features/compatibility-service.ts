@@ -1,4 +1,4 @@
-import { getAllQuery, runQuery } from '../database';
+import { getAllQuery, runQuery, getDatabase } from '../database';
 
 interface SkillMatch {
   skill: string;
@@ -14,12 +14,66 @@ interface CompatibilityResult {
   experienceMatch: number;
   educationMatch: number;
   locationMatch: boolean;
+  profileSource?: string; // Which profile source was used
   breakdown: {
     skills: number;
     experience: number;
     education: number;
     location: number;
   };
+}
+
+/**
+ * Get the profile data based on Auditor's source setting
+ */
+async function getProfileBySource(userId: number): Promise<{ profile: any; source: string }> {
+  // Get Auditor settings
+  const models = await getAllQuery('SELECT * FROM ai_models');
+  const auditor = models.find((m: any) => m.role === 'Auditor' && m.status === 'active');
+  const source = auditor?.auditor_source || 'all';
+  
+  // Get profiles based on source
+  const profiles = await getAllQuery('SELECT * FROM user_profile');
+  const linkedinProfile = profiles.find((p: any) => p.source === 'linkedin');
+  const manualProfile = profiles.find((p: any) => p.source === 'manual');
+  const baseProfile = profiles[0];
+  
+  // Get uploaded CVs
+  const db = getDatabase();
+  const documents = db.documents || [];
+  const uploadedCvs = documents.filter((d: any) => d.doc_type === 'uploaded_cv');
+  
+  let selectedProfile = baseProfile;
+  let usedSource = 'combined';
+  
+  switch (source) {
+    case 'linkedin':
+      if (linkedinProfile) {
+        selectedProfile = linkedinProfile;
+        usedSource = 'LinkedIn Profile';
+      }
+      break;
+    case 'manual':
+      if (manualProfile) {
+        selectedProfile = manualProfile;
+        usedSource = 'Manual Profile';
+      }
+      break;
+    case 'uploaded_cv':
+      // For uploaded CVs, we'd need to extract text - for now use base profile with CV note
+      if (uploadedCvs.length > 0) {
+        usedSource = 'Uploaded CV: ' + (uploadedCvs[0].file_name || 'CV Document');
+      }
+      selectedProfile = baseProfile;
+      break;
+    case 'all':
+    default:
+      // Combine all sources (default behavior)
+      usedSource = 'All Sources (Combined)';
+      break;
+  }
+  
+  return { profile: selectedProfile, source: usedSource };
 }
 
 /**
@@ -31,9 +85,8 @@ interface CompatibilityResult {
  * - Gold: 76-100 (Excellent match)
  */
 export async function calculateCompatibility(userId: number, jobId: number): Promise<CompatibilityResult> {
-  // Get user profile
-  const profiles = await getAllQuery('SELECT * FROM user_profile');
-  const profile = profiles[0];
+  // Get user profile based on Auditor source setting
+  const { profile, source } = await getProfileBySource(userId);
   
   // Get job listing
   const jobs = await getAllQuery('SELECT * FROM job_listings');
@@ -64,10 +117,11 @@ export async function calculateCompatibility(userId: number, jobId: number): Pro
   else if (totalScore >= 26) level = 'yellow';
   else level = 'red';
   
-  // Update job with compatibility score
+  // Update job with compatibility score and source used
   await runQuery('UPDATE job_listings', {
     id: jobId,
-    compatibility_score: totalScore
+    compatibility_score: totalScore,
+    compatibility_source: source
   });
   
   return {

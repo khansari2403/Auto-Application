@@ -175,10 +175,21 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [x] **HR AI Job Import Fixed** - Fixed `ai:generate-interview-prep` handler to use correct function `getJobPageContent` instead of non-existent `scrapeJobPage`
 - [x] **IPC Channel Registration Fixed** - Added missing `ai:test-model` to knownChannels array in ipc/index.ts
 - [x] **JSON-LD Parsing Enhancement** - Improved job data extraction for Interview Insider to parse JSON-LD structured data
-- [x] **AI Model Test Improved** - Enhanced model testing to support multiple providers (OpenRouter, OpenAI, Anthropic, Together AI, Google AI, local models) with better error messages
-- [x] **Email Connection Persistence Fixed** - Connection status now properly persists and auto-verifies on app load
-- [x] **Email Inbox Test Feature** - Added "Test: View Inbox" button that fetches and displays actual inbox messages to prove connection works
-- [x] **IMAP Connection Test** - Added `email:test-inbox` and `email:fetch-inbox` IPC handlers for real inbox access verification
+- [x] **AI Model Test Completely Rewritten** - Enhanced model testing with:
+  - Support for multiple providers (OpenRouter `sk-or-`, OpenAI `sk-`/`sk-proj-`, Anthropic `sk-ant-`, Together AI `tgp_v1_`, Google AI `AIza`)
+  - Proper API request formats for each provider
+  - Detailed console logging for debugging
+  - Better error messages (401, 403, 404, 429, timeout, etc.)
+  - 30-second timeout for slow connections
+- [x] **Email Connection Persistence Fixed** - Connection status properly persists and auto-verifies on app load
+- [x] **Email Inbox Test Feature** - Added "Test: View Inbox" button for App Password method
+- [x] **Google OAuth Implementation** - Complete OAuth flow:
+  - `email:oauth-start` - Opens browser for Google consent
+  - `email:oauth-callback` - Exchanges authorization code for tokens
+  - `email:oauth-test` - Tests connection by fetching Gmail profile and inbox
+  - Tokens stored in database for persistence
+  - Auto-reconnect on app startup
+- [x] **Added googleapis dependency** - For Gmail API integration
 
 ### P1 - High Priority (Testing Needed)
 - [ ] End-to-end test of Smart Apply flow

@@ -22,9 +22,7 @@ const EMAIL_PROVIDERS = [
 
 const ACCESS_METHODS = [
   { id: 'oauth', name: 'OAuth 2.0 (Recommended)', description: 'Most secure - no password stored', icon: '🔐' },
-  { id: 'app_password', name: 'App-Specific Password', description: 'Create a password just for this app', icon: '🔑' },
-  { id: 'delegate', name: 'Delegation Access', description: 'For Google Workspace / Microsoft 365', icon: '👥' },
-  { id: 'invite_link', name: 'Invite Link (Limited)', description: 'Send invite to secretary', icon: '📨' }
+  { id: 'app_password', name: 'App-Specific Password', description: 'Create a password just for this app', icon: '🔑' }
 ];
 
 export function EmailMonitoringSection({ userId }: { userId: number }) {
@@ -40,7 +38,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
   const [isConnected, setIsConnected] = useState(false);
   const [showManualCode, setShowManualCode] = useState(false);
   const [manualCode, setManualCode] = useState('');
-  const [showSecretarySetup, setShowSecretarySetup] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
   const [inboxMessages, setInboxMessages] = useState<any[]>([]);
@@ -57,7 +54,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
     if (result?.success && result.data) {
       setGoogleClientId(result.data.google_client_id || '');
       setGoogleClientSecret(result.data.google_client_secret || '');
-      // Load connection status and password
       const wasConnected = !!result.data.email_connected;
       setIsConnected(wasConnected);
       
@@ -70,13 +66,10 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
           appPassword: result.data.email_app_password || ''
         });
         
-        // Auto-verify connection on load if it was previously connected
         if (wasConnected) {
           if (result.data.email_access_method === 'oauth' && result.data.oauth_access_token) {
-            // Silently verify OAuth connection
             verifyOAuthConnection(true);
           } else if (result.data.email_app_password) {
-            // Silent re-verification for app password
             verifyConnection(result.data.email, result.data.email_app_password, result.data.email_provider, true);
           }
         }
@@ -84,7 +77,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
     }
   };
 
-  // Verify OAuth connection
   const verifyOAuthConnection = async (silent: boolean = false) => {
     if (!silent) setIsTesting(true);
     setTestResult(null);
@@ -112,15 +104,36 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
         }
       }
     } catch (e: any) {
-      if (!silent) {
-        setTestResult({ success: false, error: e.message });
-      }
+      if (!silent) setTestResult({ success: false, error: e.message });
     } finally {
       if (!silent) setIsTesting(false);
     }
   };
 
-  // Start OAuth flow
+  const verifyConnection = async (email: string, password: string, provider: string, silent: boolean = false) => {
+    if (!silent) setIsTesting(true);
+    setTestResult(null);
+    
+    try {
+      const result = await (window as any).electron.invoke?.('email:test-inbox', { email, password, provider });
+      
+      if (result?.success) {
+        setIsConnected(true);
+        if (!silent) setTestResult({ success: true, message: result.message || 'Connection verified!' });
+        await (window as any).electron.invoke?.('settings:update', { id: 1, email_connected: true });
+      } else {
+        setIsConnected(false);
+        if (!silent) setTestResult({ success: false, error: result?.error || 'Connection failed' });
+        await (window as any).electron.invoke?.('settings:update', { id: 1, email_connected: false });
+      }
+    } catch (e: any) {
+      if (!silent) setTestResult({ success: false, error: e.message });
+      setIsConnected(false);
+    } finally {
+      if (!silent) setIsTesting(false);
+    }
+  };
+
   const startOAuthFlow = async () => {
     if (!googleClientId || !googleClientSecret) {
       setTestResult({ success: false, error: 'Please enter Client ID and Client Secret first' });
@@ -150,7 +163,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
     }
   };
 
-  // Submit OAuth authorization code
   const submitOAuthCode = async () => {
     if (!manualCode.trim()) {
       setTestResult({ success: false, error: 'Please paste the authorization code' });
@@ -168,7 +180,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
       });
       
       if (result?.success) {
-        // Save config
         await (window as any).electron.invoke?.('settings:update', { 
           id: 1,
           google_client_id: googleClientId, 
@@ -185,7 +196,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
         setOauthInProgress(false);
         setTestResult({ success: true, message: result.message || 'Email connected via OAuth!' });
         
-        // Test the connection
         setTimeout(() => verifyOAuthConnection(false), 1000);
       } else {
         setTestResult({ success: false, error: result?.error || 'Failed to verify OAuth code' });
@@ -197,50 +207,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
     }
   };
 
-  // Verify connection by testing IMAP access
-  const verifyConnection = async (email: string, password: string, provider: string, silent: boolean = false) => {
-    if (!silent) setIsTesting(true);
-    setTestResult(null);
-    
-    try {
-      const result = await (window as any).electron.invoke?.('email:test-inbox', {
-        email,
-        password,
-        provider
-      });
-      
-      if (result?.success) {
-        setIsConnected(true);
-        if (!silent) {
-          setTestResult({ success: true, message: result.message || 'Connection verified!' });
-        }
-        // Update connection status in DB
-        await (window as any).electron.invoke?.('settings:update', { 
-          id: 1,
-          email_connected: true 
-        });
-      } else {
-        setIsConnected(false);
-        if (!silent) {
-          setTestResult({ success: false, error: result?.error || 'Connection failed' });
-        }
-        // Update connection status in DB
-        await (window as any).electron.invoke?.('settings:update', { 
-          id: 1,
-          email_connected: false 
-        });
-      }
-    } catch (e: any) {
-      if (!silent) {
-        setTestResult({ success: false, error: e.message });
-      }
-      setIsConnected(false);
-    } finally {
-      if (!silent) setIsTesting(false);
-    }
-  };
-
-  // Fetch actual inbox messages to prove connection works
   const fetchInboxPreview = async () => {
     if (!config.email || !config.appPassword) {
       alert('Please enter email and app password first');
@@ -262,11 +228,7 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
         setInboxMessages(result.messages || []);
         setInboxTotalCount(result.totalCount || 0);
         setIsConnected(true);
-        // Update connection status
-        await (window as any).electron.invoke?.('settings:update', { 
-          id: 1,
-          email_connected: true 
-        });
+        await (window as any).electron.invoke?.('settings:update', { id: 1, email_connected: true });
       } else {
         setTestResult({ success: false, error: result?.error || 'Failed to fetch inbox' });
         setIsConnected(false);
@@ -292,16 +254,12 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
   };
 
   const handleConnect = async () => {
-    if (config.accessMethod === 'oauth') {
-      // TODO: Implement OAuth flow
-      setShowManualCode(true);
-    } else if (config.accessMethod === 'app_password') {
+    if (config.accessMethod === 'app_password') {
       if (!config.email || !config.appPassword) {
         alert('Please enter email and app password');
         return;
       }
       
-      // Test the connection first
       setIsTesting(true);
       const testResult = await (window as any).electron.invoke?.('email:test-inbox', {
         email: config.email,
@@ -311,7 +269,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
       setIsTesting(false);
       
       if (testResult?.success) {
-        // Save config with connected status
         await (window as any).electron.invoke?.('settings:update', { 
           id: 1,
           google_client_id: googleClientId, 
@@ -328,23 +285,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
         setTestResult({ success: false, error: testResult?.error || 'Connection failed. Check your credentials.' });
       }
     }
-  };
-
-  const handleVerify = async (code: string) => {
-    // Save OAuth verification with connected status
-    await (window as any).electron.invoke?.('settings:update', { 
-      id: 1,
-      google_client_id: googleClientId, 
-      google_client_secret: googleClientSecret,
-      email_provider: config.provider,
-      email: config.email,
-      email_access_method: config.accessMethod,
-      oauth_code: code,
-      email_connected: true  // Persist connection status
-    });
-    setIsConnected(true);
-    setShowManualCode(false);
-    alert('Connected successfully!');
   };
 
   const inputStyle = { width: '100%', padding: '12px', marginBottom: '10px', border: '1px solid var(--border)', borderRadius: '6px', fontSize: '14px', background: 'var(--input-bg)', color: 'var(--text-primary)' };
@@ -473,22 +413,16 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                   placeholder="your.email@example.com"
                 />
 
+                {/* OAuth Section */}
                 {config.accessMethod === 'oauth' && (
-                  <>
+                  <div>
                     <div style={{ background: 'var(--info-light)', padding: '12px', borderRadius: '6px', marginBottom: '15px' }}>
                       <p style={{ margin: 0, fontSize: '12px', color: 'var(--info)' }}>
-                        <strong>ℹ️ OAuth Setup Steps:</strong>
-                        <ol style={{ margin: '8px 0 0 20px', padding: 0 }}>
-                          <li>Create a project in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">Google Cloud Console</a></li>
-                          <li>Enable Gmail API in APIs & Services</li>
-                          <li>Create OAuth 2.0 credentials (Desktop app type)</li>
-                          <li>Add your email to Test Users in OAuth consent screen</li>
-                          <li>Paste Client ID & Secret below, then click "Start OAuth"</li>
-                        </ol>
+                        <strong>OAuth Setup:</strong> Create OAuth credentials in Google Cloud Console, enable Gmail API, add your email to Test Users.
                       </p>
                     </div>
                     <label style={labelStyle}>Client ID</label>
-                    <input style={inputStyle} value={googleClientId} onChange={e => setGoogleClientId(e.target.value)} placeholder="Your OAuth Client ID (ends with .apps.googleusercontent.com)" />
+                    <input style={inputStyle} value={googleClientId} onChange={e => setGoogleClientId(e.target.value)} placeholder="Your OAuth Client ID" />
                     <label style={labelStyle}>Client Secret</label>
                     <input style={inputStyle} type="password" value={googleClientSecret} onChange={e => setGoogleClientSecret(e.target.value)} placeholder="Your OAuth Client Secret" />
                     
@@ -497,16 +431,11 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                         onClick={startOAuthFlow}
                         disabled={oauthInProgress || !googleClientId || !googleClientSecret}
                         style={{ 
-                          width: '100%',
-                          padding: '14px 25px', 
+                          width: '100%', padding: '14px 25px', 
                           background: 'linear-gradient(135deg, #4285f4 0%, #34a853 100%)', 
-                          color: '#fff', 
-                          border: 'none', 
-                          borderRadius: '6px', 
+                          color: '#fff', border: 'none', borderRadius: '6px', 
                           cursor: oauthInProgress ? 'wait' : 'pointer', 
-                          fontWeight: 'bold',
-                          fontSize: '14px',
-                          marginTop: '10px',
+                          fontWeight: 'bold', fontSize: '14px', marginTop: '10px',
                           opacity: (!googleClientId || !googleClientSecret) ? 0.5 : 1
                         }}
                       >
@@ -517,8 +446,7 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                     {showManualCode && (
                       <div style={{ marginTop: '15px', padding: '15px', background: 'var(--warning-light)', borderRadius: '8px', border: '1px solid var(--warning)' }}>
                         <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: 'var(--warning)' }}>
-                          <strong>📋 Paste Authorization Code:</strong><br/>
-                          After signing in, Google will show you a code. Copy and paste it here:
+                          <strong>Paste Authorization Code:</strong> After signing in, Google will show you a code. Copy and paste it here:
                         </p>
                         <input 
                           style={{ ...inputStyle, marginBottom: '10px' }} 
@@ -530,29 +458,13 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                           <button 
                             onClick={submitOAuthCode}
                             disabled={isTesting || !manualCode.trim()}
-                            style={{ 
-                              flex: 1,
-                              padding: '12px', 
-                              background: '#4285f4', 
-                              color: '#fff', 
-                              border: 'none', 
-                              borderRadius: '6px', 
-                              cursor: isTesting ? 'wait' : 'pointer',
-                              fontWeight: 'bold'
-                            }}
+                            style={{ flex: 1, padding: '12px', background: '#4285f4', color: '#fff', border: 'none', borderRadius: '6px', cursor: isTesting ? 'wait' : 'pointer', fontWeight: 'bold' }}
                           >
                             {isTesting ? '⏳ Verifying...' : '✓ Submit Code'}
                           </button>
                           <button 
                             onClick={() => { setShowManualCode(false); setManualCode(''); setOauthInProgress(false); }}
-                            style={{ 
-                              padding: '12px 20px', 
-                              background: 'var(--bg-tertiary)', 
-                              color: 'var(--text-primary)', 
-                              border: '1px solid var(--border)', 
-                              borderRadius: '6px', 
-                              cursor: 'pointer'
-                            }}
+                            style={{ padding: '12px 20px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: '1px solid var(--border)', borderRadius: '6px', cursor: 'pointer' }}
                           >
                             Cancel
                           </button>
@@ -564,32 +476,21 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                       <button 
                         onClick={() => verifyOAuthConnection(false)}
                         disabled={isTesting}
-                        style={{ 
-                          width: '100%',
-                          padding: '14px 25px', 
-                          background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', 
-                          color: '#fff', 
-                          border: 'none', 
-                          borderRadius: '6px', 
-                          cursor: isTesting ? 'wait' : 'pointer', 
-                          fontWeight: 'bold',
-                          fontSize: '14px',
-                          marginTop: '10px'
-                        }}
+                        style={{ width: '100%', padding: '14px 25px', background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', color: '#fff', border: 'none', borderRadius: '6px', cursor: isTesting ? 'wait' : 'pointer', fontWeight: 'bold', fontSize: '14px', marginTop: '10px' }}
                       >
                         {isTesting ? '⏳ Testing...' : '📬 Test Connection - View Inbox'}
                       </button>
                     )}
-                  </>
+                  </div>
                 )}
 
+                {/* App Password Section */}
                 {config.accessMethod === 'app_password' && (
-                  <>
+                  <div>
                     <div style={{ background: 'var(--warning-light)', padding: '12px', borderRadius: '6px', marginBottom: '15px' }}>
                       <p style={{ margin: 0, fontSize: '12px', color: 'var(--warning)' }}>
-                        <strong>ℹ️ App Password:</strong> Generate an app-specific password in your email provider's security settings.
-                        {config.provider === 'gmail' && <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ marginLeft: '5px' }}>Gmail App Passwords →</a>}
-                        {config.provider === 'outlook' && <a href="https://account.live.com/proofs/AppPassword" target="_blank" rel="noreferrer" style={{ marginLeft: '5px' }}>Outlook App Passwords →</a>}
+                        <strong>App Password:</strong> Generate an app-specific password in your email provider's security settings.
+                        {config.provider === 'gmail' && <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ marginLeft: '5px' }}>Gmail App Passwords</a>}
                       </p>
                     </div>
                     <label style={labelStyle}>App Password</label>
@@ -600,107 +501,69 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                       onChange={e => setConfig({...config, appPassword: e.target.value})}
                       placeholder="Enter app-specific password"
                     />
-                  </>
+                    
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap' }}>
+                      <button onClick={handleSave} style={{ padding: '12px 25px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                        💾 Save Configuration
+                      </button>
+                      <button 
+                        onClick={handleConnect} 
+                        disabled={isTesting}
+                        style={{ padding: '12px 25px', background: isConnected ? 'var(--success)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: '#fff', border: 'none', borderRadius: '6px', cursor: isTesting ? 'wait' : 'pointer', fontWeight: 'bold', opacity: isTesting ? 0.7 : 1 }}
+                      >
+                        {isTesting ? '⏳ Testing...' : isConnected ? '✅ Connected!' : '🔗 Connect Email'}
+                      </button>
+                      {isConnected && (
+                        <>
+                          <button 
+                            onClick={fetchInboxPreview}
+                            disabled={isLoadingInbox}
+                            style={{ padding: '12px 20px', background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', color: '#fff', border: 'none', borderRadius: '6px', cursor: isLoadingInbox ? 'wait' : 'pointer', fontWeight: 'bold', opacity: isLoadingInbox ? 0.7 : 1 }}
+                          >
+                            {isLoadingInbox ? '⏳ Loading...' : '📬 Test: View Inbox'}
+                          </button>
+                          <button 
+                            onClick={async () => {
+                              await (window as any).electron.invoke?.('settings:update', { id: 1, email_connected: false });
+                              setIsConnected(false);
+                              setInboxMessages([]);
+                              setTestResult(null);
+                            }} 
+                            style={{ padding: '12px 15px', background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+                          >
+                            Disconnect
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 )}
 
                 {/* Test Result Display */}
                 {testResult && (
-                  <div style={{ 
-                    background: testResult.success ? 'var(--success-light)' : 'var(--danger-light)', 
-                    padding: '12px', 
-                    borderRadius: '6px', 
-                    marginBottom: '15px',
-                    border: `1px solid ${testResult.success ? 'var(--success)' : 'var(--danger)'}`
-                  }}>
+                  <div style={{ background: testResult.success ? 'var(--success-light)' : 'var(--danger-light)', padding: '12px', borderRadius: '6px', marginTop: '15px', border: `1px solid ${testResult.success ? 'var(--success)' : 'var(--danger)'}` }}>
                     <p style={{ margin: 0, fontSize: '13px', color: testResult.success ? 'var(--success)' : 'var(--danger)' }}>
-                      {testResult.success ? '✅ ' : '❌ '}
-                      {testResult.message || testResult.error}
+                      {testResult.success ? '✅ ' : '❌ '}{testResult.message || testResult.error}
                     </p>
                   </div>
                 )}
 
-                {/* Buttons for App Password method only */}
-                {config.accessMethod === 'app_password' && (
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap' }}>
-                    <button onClick={handleSave} style={{ padding: '12px 25px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                      💾 Save Configuration
-                    </button>
-                    <button 
-                      onClick={handleConnect} 
-                      disabled={isTesting}
-                      style={{ 
-                        padding: '12px 25px', 
-                        background: isConnected ? 'var(--success)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-                        color: '#fff', 
-                        border: 'none', 
-                        borderRadius: '6px', 
-                        cursor: isTesting ? 'wait' : 'pointer', 
-                        fontWeight: 'bold',
-                        opacity: isTesting ? 0.7 : 1
-                      }}
-                    >
-                      {isTesting ? '⏳ Testing...' : isConnected ? '✅ Connected!' : '🔗 Connect Email'}
-                    </button>
-                    {isConnected && (
-                      <>
-                        <button 
-                          onClick={fetchInboxPreview}
-                          disabled={isLoadingInbox}
-                          style={{ 
-                            padding: '12px 20px', 
-                            background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', 
-                            color: '#fff', 
-                            border: 'none', 
-                            borderRadius: '6px', 
-                            cursor: isLoadingInbox ? 'wait' : 'pointer',
-                            fontWeight: 'bold',
-                            opacity: isLoadingInbox ? 0.7 : 1
-                          }}
-                        >
-                          {isLoadingInbox ? '⏳ Loading...' : '📬 Test: View Inbox'}
-                        </button>
-                        <button 
-                          onClick={async () => {
-                            await (window as any).electron.invoke?.('settings:update', { 
-                              id: 1,
-                              email_connected: false 
-                            });
-                            setIsConnected(false);
-                            setInboxMessages([]);
-                            setTestResult(null);
-                          }} 
-                          style={{ padding: '12px 15px', background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
-                        >
-                          Disconnect
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-
-                {/* Disconnect button for OAuth method */}
+                {/* Disconnect for OAuth */}
                 {config.accessMethod === 'oauth' && isConnected && (
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-                    <button 
-                      onClick={async () => {
-                        await (window as any).electron.invoke?.('settings:update', { 
-                          id: 1,
-                          email_connected: false,
-                          oauth_access_token: null,
-                          oauth_refresh_token: null
-                        });
-                        setIsConnected(false);
-                        setInboxMessages([]);
-                        setTestResult(null);
-                      }} 
-                      style={{ padding: '12px 20px', background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '6px', cursor: 'pointer' }}
-                    >
-                      🔌 Disconnect OAuth
-                    </button>
-                  </div>
+                  <button 
+                    onClick={async () => {
+                      await (window as any).electron.invoke?.('settings:update', { id: 1, email_connected: false, oauth_access_token: null, oauth_refresh_token: null });
+                      setIsConnected(false);
+                      setInboxMessages([]);
+                      setTestResult(null);
+                    }} 
+                    style={{ marginTop: '15px', padding: '12px 20px', background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '6px', cursor: 'pointer' }}
+                  >
+                    🔌 Disconnect OAuth
+                  </button>
                 )}
 
-                {/* Inbox Preview Section */}
+                {/* Inbox Preview */}
                 {inboxMessages.length > 0 && (
                   <div style={{ marginTop: '20px', padding: '15px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
                     <h4 style={{ margin: '0 0 12px 0', color: 'var(--text-primary)', fontSize: '14px' }}>
@@ -708,13 +571,7 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                     </h4>
                     <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
                       {inboxMessages.map((msg, i) => (
-                        <div key={i} style={{ 
-                          padding: '12px', 
-                          background: 'var(--card-bg)', 
-                          borderRadius: '6px', 
-                          marginBottom: '8px',
-                          border: '1px solid var(--border)'
-                        }}>
+                        <div key={i} style={{ padding: '12px', background: 'var(--card-bg)', borderRadius: '6px', marginBottom: '8px', border: '1px solid var(--border)' }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
                             <strong style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
                               {msg.from?.length > 40 ? msg.from.substring(0, 40) + '...' : msg.from}
@@ -726,11 +583,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                           <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
                             {msg.subject?.length > 60 ? msg.subject.substring(0, 60) + '...' : msg.subject}
                           </div>
-                          {msg.preview && (
-                            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
-                              {msg.preview.length > 100 ? msg.preview.substring(0, 100) + '...' : msg.preview}
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
@@ -742,89 +594,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
               </div>
             </div>
           )}
-
-          {/* Manual Code Entry */}
-          {showManualCode && (
-            <div style={{ background: 'var(--warning-light)', padding: '20px', borderRadius: '8px', marginBottom: '25px', border: '1px dashed var(--warning)' }}>
-              <h4 style={{ marginTop: 0, color: 'var(--warning)' }}>📋 Manual Code Entry</h4>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>If the OAuth popup didn't close automatically, paste the authorization code here:</p>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <input 
-                  style={{...inputStyle, marginBottom: 0, flex: 1}} 
-                  value={manualCode} 
-                  onChange={e => setManualCode(e.target.value)}
-                  placeholder="Paste authorization code..."
-                />
-                <button onClick={() => handleVerify(manualCode)} style={{ padding: '12px 20px', background: 'var(--warning)', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                  Verify
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Secretary Access Section */}
-          <div style={{ borderTop: '2px solid var(--border)', paddingTop: '25px', marginTop: '25px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>👥 Secretary Email Access</h4>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input 
-                  type="checkbox" 
-                  checked={config.secretaryEnabled} 
-                  onChange={e => setConfig({...config, secretaryEnabled: e.target.checked})}
-                />
-                <span style={{ color: 'var(--text-primary)' }}>Enable Secretary Access</span>
-              </label>
-            </div>
-
-            {config.secretaryEnabled && (
-              <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: 0 }}>
-                  Allow a secretary or assistant to monitor your email for job application responses without giving them full access to your account.
-                </p>
-
-                <label style={labelStyle}>Secretary's Email Address</label>
-                <input 
-                  style={inputStyle}
-                  type="email"
-                  value={config.secretaryEmail || ''}
-                  onChange={e => setConfig({...config, secretaryEmail: e.target.value})}
-                  placeholder="secretary@example.com"
-                />
-
-                <label style={labelStyle}>Secretary Access Method</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px', marginBottom: '15px' }}>
-                  {[
-                    { id: 'separate_login', name: 'Separate Login', desc: 'Secretary creates their own account', recommended: true },
-                    { id: 'delegate_gmail', name: 'Gmail Delegation', desc: 'For Google Workspace users' },
-                    { id: 'delegate_outlook', name: 'Outlook Delegation', desc: 'For Microsoft 365 users' },
-                    { id: 'invite_limited', name: 'Limited Invite Link', desc: 'Read-only access via link' }
-                  ].map(method => (
-                    <div 
-                      key={method.id}
-                      onClick={() => setConfig({...config, secretaryAccessMethod: method.id})}
-                      style={{
-                        padding: '12px',
-                        border: `2px solid ${config.secretaryAccessMethod === method.id ? 'var(--info)' : 'var(--border)'}`,
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        background: config.secretaryAccessMethod === method.id ? 'var(--info-light)' : 'var(--card-bg)'
-                      }}
-                    >
-                      <div style={{ fontWeight: 'bold', fontSize: '13px', color: 'var(--text-primary)' }}>
-                        {method.name}
-                        {method.recommended && <span style={{ marginLeft: '5px', fontSize: '10px', background: 'var(--success)', color: '#fff', padding: '2px 6px', borderRadius: '4px' }}>Recommended</span>}
-                      </div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{method.desc}</div>
-                    </div>
-                  ))}
-                </div>
-
-                <button onClick={handleSave} style={{ marginTop: '15px', padding: '12px 25px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                  💾 Save Secretary Settings
-                </button>
-              </div>
-            )}
-          </div>
         </div>
       )}
     </div>

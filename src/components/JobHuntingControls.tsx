@@ -490,36 +490,6 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
         </div>
       </div>
 
-      {/* Status Bar */}
-      {isActive && (
-        <div style={{ 
-          marginTop: '16px',
-          padding: '12px 16px',
-          background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1) 0%, rgba(46, 125, 50, 0.1) 100%)',
-          borderRadius: '10px',
-          border: '1px solid var(--success)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ 
-              width: '12px', 
-              height: '12px', 
-              borderRadius: '50%', 
-              background: '#4CAF50',
-              animation: 'pulse 2s infinite'
-            }} />
-            <span style={{ color: 'var(--success)', fontWeight: 600, fontSize: '14px' }}>
-              Hunter is actively searching for jobs...
-            </span>
-          </div>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>
-            {scheduleEnabled ? `Scheduled: ${startTime} - ${endTime}` : 'Running continuously'}
-          </span>
-        </div>
-      )}
-
       <style>{`
         @keyframes pulse {
           0%, 100% { opacity: 1; transform: scale(1); }

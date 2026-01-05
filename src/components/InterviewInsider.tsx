@@ -27,6 +27,35 @@ export function InterviewInsider({ userId }: Props) {
   const [customAnswer, setCustomAnswer] = useState<{ question: string; answer: string; tips: string } | null>(null);
   const [isAskingQuestion, setIsAskingQuestion] = useState(false);
 
+  // Ask about CV feature state
+  const [cvQuestions, setCvQuestions] = useState<{ question: string; answer: string; difficulty: string }[]>([]);
+  const [isAskingCv, setIsAskingCv] = useState(false);
+  const [difficultyLevel, setDifficultyLevel] = useState(5); // 1-10 scale
+  const [showCvSection, setShowCvSection] = useState(false);
+
+  const handleAskAboutCv = async () => {
+    setIsAskingCv(true);
+    setError(null);
+
+    try {
+      const result = await (window as any).electron.invoke('ai:ask-about-cv', {
+        jobUrl,
+        userId,
+        difficultyLevel
+      });
+
+      if (result.success) {
+        setCvQuestions(result.questions || []);
+      } else {
+        setError(result.error || 'Failed to generate CV questions');
+      }
+    } catch (e: any) {
+      setError(e.message || 'An error occurred');
+    } finally {
+      setIsAskingCv(false);
+    }
+  };
+
   const handleGenerateQuestions = async (generateMore: boolean = false) => {
     if (!jobUrl.trim()) {
       setError('Please enter a job URL');

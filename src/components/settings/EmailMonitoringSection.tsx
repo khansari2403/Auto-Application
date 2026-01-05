@@ -41,6 +41,11 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
   const [showManualCode, setShowManualCode] = useState(false);
   const [manualCode, setManualCode] = useState('');
   const [showSecretarySetup, setShowSecretarySetup] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
+  const [inboxMessages, setInboxMessages] = useState<any[]>([]);
+  const [isLoadingInbox, setIsLoadingInbox] = useState(false);
+  const [inboxTotalCount, setInboxTotalCount] = useState(0);
 
   useEffect(() => {
     loadConfig();
@@ -51,15 +56,106 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
     if (result?.success && result.data) {
       setGoogleClientId(result.data.google_client_id || '');
       setGoogleClientSecret(result.data.google_client_secret || '');
-      setIsConnected(!!result.data.email_connected);
+      // Load connection status and password
+      const wasConnected = !!result.data.email_connected;
+      setIsConnected(wasConnected);
+      
       if (result.data.email_provider) {
         setConfig({
           ...config,
           provider: result.data.email_provider,
           email: result.data.email || '',
-          accessMethod: result.data.email_access_method || ''
+          accessMethod: result.data.email_access_method || '',
+          appPassword: result.data.email_app_password || ''
+        });
+        
+        // Auto-verify connection on load if it was previously connected
+        if (wasConnected && result.data.email_app_password) {
+          // Silent re-verification in background
+          verifyConnection(result.data.email, result.data.email_app_password, result.data.email_provider, true);
+        }
+      }
+    }
+  };
+
+  // Verify connection by testing IMAP access
+  const verifyConnection = async (email: string, password: string, provider: string, silent: boolean = false) => {
+    if (!silent) setIsTesting(true);
+    setTestResult(null);
+    
+    try {
+      const result = await (window as any).electron.invoke?.('email:test-inbox', {
+        email,
+        password,
+        provider
+      });
+      
+      if (result?.success) {
+        setIsConnected(true);
+        if (!silent) {
+          setTestResult({ success: true, message: result.message || 'Connection verified!' });
+        }
+        // Update connection status in DB
+        await (window as any).electron.invoke?.('settings:update', { 
+          id: 1,
+          email_connected: true 
+        });
+      } else {
+        setIsConnected(false);
+        if (!silent) {
+          setTestResult({ success: false, error: result?.error || 'Connection failed' });
+        }
+        // Update connection status in DB
+        await (window as any).electron.invoke?.('settings:update', { 
+          id: 1,
+          email_connected: false 
         });
       }
+    } catch (e: any) {
+      if (!silent) {
+        setTestResult({ success: false, error: e.message });
+      }
+      setIsConnected(false);
+    } finally {
+      if (!silent) setIsTesting(false);
+    }
+  };
+
+  // Fetch actual inbox messages to prove connection works
+  const fetchInboxPreview = async () => {
+    if (!config.email || !config.appPassword) {
+      alert('Please enter email and app password first');
+      return;
+    }
+    
+    setIsLoadingInbox(true);
+    setInboxMessages([]);
+    
+    try {
+      const result = await (window as any).electron.invoke?.('email:fetch-inbox', {
+        email: config.email,
+        password: config.appPassword,
+        provider: config.provider,
+        maxMessages: 5
+      });
+      
+      if (result?.success) {
+        setInboxMessages(result.messages || []);
+        setInboxTotalCount(result.totalCount || 0);
+        setIsConnected(true);
+        // Update connection status
+        await (window as any).electron.invoke?.('settings:update', { 
+          id: 1,
+          email_connected: true 
+        });
+      } else {
+        setTestResult({ success: false, error: result?.error || 'Failed to fetch inbox' });
+        setIsConnected(false);
+      }
+    } catch (e: any) {
+      setTestResult({ success: false, error: e.message });
+    } finally {
+      setIsLoadingInbox(false);
     }
   };
 
@@ -81,19 +177,37 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
       // TODO: Implement OAuth flow
       setShowManualCode(true);
     } else if (config.accessMethod === 'app_password') {
-      // Save config with connected status
-      await (window as any).electron.invoke?.('settings:update', { 
-        id: 1,
-        google_client_id: googleClientId, 
-        google_client_secret: googleClientSecret,
-        email_provider: config.provider,
+      if (!config.email || !config.appPassword) {
+        alert('Please enter email and app password');
+        return;
+      }
+      
+      // Test the connection first
+      setIsTesting(true);
+      const testResult = await (window as any).electron.invoke?.('email:test-inbox', {
         email: config.email,
-        email_access_method: config.accessMethod,
-        email_app_password: config.appPassword,
-        email_connected: true  // Persist connection status
+        password: config.appPassword,
+        provider: config.provider
       });
-      setIsConnected(true);
-      alert('Email connected successfully!');
+      setIsTesting(false);
+      
+      if (testResult?.success) {
+        // Save config with connected status
+        await (window as any).electron.invoke?.('settings:update', { 
+          id: 1,
+          google_client_id: googleClientId, 
+          google_client_secret: googleClientSecret,
+          email_provider: config.provider,
+          email: config.email,
+          email_access_method: config.accessMethod,
+          email_app_password: config.appPassword,
+          email_connected: true
+        });
+        setIsConnected(true);
+        setTestResult({ success: true, message: 'Email connected and verified!' });
+      } else {
+        setTestResult({ success: false, error: testResult?.error || 'Connection failed. Check your credentials.' });
+      }
     }
   };
 

@@ -389,41 +389,117 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                   </>
                 )}
 
-                <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                {/* Test Result Display */}
+                {testResult && (
+                  <div style={{ 
+                    background: testResult.success ? 'var(--success-light)' : 'var(--danger-light)', 
+                    padding: '12px', 
+                    borderRadius: '6px', 
+                    marginBottom: '15px',
+                    border: `1px solid ${testResult.success ? 'var(--success)' : 'var(--danger)'}`
+                  }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: testResult.success ? 'var(--success)' : 'var(--danger)' }}>
+                      {testResult.success ? '✅ ' : '❌ '}
+                      {testResult.message || testResult.error}
+                    </p>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap' }}>
                   <button onClick={handleSave} style={{ padding: '12px 25px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
                     💾 Save Configuration
                   </button>
                   <button 
                     onClick={handleConnect} 
-                    disabled={isConnected}
+                    disabled={isTesting}
                     style={{ 
                       padding: '12px 25px', 
                       background: isConnected ? 'var(--success)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
                       color: '#fff', 
                       border: 'none', 
                       borderRadius: '6px', 
-                      cursor: isConnected ? 'default' : 'pointer', 
+                      cursor: isTesting ? 'wait' : 'pointer', 
                       fontWeight: 'bold',
-                      opacity: isConnected ? 1 : 1
+                      opacity: isTesting ? 0.7 : 1
                     }}
                   >
-                    {isConnected ? '✅ Connected!' : '🔗 Connect Email'}
+                    {isTesting ? '⏳ Testing...' : isConnected ? '✅ Connected!' : '🔗 Connect Email'}
                   </button>
                   {isConnected && (
-                    <button 
-                      onClick={async () => {
-                        await (window as any).electron.invoke?.('settings:update', { 
-                          id: 1,
-                          email_connected: false 
-                        });
-                        setIsConnected(false);
-                      }} 
-                      style={{ padding: '12px 15px', background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
-                    >
-                      Disconnect
-                    </button>
+                    <>
+                      <button 
+                        onClick={fetchInboxPreview}
+                        disabled={isLoadingInbox}
+                        style={{ 
+                          padding: '12px 20px', 
+                          background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', 
+                          color: '#fff', 
+                          border: 'none', 
+                          borderRadius: '6px', 
+                          cursor: isLoadingInbox ? 'wait' : 'pointer',
+                          fontWeight: 'bold',
+                          opacity: isLoadingInbox ? 0.7 : 1
+                        }}
+                      >
+                        {isLoadingInbox ? '⏳ Loading...' : '📬 Test: View Inbox'}
+                      </button>
+                      <button 
+                        onClick={async () => {
+                          await (window as any).electron.invoke?.('settings:update', { 
+                            id: 1,
+                            email_connected: false 
+                          });
+                          setIsConnected(false);
+                          setInboxMessages([]);
+                          setTestResult(null);
+                        }} 
+                        style={{ padding: '12px 15px', background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+                      >
+                        Disconnect
+                      </button>
+                    </>
                   )}
                 </div>
+
+                {/* Inbox Preview Section */}
+                {inboxMessages.length > 0 && (
+                  <div style={{ marginTop: '20px', padding: '15px', background: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                    <h4 style={{ margin: '0 0 12px 0', color: 'var(--text-primary)', fontSize: '14px' }}>
+                      📬 Inbox Preview ({inboxMessages.length} of {inboxTotalCount} messages)
+                    </h4>
+                    <div style={{ maxHeight: '250px', overflowY: 'auto' }}>
+                      {inboxMessages.map((msg, i) => (
+                        <div key={i} style={{ 
+                          padding: '12px', 
+                          background: 'var(--card-bg)', 
+                          borderRadius: '6px', 
+                          marginBottom: '8px',
+                          border: '1px solid var(--border)'
+                        }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                            <strong style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
+                              {msg.from?.length > 40 ? msg.from.substring(0, 40) + '...' : msg.from}
+                            </strong>
+                            <span style={{ fontSize: '10px', color: 'var(--text-tertiary)' }}>
+                              {msg.date ? new Date(msg.date).toLocaleDateString() : ''}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+                            {msg.subject?.length > 60 ? msg.subject.substring(0, 60) + '...' : msg.subject}
+                          </div>
+                          {msg.preview && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', marginTop: '4px' }}>
+                              {msg.preview.length > 100 ? msg.preview.substring(0, 100) + '...' : msg.preview}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <p style={{ margin: '10px 0 0 0', fontSize: '11px', color: 'var(--success)' }}>
+                      ✓ Connection verified! Your inbox is accessible.
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}

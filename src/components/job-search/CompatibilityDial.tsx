@@ -3,9 +3,10 @@ import React from 'react';
 interface CompatibilityDialProps {
   score: number | null | undefined;
   size?: 'small' | 'large';
+  source?: string; // Which profile source was used for assessment
 }
 
-export function CompatibilityDial({ score, size = 'small' }: CompatibilityDialProps) {
+export function CompatibilityDial({ score, size = 'small', source }: CompatibilityDialProps) {
   // If no score, show N/A
   if (score === null || score === undefined || score === 0) {
     const height = size === 'large' ? 80 : 40;

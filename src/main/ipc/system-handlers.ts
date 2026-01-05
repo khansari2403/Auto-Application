@@ -33,11 +33,14 @@ export function registerSystemHandlers(): string[] {
   });
 
   // --- SCHEDULER CONTROL ---
-  ipcMain.handle('scheduler:toggle', async (_, enabled) => {
+  ipcMain.handle('scheduler:toggle', async (_, data) => {
     try {
+      // Support both { active: boolean } and direct boolean
+      const enabled = typeof data === 'object' ? data.active : data;
       const { setSchedulerEnabled } = require('../features/scheduler');
       setSchedulerEnabled(enabled);
       await runQuery('UPDATE settings', { job_hunting_active: enabled ? 1 : 0 });
+      console.log(`Scheduler toggled: ${enabled ? 'ENABLED' : 'DISABLED'}`);
       return { success: true, enabled };
     } catch (e: any) {
       return { success: false, error: e.message };

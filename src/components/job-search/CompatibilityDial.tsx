@@ -1,12 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 interface CompatibilityDialProps {
   score: number | null | undefined;
   size?: 'small' | 'large';
   source?: string; // Which profile source was used for assessment
+  missingSkills?: string[]; // Missing qualifications
+  matchedSkills?: string[]; // Matched qualifications
+  breakdown?: {
+    skills: number;
+    experience: number;
+    education: number;
+    location: number;
+  };
 }
 
-export function CompatibilityDial({ score, size = 'small', source }: CompatibilityDialProps) {
+export function CompatibilityDial({ score, size = 'small', source, missingSkills = [], matchedSkills = [], breakdown }: CompatibilityDialProps) {
+  const [showTooltip, setShowTooltip] = useState(false);
   // If no score, show N/A
   if (score === null || score === undefined || score === 0) {
     const height = size === 'large' ? 80 : 40;

@@ -378,6 +378,35 @@ function AIModelsSection({ userId }: { userId: number }) {
                   <input type='number' style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc' }} value={formData.wordLimit} onChange={(e) => handleInputChange('wordLimit', e.target.value)} />
                 </>
               )}
+
+              {/* Auditor-specific settings */}
+              {isAuditor && (
+                <div style={{ background: '#fff3e0', padding: '15px', borderRadius: '10px', border: '1px solid #ffb74d', marginBottom: '15px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#e65100' }}>
+                    🧐 Source of Judgement
+                  </label>
+                  <p style={{ fontSize: '11px', color: '#666', marginBottom: '10px' }}>
+                    The Auditor will use this profile source to verify Hunter results and assess CV generation quality
+                  </p>
+                  <select 
+                    style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ffb74d', background: '#fff' }} 
+                    value={formData.auditorSource} 
+                    onChange={(e) => handleInputChange('auditorSource', e.target.value)}
+                  >
+                    <option value='all'>📋 All Sources (Combined)</option>
+                    <option value='linkedin'>👤 LinkedIn Profile Only</option>
+                    <option value='manual'>✏️ Manual Profile Input Only</option>
+                    <option value='uploaded_cv'>📄 Uploaded CV Documents Only</option>
+                  </select>
+                  <div style={{ marginTop: '10px', padding: '10px', background: '#fff', borderRadius: '6px', fontSize: '11px', color: '#555' }}>
+                    <strong>How it works:</strong><br/>
+                    • <strong>All Sources:</strong> Combines LinkedIn + Manual + CVs for comprehensive assessment<br/>
+                    • <strong>LinkedIn Only:</strong> Uses only imported LinkedIn data<br/>
+                    • <strong>Manual Only:</strong> Uses only manually entered profile info<br/>
+                    • <strong>Uploaded CV:</strong> Uses only uploaded CV documents as reference
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>

@@ -195,31 +195,50 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
             </div>
           </div>
 
-          {/* Direct Hunter Trigger Button */}
-          <button
-            onClick={startHunterSearch}
-            disabled={isSearching}
-            style={{
-              padding: '14px 28px',
-              borderRadius: '12px',
-              border: 'none',
-              background: isSearching 
-                ? 'linear-gradient(135deg, #9E9E9E 0%, #757575 100%)'
-                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: '#fff',
-              fontWeight: 'bold',
-              fontSize: '14px',
-              cursor: isSearching ? 'not-allowed' : 'pointer',
-              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
-              transition: 'all 0.3s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              opacity: isSearching ? 0.8 : 1
-            }}
-          >
-            {isSearching ? '🔄 Searching...' : '🔍 Hunt Now'}
-          </button>
+          {/* Direct Hunter Trigger Button - with Cancel option */}
+          {isSearching ? (
+            <button
+              onClick={cancelHunterSearch}
+              style={{
+                padding: '14px 28px',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #f44336 0%, #c62828 100%)',
+                color: '#fff',
+                fontWeight: 'bold',
+                fontSize: '14px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(244, 67, 54, 0.4)',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              ⏹️ Cancel Search
+            </button>
+          ) : (
+            <button
+              onClick={startHunterSearch}
+              style={{
+                padding: '14px 28px',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: '#fff',
+                fontWeight: 'bold',
+                fontSize: '14px',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                transition: 'all 0.3s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              🔍 Hunt Now
+            </button>
+          )}
         </div>
       </div>
 

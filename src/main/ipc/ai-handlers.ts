@@ -22,27 +22,59 @@ export function registerAIHandlers(): string[] {
     try {
       const { modelName, apiKey, apiEndpoint } = data;
       
+      console.log('Testing model:', modelName);
+      console.log('API Key prefix:', apiKey?.substring(0, 15) + '...');
+      console.log('Custom endpoint:', apiEndpoint);
+      
       if (!apiKey) {
         return { success: false, message: 'No API key provided' };
       }
       
-      // Determine endpoint
-      let endpoint = 'https://api.openai.com/v1/chat/completions';
+      // Determine endpoint and provider type
+      let endpoint = '';
+      let provider = 'openai';
       
-      if (apiEndpoint?.includes('localhost')) {
+      // Check for custom/local endpoint first
+      if (apiEndpoint?.includes('localhost') || apiEndpoint?.includes('127.0.0.1')) {
         endpoint = apiEndpoint;
+        provider = 'local';
+      } 
+      // Check API key patterns
+      else if (apiKey.startsWith('sk-or-')) {
+        // OpenRouter
+        endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+        provider = 'openrouter';
       } else if (apiKey.startsWith('tgp_v1_')) {
+        // Together AI
         endpoint = 'https://api.together.xyz/v1/chat/completions';
+        provider = 'together';
       } else if (apiKey.startsWith('sk-ant-')) {
+        // Anthropic
         endpoint = 'https://api.anthropic.com/v1/messages';
+        provider = 'anthropic';
+      } else if (apiKey.startsWith('AIza')) {
+        // Google AI
+        endpoint = 'https://generativelanguage.googleapis.com/v1beta/models';
+        provider = 'google';
+      } else if (apiKey.startsWith('sk-')) {
+        // OpenAI
+        endpoint = 'https://api.openai.com/v1/chat/completions';
+        provider = 'openai';
+      } else {
+        // Default to OpenRouter for unknown key formats (most flexible)
+        endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+        provider = 'openrouter';
       }
+      
+      console.log('Detected provider:', provider);
+      console.log('Using endpoint:', endpoint);
       
       // Simple test prompt
       const testPrompt = 'Respond with only the word "OK" to confirm you are working.';
       
       let response;
       
-      if (apiKey.startsWith('sk-ant-')) {
+      if (provider === 'anthropic') {
         // Anthropic API
         response = await axios.post(endpoint, {
           model: modelName || 'claude-3-haiku-20240307',
@@ -54,10 +86,35 @@ export function registerAIHandlers(): string[] {
             'anthropic-version': '2023-06-01',
             'Content-Type': 'application/json'
           },
-          timeout: 15000
+          timeout: 20000
+        });
+      } else if (provider === 'google') {
+        // Google AI requires different format
+        const googleEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName || 'gemini-pro'}:generateContent?key=${apiKey}`;
+        response = await axios.post(googleEndpoint, {
+          contents: [{ parts: [{ text: testPrompt }] }]
+        }, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 20000
+        });
+      } else if (provider === 'openrouter') {
+        // OpenRouter API (OpenAI compatible with extra headers)
+        response = await axios.post(endpoint, {
+          model: modelName || 'openai/gpt-3.5-turbo',
+          messages: [{ role: 'user', content: testPrompt }],
+          max_tokens: 10,
+          temperature: 0
+        }, {
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'HTTP-Referer': 'https://job-automation-app.local',
+            'X-Title': 'Job Automation App'
+          },
+          timeout: 20000
         });
       } else {
-        // OpenAI-compatible API
+        // OpenAI and compatible APIs (Together, local, etc.)
         response = await axios.post(endpoint, {
           model: modelName || 'gpt-3.5-turbo',
           messages: [{ role: 'user', content: testPrompt }],
@@ -68,19 +125,56 @@ export function registerAIHandlers(): string[] {
             'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: 15000
+          timeout: 20000
         });
       }
       
+      console.log('Test response received:', response.status);
+      
       if (response.data) {
-        return { success: true, message: 'Model responding correctly' };
+        // Check for actual response content based on provider
+        let hasContent = false;
+        if (provider === 'google') {
+          hasContent = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
+        } else if (provider === 'anthropic') {
+          hasContent = response.data.content?.[0]?.text;
+        } else {
+          hasContent = response.data.choices?.[0]?.message?.content;
+        }
+        
+        if (hasContent) {
+          return { success: true, message: `✓ Model responding (${provider})` };
+        } else {
+          return { success: true, message: `✓ Connected but empty response (${provider})` };
+        }
       } else {
         return { success: false, message: 'No response from model' };
       }
       
     } catch (e: any) {
-      const errorMsg = e.response?.data?.error?.message || e.message || 'Unknown error';
-      console.error('Model test failed:', errorMsg);
+      console.error('Model test error:', e.response?.data || e.message);
+      
+      // Extract meaningful error message
+      let errorMsg = 'Unknown error';
+      
+      if (e.response?.data?.error?.message) {
+        errorMsg = e.response.data.error.message;
+      } else if (e.response?.data?.message) {
+        errorMsg = e.response.data.message;
+      } else if (e.response?.status === 401) {
+        errorMsg = 'Invalid API key or unauthorized';
+      } else if (e.response?.status === 404) {
+        errorMsg = 'Model not found - check model name';
+      } else if (e.response?.status === 429) {
+        errorMsg = 'Rate limited - try again later';
+      } else if (e.code === 'ECONNREFUSED') {
+        errorMsg = 'Connection refused - check endpoint URL';
+      } else if (e.code === 'ETIMEDOUT' || e.code === 'ECONNABORTED') {
+        errorMsg = 'Connection timeout - server not responding';
+      } else if (e.message) {
+        errorMsg = e.message;
+      }
+      
       return { success: false, message: errorMsg };
     }
   });

@@ -699,7 +699,6 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                     </button>
                   </div>
                 )}
-                </div>
 
                 {/* Inbox Preview Section */}
                 {inboxMessages.length > 0 && (

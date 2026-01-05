@@ -175,6 +175,10 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [x] **HR AI Job Import Fixed** - Fixed `ai:generate-interview-prep` handler to use correct function `getJobPageContent` instead of non-existent `scrapeJobPage`
 - [x] **IPC Channel Registration Fixed** - Added missing `ai:test-model` to knownChannels array in ipc/index.ts
 - [x] **JSON-LD Parsing Enhancement** - Improved job data extraction for Interview Insider to parse JSON-LD structured data
+- [x] **AI Model Test Improved** - Enhanced model testing to support multiple providers (OpenRouter, OpenAI, Anthropic, Together AI, Google AI, local models) with better error messages
+- [x] **Email Connection Persistence Fixed** - Connection status now properly persists and auto-verifies on app load
+- [x] **Email Inbox Test Feature** - Added "Test: View Inbox" button that fetches and displays actual inbox messages to prove connection works
+- [x] **IMAP Connection Test** - Added `email:test-inbox` and `email:fetch-inbox` IPC handlers for real inbox access verification
 
 ### P1 - High Priority (Testing Needed)
 - [ ] End-to-end test of Smart Apply flow

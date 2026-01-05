@@ -20,6 +20,7 @@
     "axios": "^1.6.0",
     "dotenv": "^16.3.1",
     "electron-is-dev": "^1.2.0",
+    "googleapis": "^169.0.0",
     "imap": "^0.8.19",
     "mailparser": "^3.7.1",
     "marked": "^17.0.1",

@@ -1,6 +1,7 @@
 import { runQuery, getDatabase, getAllQuery, logAction } from '../database';
 import { scrapeJobs, getJobPageContent } from '../scraper-service';
 import { reportGhostJob as reportGhostJobNetwork, isGhostJob as isGhostJobNetwork } from './ghost-job-network';
+import * as CompatibilityService from './compatibility-service';
 
 // Cancellation flag for Hunter search
 let hunterCancelled = false;

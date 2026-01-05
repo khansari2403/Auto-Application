@@ -185,7 +185,8 @@ function AIModelsSection({ userId }: { userId: number }) {
       functionalPrompt: model.functional_prompt || '',
       cvStylePersona: model.cv_style_persona || 'Classic',
       referenceCvId: model.reference_cv_id || '',
-      cvStyleCode: model.cv_style_code || ''
+      cvStyleCode: model.cv_style_code || '',
+      auditorSource: model.auditor_source || 'all'
     });
     setShowForm(true);
   };

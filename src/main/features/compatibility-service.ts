@@ -132,6 +132,7 @@ export async function calculateCompatibility(userId: number, jobId: number): Pro
     experienceMatch: experienceScore,
     educationMatch: educationScore,
     locationMatch: locationScore > 50,
+    profileSource: source,
     breakdown: {
       skills: skillsScore.score,
       experience: experienceScore,

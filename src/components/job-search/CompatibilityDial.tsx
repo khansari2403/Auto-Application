@@ -62,6 +62,56 @@ export function CompatibilityDial({ score, size = 'small', source, missingSkills
   const width = size === 'large' ? 20 : 12;
   const fillHeight = (score / 100) * height;
 
+  // Build tooltip content
+  const getTooltipContent = () => {
+    const lines: string[] = [];
+    
+    // Score info
+    lines.push(`Match Score: ${score}% (${label})`);
+    
+    // Breakdown if available
+    if (breakdown) {
+      lines.push('');
+      lines.push('📊 Score Breakdown:');
+      lines.push(`  • Skills: ${breakdown.skills}%`);
+      lines.push(`  • Experience: ${breakdown.experience}%`);
+      lines.push(`  • Education: ${breakdown.education}%`);
+      lines.push(`  • Location: ${breakdown.location}%`);
+    }
+    
+    // Missing skills
+    if (missingSkills && missingSkills.length > 0) {
+      lines.push('');
+      lines.push('❌ Missing Qualifications:');
+      missingSkills.slice(0, 5).forEach(skill => {
+        lines.push(`  • ${skill}`);
+      });
+      if (missingSkills.length > 5) {
+        lines.push(`  ... and ${missingSkills.length - 5} more`);
+      }
+    }
+    
+    // Matched skills
+    if (matchedSkills && matchedSkills.length > 0) {
+      lines.push('');
+      lines.push('✅ Matched Skills:');
+      matchedSkills.slice(0, 5).forEach(skill => {
+        lines.push(`  • ${skill}`);
+      });
+      if (matchedSkills.length > 5) {
+        lines.push(`  ... and ${matchedSkills.length - 5} more`);
+      }
+    }
+    
+    // Source
+    if (source) {
+      lines.push('');
+      lines.push(`📋 Based on: ${source}`);
+    }
+    
+    return lines.join('\n');
+  };
+
   return (
     <div 
       style={{ 
@@ -69,10 +119,134 @@ export function CompatibilityDial({ score, size = 'small', source, missingSkills
         flexDirection: 'column', 
         alignItems: 'center', 
         gap: '4px',
-        minWidth: size === 'large' ? '50px' : '35px'
+        minWidth: size === 'large' ? '50px' : '35px',
+        position: 'relative'
       }}
-      title={source ? `Based on: ${source}` : undefined}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
     >
+      {/* Hover Tooltip */}
+      {showTooltip && (
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          marginBottom: '8px',
+          padding: '12px',
+          background: 'var(--card-bg, #fff)',
+          border: `2px solid ${color}`,
+          borderRadius: '8px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          zIndex: 1000,
+          minWidth: '220px',
+          maxWidth: '300px',
+          whiteSpace: 'pre-line',
+          fontSize: '11px',
+          lineHeight: '1.4',
+          color: 'var(--text-primary, #333)',
+          pointerEvents: 'none'
+        }}>
+          {/* Arrow */}
+          <div style={{
+            position: 'absolute',
+            bottom: '-8px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 0,
+            height: 0,
+            borderLeft: '8px solid transparent',
+            borderRight: '8px solid transparent',
+            borderTop: `8px solid ${color}`
+          }} />
+          
+          {/* Header with color indicator */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            marginBottom: '8px',
+            paddingBottom: '8px',
+            borderBottom: '1px solid var(--border, #eee)'
+          }}>
+            <div style={{
+              width: '12px',
+              height: '12px',
+              borderRadius: '50%',
+              background: bg
+            }} />
+            <span style={{ fontWeight: 'bold', fontSize: '12px', color }}>
+              {score}% - {label} Match
+            </span>
+          </div>
+          
+          {/* Breakdown section */}
+          {breakdown && (
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px', color: 'var(--text-secondary, #666)' }}>
+                📊 Score Breakdown:
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '10px' }}>
+                <span>Skills: {breakdown.skills}%</span>
+                <span>Experience: {breakdown.experience}%</span>
+                <span>Education: {breakdown.education}%</span>
+                <span>Location: {breakdown.location}%</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Missing skills section */}
+          {missingSkills && missingSkills.length > 0 && (
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#f44336' }}>
+                ❌ Missing Qualifications:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '16px', color: '#f44336' }}>
+                {missingSkills.slice(0, 5).map((skill, i) => (
+                  <li key={i} style={{ marginBottom: '2px' }}>{skill}</li>
+                ))}
+                {missingSkills.length > 5 && (
+                  <li style={{ fontStyle: 'italic', opacity: 0.8 }}>
+                    ...and {missingSkills.length - 5} more
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+          
+          {/* Matched skills section */}
+          {matchedSkills && matchedSkills.length > 0 && (
+            <div>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#4CAF50' }}>
+                ✅ Matched Skills:
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '16px', color: '#4CAF50' }}>
+                {matchedSkills.slice(0, 3).map((skill, i) => (
+                  <li key={i} style={{ marginBottom: '2px' }}>{skill}</li>
+                ))}
+                {matchedSkills.length > 3 && (
+                  <li style={{ fontStyle: 'italic', opacity: 0.8 }}>
+                    ...and {matchedSkills.length - 3} more
+                  </li>
+                )}
+              </ul>
+            </div>
+          )}
+          
+          {/* Source info */}
+          {source && (
+            <div style={{ 
+              marginTop: '8px', 
+              paddingTop: '8px', 
+              borderTop: '1px solid var(--border, #eee)',
+              fontSize: '10px',
+              color: 'var(--text-tertiary, #888)'
+            }}>
+              📋 Based on: {source}
+            </div>
+          )}
+        </div>
+      )}
       {/* Vertical Gauge */}
       <div style={{ 
         position: 'relative',

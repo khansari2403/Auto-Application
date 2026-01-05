@@ -312,6 +312,9 @@ function extractBasicInfo(content: string, url: string): any {
 export async function startHunterSearch(userId: number, callAI: Function) {
   console.log('\n========== STARTING HUNTER SEARCH ==========');
   
+  // Reset cancellation flag at start
+  hunterCancelled = false;
+  
   try {
     await logAction(userId, 'ai_hunter', '🚀 Starting job hunt...', 'in_progress');
     
@@ -354,9 +357,23 @@ export async function startHunterSearch(userId: number, callAI: Function) {
     let totalJobsFound = 0;
 
     for (const profile of profiles) {
+      // Check for cancellation
+      if (hunterCancelled) {
+        console.log('Hunter search cancelled by user');
+        await logAction(userId, 'ai_hunter', `⏹️ Search cancelled. Found ${totalJobsFound} jobs before stopping.`, 'completed', true);
+        return { success: true, jobsFound: totalJobsFound, cancelled: true };
+      }
+      
       console.log(`\nProfile: ${profile.job_title} in ${profile.location}`);
       
       for (const website of websites) {
+        // Check for cancellation
+        if (hunterCancelled) {
+          console.log('Hunter search cancelled by user');
+          await logAction(userId, 'ai_hunter', `⏹️ Search cancelled. Found ${totalJobsFound} jobs before stopping.`, 'completed', true);
+          return { success: true, jobsFound: totalJobsFound, cancelled: true };
+        }
+        
         console.log(`Website: ${website.website_name} (${website.website_url})`);
         
         await logAction(userId, 'ai_hunter', `🌐 Searching ${website.website_name}...`, 'in_progress');
@@ -380,6 +397,13 @@ export async function startHunterSearch(userId: number, callAI: Function) {
         
         // Process each URL
         for (const url of jobUrls) {
+          // Check for cancellation before each job
+          if (hunterCancelled) {
+            console.log('Hunter search cancelled by user');
+            await logAction(userId, 'ai_hunter', `⏹️ Search cancelled. Found ${totalJobsFound} jobs before stopping.`, 'completed', true);
+            return { success: true, jobsFound: totalJobsFound, cancelled: true };
+          }
+          
           // Skip duplicates
           const existing = db.job_listings.find((j: any) => j.url === url);
           if (existing) {

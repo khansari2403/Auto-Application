@@ -1,10 +1,11 @@
-import { ipcMain } from 'electron';
+import { ipcMain, shell, BrowserWindow } from 'electron';
 import * as EmailService from '../features/email-service';
 import * as CompatibilityService from '../features/compatibility-service';
 import * as SecretaryAuth from '../features/secretary-auth';
 import Imap from 'imap';
 import { simpleParser } from 'mailparser';
 import { getAllQuery, runQuery } from '../database';
+import { google } from 'googleapis';
 
 export function registerServicesHandlers(): string[] {
   const channels = [
@@ -14,6 +15,9 @@ export function registerServicesHandlers(): string[] {
     'email:send-notification',
     'email:test-inbox',
     'email:fetch-inbox',
+    'email:oauth-start',
+    'email:oauth-callback',
+    'email:oauth-test',
     // Compatibility Score
     'compatibility:calculate', 
     'compatibility:calculate-all', 

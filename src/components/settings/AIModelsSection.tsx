@@ -21,7 +21,11 @@ function AIModelsSection({ userId }: { userId: number }) {
     functionalPrompt: '', cvStylePersona: 'Classic', referenceCvId: '',
     cvStyleCode: '',
     // Auditor-specific settings
-    auditorSource: 'all' // 'linkedin' | 'manual' | 'uploaded_cv' | 'all'
+    auditorSource: 'all', // 'linkedin' | 'manual' | 'uploaded_cv' | 'all'
+    // Thinker-specific settings
+    thinkerSource: 'all', // 'linkedin' | 'manual' | 'uploaded_cv' | 'all'
+    motivationLetterWordLimit: '450', // Word limit for motivation letters
+    coverLetterWordLimit: '280' // Word limit for cover letters
   });
   
   // Test results tracking
@@ -160,7 +164,8 @@ function AIModelsSection({ userId }: { userId: number }) {
       modelName: '', apiKey: '', role: 'Hunter', writingStyle: 'Formal', 
       wordLimit: '300', strictness: 'Balanced', functionalPrompt: '',
       cvStylePersona: 'Classic', referenceCvId: '', cvStyleCode: '',
-      auditorSource: 'all'
+      auditorSource: 'all', thinkerSource: 'all',
+      motivationLetterWordLimit: '450', coverLetterWordLimit: '280'
     });
     setAvailableModels([]);
     setRecommendations({ Speed: [], Cost: [], Quality: [] });
@@ -186,7 +191,10 @@ function AIModelsSection({ userId }: { userId: number }) {
       cvStylePersona: model.cv_style_persona || 'Classic',
       referenceCvId: model.reference_cv_id || '',
       cvStyleCode: model.cv_style_code || '',
-      auditorSource: model.auditor_source || 'all'
+      auditorSource: model.auditor_source || 'all',
+      thinkerSource: model.thinker_source || 'all',
+      motivationLetterWordLimit: model.motivation_letter_word_limit || '450',
+      coverLetterWordLimit: model.cover_letter_word_limit || '280'
     });
     setShowForm(true);
   };

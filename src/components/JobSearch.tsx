@@ -604,7 +604,8 @@ export function JobSearch({ userId }: { userId: number }) {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

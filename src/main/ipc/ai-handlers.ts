@@ -229,6 +229,16 @@ export function registerAIHandlers(): string[] {
     }
   });
 
+  ipcMain.handle('hunter:cancel-search', async () => {
+    try {
+      const HunterEngine = require('../features/Hunter-engine');
+      HunterEngine.cancelHunterSearch();
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
   ipcMain.handle('ai:process-application', async (_, jobId, userId) => {
     try {
       return await aiService.processApplication(jobId, userId);

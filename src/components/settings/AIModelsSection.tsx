@@ -19,7 +19,9 @@ function AIModelsSection({ userId }: { userId: number }) {
     modelName: '', apiKey: '', role: 'Hunter', 
     writingStyle: 'Formal', wordLimit: '300', strictness: 'Balanced',
     functionalPrompt: '', cvStylePersona: 'Classic', referenceCvId: '',
-    cvStyleCode: ''
+    cvStyleCode: '',
+    // Auditor-specific settings
+    auditorSource: 'all' // 'linkedin' | 'manual' | 'uploaded_cv' | 'all'
   });
   
   // Test results tracking

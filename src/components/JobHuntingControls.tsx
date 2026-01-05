@@ -53,12 +53,32 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
     }
   };
 
-  const toggleHunting = async () => {
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResult, setSearchResult] = useState<{ success: boolean; message?: string; jobsFound?: number } | null>(null);
+
+  // Start Hunter search immediately (direct trigger)
+  const startHunterSearch = async () => {
+    setIsSearching(true);
+    setSearchResult(null);
+    try {
+      const result = await (window as any).electron.invoke('hunter:start-search', userId);
+      if (result?.success) {
+        setSearchResult({ success: true, jobsFound: result.jobsFound || 0 });
+      } else {
+        setSearchResult({ success: false, message: result?.error || 'Search failed' });
+      }
+    } catch (e: any) {
+      setSearchResult({ success: false, message: e.message });
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Toggle scheduler (interval-based automatic hunting)
+  const toggleScheduler = async () => {
     const newValue = !isActive;
     setIsActive(newValue);
     await saveSettings({ job_hunting_active: newValue ? 1 : 0 });
-    
-    // Trigger scheduler
     await (window as any).electron.invoke('scheduler:toggle', { active: newValue });
   };
 

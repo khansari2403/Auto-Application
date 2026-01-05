@@ -513,11 +513,36 @@ export function JobSearch({ userId }: { userId: number }) {
             </tr>
           </thead>
           <tbody>
-            {jobs.map(job => (
+            {jobs.map(job => {
+              // Parse stored compatibility data
+              let missingSkills: string[] = [];
+              let matchedSkills: string[] = [];
+              let breakdown: any = null;
+              
+              try {
+                if (job.compatibility_missing_skills) {
+                  missingSkills = JSON.parse(job.compatibility_missing_skills);
+                }
+                if (job.compatibility_matched_skills) {
+                  matchedSkills = JSON.parse(job.compatibility_matched_skills);
+                }
+                if (job.compatibility_breakdown) {
+                  breakdown = JSON.parse(job.compatibility_breakdown);
+                }
+              } catch (e) {}
+              
+              return (
               <tr key={job.id} style={{ borderBottom: '1px solid var(--border)', background: job.status === 'ghost_job_detected' ? 'var(--warning-light)' : 'transparent' }}>
                 {/* Compatibility Score Dial */}
                 <td style={{ padding: '8px', textAlign: 'center', background: 'rgba(102, 126, 234, 0.05)' }}>
-                  <CompatibilityDial score={job.compatibility_score ?? 0} size="small" source={job.compatibility_source} />
+                  <CompatibilityDial 
+                    score={job.compatibility_score ?? 0} 
+                    size="small" 
+                    source={job.compatibility_source}
+                    missingSkills={missingSkills}
+                    matchedSkills={matchedSkills}
+                    breakdown={breakdown}
+                  />
                 </td>
                 <td style={{ padding: '12px', background: 'var(--bg-tertiary)' }}>
                   <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>

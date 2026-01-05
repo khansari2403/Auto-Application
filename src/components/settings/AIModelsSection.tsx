@@ -230,6 +230,7 @@ function AIModelsSection({ userId }: { userId: number }) {
 
   const isThinker = formData.role === 'Thinker';
   const isSecretary = formData.role === 'Secretary';
+  const isAuditor = formData.role === 'Auditor';
   const isWritingRole = isThinker || isSecretary;
 
   return (

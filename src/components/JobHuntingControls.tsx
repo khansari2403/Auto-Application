@@ -251,31 +251,63 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
       {/* Two Column Layout */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
         
-        {/* Left: Schedule Settings */}
+        {/* Left: Scheduler Settings */}
         <div style={{ 
           background: 'var(--bg-secondary)', 
           padding: '20px', 
           borderRadius: '12px',
-          border: '1px solid var(--border)'
+          border: `2px solid ${isActive ? 'var(--success)' : 'var(--border)'}`
         }}>
+          {/* Scheduler Master Toggle */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
             <h4 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              ⏰ Schedule Timer
+              🔄 Auto-Scheduler
             </h4>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input 
-                type="checkbox" 
-                checked={scheduleEnabled} 
-                onChange={handleScheduleToggle}
-                style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Enable</span>
-            </label>
+            <button
+              onClick={toggleScheduler}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: 'none',
+                background: isActive 
+                  ? 'linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%)'
+                  : 'var(--bg-tertiary)',
+                color: isActive ? '#fff' : 'var(--text-secondary)',
+                fontWeight: 600,
+                fontSize: '12px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              {isActive ? '✓ Running' : 'Start Scheduler'}
+            </button>
           </div>
 
           <p style={{ fontSize: '12px', color: 'var(--text-tertiary)', margin: '0 0 16px 0' }}>
-            Set the time window when the Hunter should actively search for jobs
+            When enabled, Hunter runs automatically at set intervals based on website check frequency
           </p>
+
+          {/* Time Window Settings */}
+          <div style={{ 
+            padding: '12px', 
+            background: 'var(--card-bg)', 
+            borderRadius: '8px',
+            marginBottom: '12px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                ⏰ Time Window
+              </span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={scheduleEnabled} 
+                  onChange={handleScheduleToggle}
+                  style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Limit hours</span>
+              </label>
+            </div>
 
           <div style={{ 
             display: 'flex', 

@@ -451,12 +451,18 @@ function saveDocumentFile(content: string, jobId: number, docType: string, forma
 // Main document generation function
 export async function generateTailoredDocs(job: any, userId: number, thinker: any, auditor: any, options: any, callAI: Function) {
   const db = getDatabase();
-  const userProfile = db.user_profile?.find((p: any) => p.id === userId) || db.user_profile?.[0];
+  
+  // Get profile based on Thinker's source settings
+  const userProfile = await getProfileByThinkerSource(userId, thinker);
   
   if (!userProfile) {
     await logAction(userId, 'ai_thinker', '❌ No user profile found. Please create your profile first.', 'failed', false);
     return;
   }
+
+  // Get word limits from Thinker settings
+  const motivationLetterWordLimit = thinker?.motivation_letter_word_limit || '450';
+  const coverLetterWordLimit = thinker?.cover_letter_word_limit || '280';
 
   // Step 0: Research Company
   let companyResearch = "";
@@ -474,34 +480,70 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
         await logAction(userId, 'ai_thinker', `✍️ Generating tailored ${type.label} for ${job.company_name}`, 'in_progress');
         await runQuery('UPDATE job_listings', { id: job.id, [`${type.key}_status`]: 'generating' });
 
+        // Check for force override (bypass Auditor rejection)
+        const forceOverride = options.forceOverride === true;
+
         let attempts = 0;
         let approved = false;
         let content = '';
         let feedback = '';
+        const maxAttempts = forceOverride ? 1 : 2; // Only 1 attempt if forced
 
-        while (attempts < 2 && !approved) {
+        while (attempts < maxAttempts && !approved) {
           attempts++;
           
-          // Build the prompt based on document type
-          const thinkerPrompt = buildThinkerPrompt(type.key, type.label, userProfile, job, companyResearch, feedback);
+          // Build the prompt based on document type with custom word limits
+          const thinkerPrompt = buildThinkerPrompt(
+            type.key, 
+            type.label, 
+            userProfile, 
+            job, 
+            companyResearch, 
+            feedback,
+            { motivationLetterWordLimit, coverLetterWordLimit }
+          );
           
           let rawContent = await callAI(thinker, thinkerPrompt);
           
           // Clean the AI output to remove JSON artifacts and meta-text
           content = cleanAIOutput(rawContent);
           
-          await logAction(userId, 'ai_auditor', `🧐 Auditing ${type.label} (Attempt ${attempts})`, 'in_progress');
-          
-          const auditorPrompt = buildAuditorPrompt(type.key, type.label, content, job);
-          const auditResponse = await callAI(auditor, auditorPrompt);
-          
-          if (auditResponse.toUpperCase().includes('APPROVED')) {
+          if (forceOverride) {
+            // Skip Auditor verification for forced generation
             approved = true;
-            await logAction(userId, 'ai_auditor', `✅ ${type.label} approved`, 'completed', true);
+            await logAction(userId, 'ai_thinker', `⚡ ${type.label} generated (force override - Auditor bypassed)`, 'completed', true);
           } else {
-            feedback = auditResponse.replace(/REJECTED:/i, '').trim();
-            await logAction(userId, 'ai_auditor', `❌ ${type.label} rejected: ${feedback}`, 'in_progress', false);
+            await logAction(userId, 'ai_auditor', `🧐 Auditing ${type.label} (Attempt ${attempts})`, 'in_progress');
+            
+            const auditorPrompt = buildAuditorPrompt(type.key, type.label, content, job);
+            const auditResponse = await callAI(auditor, auditorPrompt);
+            
+            if (auditResponse.toUpperCase().includes('APPROVED')) {
+              approved = true;
+              await logAction(userId, 'ai_auditor', `✅ ${type.label} approved`, 'completed', true);
+            } else {
+              feedback = auditResponse.replace(/REJECTED:/i, '').trim();
+              await logAction(userId, 'ai_auditor', `❌ ${type.label} rejected: ${feedback}`, 'in_progress', false);
+            }
           }
+        }
+
+        // After generation, if forceOverride was used, run Auditor verification check (but don't block)
+        if (forceOverride && content) {
+          try {
+            await logAction(userId, 'ai_auditor', `🔍 Verifying forced ${type.label} for accuracy...`, 'in_progress');
+            const verificationPrompt = buildVerificationPrompt(type.key, type.label, content, userProfile);
+            const verificationResult = await callAI(auditor, verificationPrompt);
+            
+            if (verificationResult.toUpperCase().includes('FABRICATION') || verificationResult.toUpperCase().includes('HALLUCINATION')) {
+              await logAction(userId, 'ai_auditor', `⚠️ Warning: ${type.label} may contain fabricated information. Please review carefully.`, 'completed', false);
+            } else {
+              await logAction(userId, 'ai_auditor', `✅ ${type.label} verification passed - no fabrications detected`, 'completed', true);
+            }
+          } catch (e) {
+            console.error('Verification error:', e);
+          }
+          approved = true; // Still save the document
         }
 
         if (approved) {
@@ -526,7 +568,7 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
             content: content,
             file_path: filePath,
             version: 1,
-            status: 'final',
+            status: forceOverride ? 'forced' : 'final',
             created_at: new Date().toISOString()
           });
 

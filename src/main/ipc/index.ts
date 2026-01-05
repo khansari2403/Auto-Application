@@ -50,7 +50,7 @@ export function setupIpcHandlers(): void {
     'logs:get-recent-actions', 'apps:get-all',
     'scheduler:toggle', 'scheduler:get-status',
     'qa:get-all', 'qa:update', 'qa:delete',
-    'email:test-config', 'email:send', 'email:send-notification',
+    'email:test-config', 'email:send', 'email:send-notification', 'email:test-inbox', 'email:fetch-inbox',
     'compatibility:calculate', 'compatibility:calculate-all', 'compatibility:get-by-level',
     'secretary:setup-pin', 'secretary:verify-pin', 'secretary:change-pin', 
     'secretary:reset-pin', 'secretary:is-pin-set', 'secretary:get-settings', 'secretary:update-permissions'

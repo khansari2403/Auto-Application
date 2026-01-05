@@ -22,112 +22,199 @@ export function registerAIHandlers(): string[] {
     try {
       const { modelName, apiKey, apiEndpoint } = data;
       
-      console.log('Testing model:', modelName);
-      console.log('API Key prefix:', apiKey?.substring(0, 15) + '...');
-      console.log('Custom endpoint:', apiEndpoint);
+      console.log('\n===== AI MODEL TEST =====');
+      console.log('Model Name:', modelName);
+      console.log('API Key:', apiKey ? `${apiKey.substring(0, 20)}...` : 'MISSING');
+      console.log('Custom Endpoint:', apiEndpoint || 'none');
       
-      if (!apiKey) {
+      if (!apiKey || apiKey.trim() === '') {
+        console.log('ERROR: No API key provided');
         return { success: false, message: 'No API key provided' };
       }
       
-      // Determine endpoint and provider type
+      const trimmedKey = apiKey.trim();
+      
+      // Determine endpoint and provider type based on key format
       let endpoint = '';
       let provider = 'openai';
       
       // Check for custom/local endpoint first
-      if (apiEndpoint?.includes('localhost') || apiEndpoint?.includes('127.0.0.1')) {
+      if (apiEndpoint && (apiEndpoint.includes('localhost') || apiEndpoint.includes('127.0.0.1'))) {
         endpoint = apiEndpoint;
         provider = 'local';
       } 
-      // Check API key patterns
-      else if (apiKey.startsWith('sk-or-')) {
-        // OpenRouter
+      // Check API key patterns - ORDER MATTERS (more specific first)
+      else if (trimmedKey.startsWith('sk-or-')) {
         endpoint = 'https://openrouter.ai/api/v1/chat/completions';
         provider = 'openrouter';
-      } else if (apiKey.startsWith('tgp_v1_')) {
-        // Together AI
-        endpoint = 'https://api.together.xyz/v1/chat/completions';
-        provider = 'together';
-      } else if (apiKey.startsWith('sk-ant-')) {
-        // Anthropic
+      } else if (trimmedKey.startsWith('sk-ant-')) {
         endpoint = 'https://api.anthropic.com/v1/messages';
         provider = 'anthropic';
-      } else if (apiKey.startsWith('AIza')) {
-        // Google AI
+      } else if (trimmedKey.startsWith('tgp_v1_')) {
+        endpoint = 'https://api.together.xyz/v1/chat/completions';
+        provider = 'together';
+      } else if (trimmedKey.startsWith('AIza')) {
         endpoint = 'https://generativelanguage.googleapis.com/v1beta/models';
         provider = 'google';
-      } else if (apiKey.startsWith('sk-')) {
-        // OpenAI
+      } else if (trimmedKey.startsWith('sk-proj-') || trimmedKey.startsWith('sk-')) {
+        // OpenAI - both classic and project-based keys
         endpoint = 'https://api.openai.com/v1/chat/completions';
         provider = 'openai';
       } else {
-        // Default to OpenRouter for unknown key formats (most flexible)
-        endpoint = 'https://openrouter.ai/api/v1/chat/completions';
-        provider = 'openrouter';
+        // Unknown format - try OpenAI first as it's most common
+        endpoint = 'https://api.openai.com/v1/chat/completions';
+        provider = 'openai';
       }
       
-      console.log('Detected provider:', provider);
-      console.log('Using endpoint:', endpoint);
+      console.log('Detected Provider:', provider);
+      console.log('Using Endpoint:', endpoint);
+      
+      // Use a safe model name for testing
+      let testModelName = modelName;
+      if (provider === 'openai' && (!modelName || modelName === '')) {
+        testModelName = 'gpt-3.5-turbo';
+      }
+      
+      console.log('Test Model Name:', testModelName);
       
       // Simple test prompt
-      const testPrompt = 'Respond with only the word "OK" to confirm you are working.';
+      const testPrompt = 'Say OK';
       
       let response;
       
       if (provider === 'anthropic') {
-        // Anthropic API
+        console.log('Making Anthropic API call...');
         response = await axios.post(endpoint, {
-          model: modelName || 'claude-3-haiku-20240307',
+          model: testModelName || 'claude-3-haiku-20240307',
           max_tokens: 10,
           messages: [{ role: 'user', content: testPrompt }]
         }, {
           headers: {
-            'x-api-key': apiKey,
+            'x-api-key': trimmedKey,
             'anthropic-version': '2023-06-01',
             'Content-Type': 'application/json'
           },
-          timeout: 20000
+          timeout: 30000
         });
       } else if (provider === 'google') {
-        // Google AI requires different format
-        const googleEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelName || 'gemini-pro'}:generateContent?key=${apiKey}`;
+        console.log('Making Google AI call...');
+        const googleEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${testModelName || 'gemini-pro'}:generateContent?key=${trimmedKey}`;
         response = await axios.post(googleEndpoint, {
           contents: [{ parts: [{ text: testPrompt }] }]
         }, {
           headers: { 'Content-Type': 'application/json' },
-          timeout: 20000
+          timeout: 30000
         });
       } else if (provider === 'openrouter') {
-        // OpenRouter API (OpenAI compatible with extra headers)
+        console.log('Making OpenRouter API call...');
         response = await axios.post(endpoint, {
-          model: modelName || 'openai/gpt-3.5-turbo',
+          model: testModelName || 'openai/gpt-3.5-turbo',
           messages: [{ role: 'user', content: testPrompt }],
           max_tokens: 10,
           temperature: 0
         }, {
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            'Authorization': `Bearer ${trimmedKey}`,
             'Content-Type': 'application/json',
             'HTTP-Referer': 'https://job-automation-app.local',
             'X-Title': 'Job Automation App'
           },
-          timeout: 20000
+          timeout: 30000
         });
       } else {
         // OpenAI and compatible APIs (Together, local, etc.)
+        console.log('Making OpenAI-compatible API call...');
+        console.log('Request body:', JSON.stringify({
+          model: testModelName || 'gpt-3.5-turbo',
+          messages: [{ role: 'user', content: testPrompt }],
+          max_tokens: 10
+        }));
+        
         response = await axios.post(endpoint, {
-          model: modelName || 'gpt-3.5-turbo',
+          model: testModelName || 'gpt-3.5-turbo',
           messages: [{ role: 'user', content: testPrompt }],
           max_tokens: 10,
           temperature: 0
         }, {
           headers: {
-            'Authorization': `Bearer ${apiKey}`,
+            'Authorization': `Bearer ${trimmedKey}`,
             'Content-Type': 'application/json'
           },
-          timeout: 20000
+          timeout: 30000
         });
       }
+      
+      console.log('Response status:', response.status);
+      console.log('Response data:', JSON.stringify(response.data).substring(0, 200));
+      
+      if (response.data) {
+        // Check for actual response content based on provider
+        let hasContent = false;
+        let responseText = '';
+        
+        if (provider === 'google') {
+          responseText = response.data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          hasContent = !!responseText;
+        } else if (provider === 'anthropic') {
+          responseText = response.data.content?.[0]?.text || '';
+          hasContent = !!responseText;
+        } else {
+          responseText = response.data.choices?.[0]?.message?.content || '';
+          hasContent = !!responseText;
+        }
+        
+        console.log('Response text:', responseText);
+        console.log('Has content:', hasContent);
+        console.log('===== TEST PASSED =====\n');
+        
+        return { success: true, message: `✓ Model responding correctly` };
+      } else {
+        console.log('===== TEST FAILED: No response data =====\n');
+        return { success: false, message: 'No response from model' };
+      }
+      
+    } catch (e: any) {
+      console.log('\n===== AI MODEL TEST ERROR =====');
+      console.log('Error type:', e.constructor.name);
+      console.log('Error message:', e.message);
+      console.log('Response status:', e.response?.status);
+      console.log('Response data:', JSON.stringify(e.response?.data || {}).substring(0, 500));
+      console.log('================================\n');
+      
+      // Extract meaningful error message
+      let errorMsg = 'Unknown error';
+      
+      if (e.response?.data?.error?.message) {
+        errorMsg = e.response.data.error.message;
+      } else if (e.response?.data?.message) {
+        errorMsg = e.response.data.message;
+      } else if (e.response?.data?.error) {
+        errorMsg = typeof e.response.data.error === 'string' 
+          ? e.response.data.error 
+          : JSON.stringify(e.response.data.error);
+      } else if (e.response?.status === 401) {
+        errorMsg = 'Invalid API key - check that your key is correct and active';
+      } else if (e.response?.status === 403) {
+        errorMsg = 'Access forbidden - your API key may not have permission for this model';
+      } else if (e.response?.status === 404) {
+        errorMsg = 'Model not found - check the model name is correct';
+      } else if (e.response?.status === 429) {
+        errorMsg = 'Rate limited or quota exceeded - check your API plan';
+      } else if (e.response?.status === 500 || e.response?.status === 502 || e.response?.status === 503) {
+        errorMsg = 'API server error - try again later';
+      } else if (e.code === 'ECONNREFUSED') {
+        errorMsg = 'Connection refused - check endpoint URL';
+      } else if (e.code === 'ETIMEDOUT' || e.code === 'ECONNABORTED') {
+        errorMsg = 'Connection timeout - server not responding';
+      } else if (e.code === 'ENOTFOUND') {
+        errorMsg = 'Server not found - check your internet connection';
+      } else if (e.message) {
+        errorMsg = e.message;
+      }
+      
+      return { success: false, message: errorMsg };
+    }
+  });
       
       console.log('Test response received:', response.status);
       

@@ -309,72 +309,65 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
               </label>
             </div>
 
-          <div style={{ 
-            display: 'flex', 
-            gap: '20px', 
-            alignItems: 'center',
-            opacity: scheduleEnabled ? 1 : 0.5,
-            pointerEvents: scheduleEnabled ? 'auto' : 'none'
-          }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-primary)' }}>
-                Start Time
-              </label>
+            <div style={{ 
+              display: 'flex', 
+              gap: '12px', 
+              alignItems: 'center',
+              opacity: scheduleEnabled ? 1 : 0.5,
+              pointerEvents: scheduleEnabled ? 'auto' : 'none'
+            }}>
               <input
                 type="time"
                 value={startTime}
                 onChange={(e) => handleTimeChange('start', e.target.value)}
                 style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
+                  flex: 1,
+                  padding: '8px',
+                  borderRadius: '6px',
                   border: '1px solid var(--border)',
                   background: 'var(--input-bg)',
                   color: 'var(--text-primary)',
-                  fontSize: '16px',
-                  fontWeight: 'bold'
+                  fontSize: '14px'
                 }}
               />
-            </div>
-            
-            <div style={{ 
-              fontSize: '24px', 
-              color: 'var(--text-tertiary)',
-              paddingTop: '24px'
-            }}>→</div>
-            
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '6px', color: 'var(--text-primary)' }}>
-                End Time
-              </label>
+              <span style={{ color: 'var(--text-tertiary)' }}>to</span>
               <input
                 type="time"
                 value={endTime}
                 onChange={(e) => handleTimeChange('end', e.target.value)}
                 style={{
-                  width: '100%',
-                  padding: '12px',
-                  borderRadius: '8px',
+                  flex: 1,
+                  padding: '8px',
+                  borderRadius: '6px',
                   border: '1px solid var(--border)',
                   background: 'var(--input-bg)',
                   color: 'var(--text-primary)',
-                  fontSize: '16px',
-                  fontWeight: 'bold'
+                  fontSize: '14px'
                 }}
               />
             </div>
           </div>
 
-          {scheduleEnabled && (
+          {/* Scheduler Status */}
+          {isActive && (
             <div style={{ 
-              marginTop: '12px', 
               padding: '10px', 
-              background: 'var(--info-light)', 
+              background: 'var(--success-light)', 
               borderRadius: '8px',
               fontSize: '12px',
-              color: 'var(--info)'
+              color: 'var(--success)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}>
-              🕐 Hunter will be active from <strong>{startTime}</strong> to <strong>{endTime}</strong> daily
+              <div style={{ 
+                width: '8px', 
+                height: '8px', 
+                borderRadius: '50%', 
+                background: 'var(--success)',
+                animation: 'pulse 2s infinite'
+              }} />
+              Scheduler active {scheduleEnabled ? `(${startTime} - ${endTime})` : '(24/7)'}
             </div>
           )}
         </div>

@@ -215,56 +215,6 @@ export function registerAIHandlers(): string[] {
       return { success: false, message: errorMsg };
     }
   });
-      
-      console.log('Test response received:', response.status);
-      
-      if (response.data) {
-        // Check for actual response content based on provider
-        let hasContent = false;
-        if (provider === 'google') {
-          hasContent = response.data.candidates?.[0]?.content?.parts?.[0]?.text;
-        } else if (provider === 'anthropic') {
-          hasContent = response.data.content?.[0]?.text;
-        } else {
-          hasContent = response.data.choices?.[0]?.message?.content;
-        }
-        
-        if (hasContent) {
-          return { success: true, message: `✓ Model responding (${provider})` };
-        } else {
-          return { success: true, message: `✓ Connected but empty response (${provider})` };
-        }
-      } else {
-        return { success: false, message: 'No response from model' };
-      }
-      
-    } catch (e: any) {
-      console.error('Model test error:', e.response?.data || e.message);
-      
-      // Extract meaningful error message
-      let errorMsg = 'Unknown error';
-      
-      if (e.response?.data?.error?.message) {
-        errorMsg = e.response.data.error.message;
-      } else if (e.response?.data?.message) {
-        errorMsg = e.response.data.message;
-      } else if (e.response?.status === 401) {
-        errorMsg = 'Invalid API key or unauthorized';
-      } else if (e.response?.status === 404) {
-        errorMsg = 'Model not found - check model name';
-      } else if (e.response?.status === 429) {
-        errorMsg = 'Rate limited - try again later';
-      } else if (e.code === 'ECONNREFUSED') {
-        errorMsg = 'Connection refused - check endpoint URL';
-      } else if (e.code === 'ETIMEDOUT' || e.code === 'ECONNABORTED') {
-        errorMsg = 'Connection timeout - server not responding';
-      } else if (e.message) {
-        errorMsg = e.message;
-      }
-      
-      return { success: false, message: errorMsg };
-    }
-  });
 
   // --- AI / HUNTER ---
   ipcMain.handle('hunter:start-search', async (_, userId) => {

@@ -619,60 +619,86 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                   </div>
                 )}
 
-                <div style={{ display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap' }}>
-                  <button onClick={handleSave} style={{ padding: '12px 25px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-                    💾 Save Configuration
-                  </button>
-                  <button 
-                    onClick={handleConnect} 
-                    disabled={isTesting}
-                    style={{ 
-                      padding: '12px 25px', 
-                      background: isConnected ? 'var(--success)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
-                      color: '#fff', 
-                      border: 'none', 
-                      borderRadius: '6px', 
-                      cursor: isTesting ? 'wait' : 'pointer', 
-                      fontWeight: 'bold',
-                      opacity: isTesting ? 0.7 : 1
-                    }}
-                  >
-                    {isTesting ? '⏳ Testing...' : isConnected ? '✅ Connected!' : '🔗 Connect Email'}
-                  </button>
-                  {isConnected && (
-                    <>
-                      <button 
-                        onClick={fetchInboxPreview}
-                        disabled={isLoadingInbox}
-                        style={{ 
-                          padding: '12px 20px', 
-                          background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', 
-                          color: '#fff', 
-                          border: 'none', 
-                          borderRadius: '6px', 
-                          cursor: isLoadingInbox ? 'wait' : 'pointer',
-                          fontWeight: 'bold',
-                          opacity: isLoadingInbox ? 0.7 : 1
-                        }}
-                      >
-                        {isLoadingInbox ? '⏳ Loading...' : '📬 Test: View Inbox'}
-                      </button>
-                      <button 
-                        onClick={async () => {
-                          await (window as any).electron.invoke?.('settings:update', { 
-                            id: 1,
-                            email_connected: false 
-                          });
-                          setIsConnected(false);
-                          setInboxMessages([]);
-                          setTestResult(null);
-                        }} 
-                        style={{ padding: '12px 15px', background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
-                      >
-                        Disconnect
-                      </button>
-                    </>
-                  )}
+                {/* Buttons for App Password method only */}
+                {config.accessMethod === 'app_password' && (
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '15px', flexWrap: 'wrap' }}>
+                    <button onClick={handleSave} style={{ padding: '12px 25px', background: 'var(--bg-tertiary)', color: 'var(--text-primary)', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+                      💾 Save Configuration
+                    </button>
+                    <button 
+                      onClick={handleConnect} 
+                      disabled={isTesting}
+                      style={{ 
+                        padding: '12px 25px', 
+                        background: isConnected ? 'var(--success)' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+                        color: '#fff', 
+                        border: 'none', 
+                        borderRadius: '6px', 
+                        cursor: isTesting ? 'wait' : 'pointer', 
+                        fontWeight: 'bold',
+                        opacity: isTesting ? 0.7 : 1
+                      }}
+                    >
+                      {isTesting ? '⏳ Testing...' : isConnected ? '✅ Connected!' : '🔗 Connect Email'}
+                    </button>
+                    {isConnected && (
+                      <>
+                        <button 
+                          onClick={fetchInboxPreview}
+                          disabled={isLoadingInbox}
+                          style={{ 
+                            padding: '12px 20px', 
+                            background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', 
+                            color: '#fff', 
+                            border: 'none', 
+                            borderRadius: '6px', 
+                            cursor: isLoadingInbox ? 'wait' : 'pointer',
+                            fontWeight: 'bold',
+                            opacity: isLoadingInbox ? 0.7 : 1
+                          }}
+                        >
+                          {isLoadingInbox ? '⏳ Loading...' : '📬 Test: View Inbox'}
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            await (window as any).electron.invoke?.('settings:update', { 
+                              id: 1,
+                              email_connected: false 
+                            });
+                            setIsConnected(false);
+                            setInboxMessages([]);
+                            setTestResult(null);
+                          }} 
+                          style={{ padding: '12px 15px', background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '6px', cursor: 'pointer', fontSize: '12px' }}
+                        >
+                          Disconnect
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Disconnect button for OAuth method */}
+                {config.accessMethod === 'oauth' && isConnected && (
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                    <button 
+                      onClick={async () => {
+                        await (window as any).electron.invoke?.('settings:update', { 
+                          id: 1,
+                          email_connected: false,
+                          oauth_access_token: null,
+                          oauth_refresh_token: null
+                        });
+                        setIsConnected(false);
+                        setInboxMessages([]);
+                        setTestResult(null);
+                      }} 
+                      style={{ padding: '12px 20px', background: 'var(--danger-light)', color: 'var(--danger)', border: '1px solid var(--danger)', borderRadius: '6px', cursor: 'pointer' }}
+                    >
+                      🔌 Disconnect OAuth
+                    </button>
+                  </div>
+                )}
                 </div>
 
                 {/* Inbox Preview Section */}

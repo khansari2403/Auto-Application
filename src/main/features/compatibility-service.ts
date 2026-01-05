@@ -117,11 +117,19 @@ export async function calculateCompatibility(userId: number, jobId: number): Pro
   else if (totalScore >= 26) level = 'yellow';
   else level = 'red';
   
-  // Update job with compatibility score and source used
+  // Update job with compatibility score, source, and detailed breakdown
   await runQuery('UPDATE job_listings', {
     id: jobId,
     compatibility_score: totalScore,
-    compatibility_source: source
+    compatibility_source: source,
+    compatibility_matched_skills: JSON.stringify(skillsScore.matched),
+    compatibility_missing_skills: JSON.stringify(skillsScore.missing),
+    compatibility_breakdown: JSON.stringify({
+      skills: skillsScore.score,
+      experience: experienceScore,
+      education: educationScore,
+      location: locationScore
+    })
   });
   
   return {

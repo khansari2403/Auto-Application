@@ -251,6 +251,48 @@ export function JobSearch({ userId }: { userId: number }) {
     }
   };
 
+  // Force generate document even if Auditor would reject
+  const handleForceGenerateDoc = async (jobId: number, docType: string) => {
+    setProcessingId(jobId);
+    try {
+      const singleDocOptions: any = {
+        cv: false,
+        motivationLetter: false,
+        coverLetter: false,
+        portfolio: false,
+        proposal: false,
+        forceOverride: true // Bypass Auditor rejection
+      };
+      
+      const typeToOption: Record<string, string> = {
+        'cv': 'cv',
+        'motivation_letter': 'motivationLetter',
+        'cover_letter': 'coverLetter',
+        'portfolio': 'portfolio',
+        'proposal': 'proposal'
+      };
+      
+      const optionKey = typeToOption[docType];
+      if (optionKey) {
+        singleDocOptions[optionKey] = true;
+      }
+      
+      const result = await (window as any).electron.invoke('ai:generate-tailored-docs', { 
+        jobId, 
+        userId, 
+        docOptions: singleDocOptions 
+      });
+      if (!result.success) {
+        alert('Generation Error: ' + result.error);
+      }
+    } catch (e: any) {
+      alert('Generation Error: ' + e.message);
+    } finally {
+      setProcessingId(null);
+      loadData();
+    }
+  };
+
   const renderDocIcon = (job: any, type: string, label: string, shortLabel: string) => {
     const status = job[`${type}_status`];
     const path = job[`${type}_path`];
@@ -264,8 +306,11 @@ export function JobSearch({ userId }: { userId: number }) {
         // Open the completed document
         (window as any).electron.invoke('docs:open-file', path);
       } else if (status === 'rejected' && rejectionReason) {
-        // Show rejection reason
-        alert(`⚠️ ${label} was rejected by the Auditor:\n\n${rejectionReason}\n\n💡 Tip: This usually happens when your profile doesn't have enough relevant experience for this position. The AI tried to generate content but couldn't find sufficient matching data.\n\nClick again to retry generation.`);
+        // Show rejection reason with option to force generate
+        const forceGenerate = confirm(`⚠️ ${label} was rejected by the Auditor:\n\n${rejectionReason}\n\n💡 Options:\n• Click OK to FORCE GENERATE anyway (bypasses Auditor)\n• Click Cancel to close\n\nNote: Forced documents will be verified for accuracy after generation.`);
+        if (forceGenerate) {
+          handleForceGenerateDoc(job.id, type);
+        }
       } else {
         // Generate ONLY this specific document type
         handleGenerateSingleDoc(job.id, type);
@@ -296,7 +341,7 @@ export function JobSearch({ userId }: { userId: number }) {
     return (
       <div 
         onClick={handleDocClick}
-        title={status === 'rejected' ? `${label}: REJECTED - Click to see reason` : `${label}: ${status || 'Not started'} - Click to ${status === 'auditor_done' ? 'open' : 'generate'}`}
+        title={status === 'rejected' ? `${label}: REJECTED - Click to force generate` : `${label}: ${status || 'Not started'} - Click to ${status === 'auditor_done' ? 'open' : 'generate'}`}
         style={{ 
           cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           width: '28px', height: '28px', borderRadius: '6px', 

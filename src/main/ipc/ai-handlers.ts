@@ -6,12 +6,14 @@ import axios from 'axios';
 export function registerAIHandlers(): string[] {
   const channels = [
     'hunter:start-search',
+    'hunter:cancel-search',
     'ai:process-application',
     'ai:generate-tailored-docs',
     'ai:fetch-models',
     'ai:test-model',
     'ai:generate-interview-prep',
     'ai:ask-custom-question',
+    'ai:ask-about-cv',
     'ai:smart-apply',
     'ai:continue-application',
     'ai:cancel-application'

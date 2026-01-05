@@ -384,8 +384,74 @@ function AIModelsSection({ userId }: { userId: number }) {
                     </>
                   )}
 
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Word Limit</label>
-                  <input type='number' style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc' }} value={formData.wordLimit} onChange={(e) => handleInputChange('wordLimit', e.target.value)} />
+                  {/* Thinker-specific: Separate word limits for different document types */}
+                  {isThinker && (
+                    <div style={{ background: '#e8f5e9', padding: '15px', borderRadius: '10px', border: '1px solid #81c784', marginBottom: '15px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#2e7d32' }}>
+                        📝 Word Limits by Document Type
+                      </label>
+                      <p style={{ fontSize: '11px', color: '#666', marginBottom: '10px' }}>
+                        Set separate word limits for each document type. CV generation is not affected by word limits.
+                      </p>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', marginBottom: '4px', color: '#1b5e20' }}>Motivation Letter</label>
+                          <input 
+                            type='number' 
+                            style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #81c784', background: '#fff' }} 
+                            value={formData.motivationLetterWordLimit} 
+                            onChange={(e) => handleInputChange('motivationLetterWordLimit', e.target.value)} 
+                            placeholder='400-500 words'
+                          />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: 'bold', marginBottom: '4px', color: '#1b5e20' }}>Cover Letter</label>
+                          <input 
+                            type='number' 
+                            style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #81c784', background: '#fff' }} 
+                            value={formData.coverLetterWordLimit} 
+                            onChange={(e) => handleInputChange('coverLetterWordLimit', e.target.value)} 
+                            placeholder='250-300 words'
+                          />
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '8px', fontSize: '10px', color: '#666', fontStyle: 'italic' }}>
+                        Note: CV generation uses profile data and is not constrained by word limits.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Thinker-specific: Profile source selection */}
+                  {isThinker && (
+                    <div style={{ background: '#e3f2fd', padding: '15px', borderRadius: '10px', border: '1px solid #64b5f6', marginBottom: '15px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#1565c0' }}>
+                        🧠 Profile Source for Document Generation
+                      </label>
+                      <p style={{ fontSize: '11px', color: '#666', marginBottom: '10px' }}>
+                        Choose which profile data the Thinker should use when generating CVs, motivation letters, and cover letters.
+                      </p>
+                      <select 
+                        style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #64b5f6', background: '#fff' }} 
+                        value={formData.thinkerSource} 
+                        onChange={(e) => handleInputChange('thinkerSource', e.target.value)}
+                      >
+                        <option value='all'>📋 All Sources (Combined)</option>
+                        <option value='linkedin'>👤 LinkedIn Profile Only</option>
+                        <option value='manual'>✏️ Manual Profile Input Only</option>
+                        <option value='uploaded_cv'>📄 Uploaded CV Documents Only</option>
+                      </select>
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#fff', borderRadius: '6px', fontSize: '11px', color: '#555' }}>
+                        <strong>Recommendation:</strong> For best results, use "All Sources" to combine your complete professional history. Use specific sources only if you want documents tailored to a particular version of your profile.
+                      </div>
+                    </div>
+                  )}
+
+                  {!isThinker && isWritingRole && (
+                    <>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Word Limit</label>
+                      <input type='number' style={{ width: '100%', padding: '10px', marginBottom: '15px', borderRadius: '6px', border: '1px solid #ccc' }} value={formData.wordLimit} onChange={(e) => handleInputChange('wordLimit', e.target.value)} />
+                    </>
+                  )}
                 </>
               )}
 

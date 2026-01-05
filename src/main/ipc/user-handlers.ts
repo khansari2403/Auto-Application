@@ -1,4 +1,4 @@
-import { ipcMain, shell } from 'electron';
+import { ipcMain, shell, BrowserWindow } from 'electron';
 import { runQuery, getAllQuery, getDatabase } from '../database';
 
 export function registerUserHandlers(): string[] {
@@ -7,7 +7,8 @@ export function registerUserHandlers(): string[] {
     'user:update-profile',
     'user:open-linkedin', 
     'user:capture-linkedin', 
-    'user:save-linkedin-profile'
+    'user:save-linkedin-profile',
+    'user:open-linkedin-login'
   ];
 
   // --- USER PROFILE ---
@@ -40,6 +41,33 @@ export function registerUserHandlers(): string[] {
       const linkedinUrl = url || 'https://www.linkedin.com/in/';
       await shell.openExternal(linkedinUrl);
       return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // Open LinkedIn login in a popup window and wait for user to sign in
+  ipcMain.handle('user:open-linkedin-login', async () => {
+    try {
+      // Create a popup window for LinkedIn login
+      const loginWindow = new BrowserWindow({
+        width: 1000,
+        height: 700,
+        title: 'LinkedIn Sign In',
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true
+        }
+      });
+      
+      // Navigate to LinkedIn login page
+      await loginWindow.loadURL('https://www.linkedin.com/login');
+      
+      // Return immediately - user will manually log in
+      return { 
+        success: true, 
+        message: 'LinkedIn login window opened. Please sign in manually, then close this window and click "Fetch Profile".' 
+      };
     } catch (e: any) {
       return { success: false, error: e.message };
     }

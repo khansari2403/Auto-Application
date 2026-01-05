@@ -257,6 +257,199 @@ export function registerServicesHandlers(): string[] {
     }
   });
 
+  // --- GOOGLE OAUTH HANDLERS ---
+  
+  // Store OAuth clients temporarily
+  const oauthClients: Map<string, any> = new Map();
+  
+  // Start OAuth flow - opens browser for consent
+  ipcMain.handle('email:oauth-start', async (_, data) => {
+    try {
+      const { clientId, clientSecret, email } = data;
+      
+      if (!clientId || !clientSecret) {
+        return { success: false, error: 'Client ID and Client Secret are required' };
+      }
+      
+      console.log('Starting OAuth flow for:', email);
+      
+      // Create OAuth2 client
+      const oauth2Client = new google.auth.OAuth2(
+        clientId,
+        clientSecret,
+        'urn:ietf:wg:oauth:2.0:oob' // Use out-of-band for desktop apps
+      );
+      
+      // Store client for later use
+      oauthClients.set(email || 'default', oauth2Client);
+      
+      // Generate authorization URL
+      const authUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope: [
+          'https://www.googleapis.com/auth/gmail.readonly',
+          'https://www.googleapis.com/auth/gmail.send',
+          'https://mail.google.com/' // Full IMAP access
+        ],
+        prompt: 'consent' // Force consent screen to get refresh token
+      });
+      
+      console.log('OAuth URL generated:', authUrl);
+      
+      // Open browser with auth URL
+      await shell.openExternal(authUrl);
+      
+      return { 
+        success: true, 
+        message: 'Browser opened. Please sign in and copy the authorization code.',
+        authUrl: authUrl
+      };
+      
+    } catch (e: any) {
+      console.error('OAuth start error:', e);
+      return { success: false, error: e.message };
+    }
+  });
+  
+  // Handle OAuth callback with authorization code
+  ipcMain.handle('email:oauth-callback', async (_, data) => {
+    try {
+      const { clientId, clientSecret, code, email } = data;
+      
+      if (!code) {
+        return { success: false, error: 'Authorization code is required' };
+      }
+      
+      console.log('Processing OAuth callback for:', email);
+      
+      // Get or create OAuth2 client
+      let oauth2Client = oauthClients.get(email || 'default');
+      
+      if (!oauth2Client) {
+        oauth2Client = new google.auth.OAuth2(
+          clientId,
+          clientSecret,
+          'urn:ietf:wg:oauth:2.0:oob'
+        );
+      }
+      
+      // Exchange code for tokens
+      const { tokens } = await oauth2Client.getToken(code);
+      oauth2Client.setCredentials(tokens);
+      
+      console.log('OAuth tokens received:', {
+        access_token: tokens.access_token ? 'present' : 'missing',
+        refresh_token: tokens.refresh_token ? 'present' : 'missing',
+        expiry_date: tokens.expiry_date
+      });
+      
+      // Store tokens in database
+      await runQuery(
+        `UPDATE settings SET oauth_access_token = ?, oauth_refresh_token = ?, oauth_expiry = ?, email_connected = ? WHERE id = 1`,
+        [tokens.access_token, tokens.refresh_token, tokens.expiry_date, 1]
+      );
+      
+      return { 
+        success: true, 
+        message: 'OAuth connected successfully! Your email is now linked.',
+        hasRefreshToken: !!tokens.refresh_token
+      };
+      
+    } catch (e: any) {
+      console.error('OAuth callback error:', e);
+      
+      let errorMsg = e.message;
+      if (e.message.includes('invalid_grant')) {
+        errorMsg = 'Invalid or expired authorization code. Please try again.';
+      } else if (e.message.includes('redirect_uri_mismatch')) {
+        errorMsg = 'OAuth configuration error. Check your Google Cloud Console redirect URIs.';
+      }
+      
+      return { success: false, error: errorMsg };
+    }
+  });
+  
+  // Test OAuth connection by fetching emails
+  ipcMain.handle('email:oauth-test', async (_, data) => {
+    try {
+      const { clientId, clientSecret, email } = data;
+      
+      // Get stored tokens
+      const settings = await getAllQuery('SELECT * FROM settings WHERE id = 1');
+      const settingsRow = settings?.[0] || {};
+      
+      if (!settingsRow.oauth_access_token) {
+        return { success: false, error: 'No OAuth tokens found. Please connect first.' };
+      }
+      
+      console.log('Testing OAuth connection for:', email);
+      
+      // Create OAuth2 client with stored tokens
+      const oauth2Client = new google.auth.OAuth2(
+        clientId,
+        clientSecret,
+        'urn:ietf:wg:oauth:2.0:oob'
+      );
+      
+      oauth2Client.setCredentials({
+        access_token: settingsRow.oauth_access_token,
+        refresh_token: settingsRow.oauth_refresh_token,
+        expiry_date: settingsRow.oauth_expiry
+      });
+      
+      // Test by fetching user profile
+      const gmail = google.gmail({ version: 'v1', auth: oauth2Client });
+      const profile = await gmail.users.getProfile({ userId: 'me' });
+      
+      console.log('Gmail profile:', profile.data);
+      
+      // Fetch latest messages
+      const messageList = await gmail.users.messages.list({
+        userId: 'me',
+        maxResults: 5,
+        labelIds: ['INBOX']
+      });
+      
+      const messages: any[] = [];
+      
+      if (messageList.data.messages) {
+        for (const msg of messageList.data.messages.slice(0, 5)) {
+          const fullMsg = await gmail.users.messages.get({
+            userId: 'me',
+            id: msg.id!,
+            format: 'metadata',
+            metadataHeaders: ['From', 'Subject', 'Date']
+          });
+          
+          const headers = fullMsg.data.payload?.headers || [];
+          messages.push({
+            from: headers.find(h => h.name === 'From')?.value || 'Unknown',
+            subject: headers.find(h => h.name === 'Subject')?.value || '(No Subject)',
+            date: headers.find(h => h.name === 'Date')?.value || '',
+            snippet: fullMsg.data.snippet
+          });
+        }
+      }
+      
+      return { 
+        success: true, 
+        email: profile.data.emailAddress,
+        totalMessages: profile.data.messagesTotal,
+        messages: messages
+      };
+      
+    } catch (e: any) {
+      console.error('OAuth test error:', e);
+      
+      let errorMsg = e.message;
+      if (e.message.includes('invalid_grant') || e.message.includes('Token has been expired')) {
+        errorMsg = 'OAuth token expired. Please reconnect your email.';
+      }
+      
+      return { success: false, error: errorMsg };
+    }
+  });
+
   // --- COMPATIBILITY SCORE ---
   ipcMain.handle('compatibility:calculate', async (_, data) => {
     try {

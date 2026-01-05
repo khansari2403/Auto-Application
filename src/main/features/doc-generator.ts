@@ -749,9 +749,11 @@ STRUCTURE:
 
 OUTPUT FORMAT: Return ONLY the CV content in clean text format. Use clear section headings.`,
 
-    motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter that fills ONE FULL PAGE (400-500 words).
+    motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter.
 
 ${baseContext}
+
+WORD LIMIT: ${motivationWordLimit} words (this is configurable by the user)
 
 CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 1. DO NOT start with "Here is the motivation letter:" or any similar meta-text
@@ -783,7 +785,7 @@ MUST INCLUDE:
 - Professional but warm tone
 - Proper sign-off with full name
 
-Length: ONE FULL PAGE (400-500 words minimum). This is a formal document.
+Length: Approximately ${motivationWordLimit} words. This is a formal document.
 Language: Match the job description language.
 
 Return ONLY the motivation letter content, starting directly with the date and ending with the sign-off.`,
@@ -791,6 +793,8 @@ Return ONLY the motivation letter content, starting directly with the date and e
     cover_letter: `You are an expert Cover Letter writer. Create a concise, professional cover letter.
 
 ${baseContext}
+
+WORD LIMIT: ${coverWordLimit} words (this is configurable by the user)
 
 CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 1. DO NOT include any JSON formatting like { "coverLetter": ... }
@@ -800,7 +804,7 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 5. Output ONLY the letter content, starting with "Dear Hiring Manager" or similar
 
 REQUIREMENTS:
-1. Be concise (250-300 words)
+1. Be concise (approximately ${coverWordLimit} words)
 2. Address the hiring manager professionally
 3. Highlight 2-3 most relevant qualifications with specific examples FROM THE PROVIDED PROFILE ONLY
 4. Show enthusiasm for the specific role

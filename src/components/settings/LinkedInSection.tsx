@@ -404,13 +404,31 @@ function LinkedInSection({ userId }: { userId: number }) {
 
       <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
         <label style={labelStyle}>LinkedIn Profile URL</label>
-        <input 
-          type="text" 
-          value={url} 
-          onChange={e => setUrl(e.target.value)} 
-          style={{ width: '100%', padding: '12px', marginBottom: '15px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)' }} 
-          placeholder="https://linkedin.com/in/your-profile" 
-        />
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+          <input 
+            type="text" 
+            value={url} 
+            onChange={e => setUrl(e.target.value)} 
+            style={{ flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)' }} 
+            placeholder="https://linkedin.com/in/your-profile" 
+          />
+          <button 
+            onClick={handleCaptureProfile}
+            disabled={isScraping || !url.includes('linkedin.com/in/')}
+            style={{ 
+              padding: '12px 20px', 
+              cursor: (isScraping || !url.includes('linkedin.com/in/')) ? 'not-allowed' : 'pointer', 
+              borderRadius: '6px', 
+              border: 'none', 
+              background: (isScraping || !url.includes('linkedin.com/in/')) ? 'var(--bg-tertiary)' : 'var(--success)', 
+              color: '#fff', 
+              fontWeight: 'bold',
+              opacity: (isScraping || !url.includes('linkedin.com/in/')) ? 0.6 : 1
+            }}
+          >
+            {isScraping ? '⏳ Fetching...' : '📥 Fetch Profile'}
+          </button>
+        </div>
         
         {scrapeStatus && (
           <div style={{ 

@@ -219,7 +219,12 @@ export function SearchProfiles({ userId }: { userId: number }) {
               <TagsDisplay items={selectedJobTitles} onRemove={(title) => setSelectedJobTitles(prev => prev.filter(t => t !== title))} />
               
               {/* Job Title Search */}
-              <label style={labelStyle}>Search & Add Job Titles</label>
+              <label style={labelStyle}>
+                Search & Add Job Titles 
+                <span style={{ fontWeight: 'normal', fontSize: '10px', color: 'var(--text-tertiary)', marginLeft: '5px' }}>
+                  (🌍 Feel free to enter titles in any language)
+                </span>
+              </label>
               <div 
                 ref={dropdownRef}
                 style={{ position: 'relative' }}
@@ -230,7 +235,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
                   value={jobTitleSearch} 
                   onChange={e => { setJobTitleSearch(e.target.value); setShowJobTitleDropdown(true); }}
                   onFocus={() => setShowJobTitleDropdown(true)}
-                  placeholder="Type to search job titles..." 
+                  placeholder="Type to search or enter custom titles in any language..." 
                 />
                 {showJobTitleDropdown && (
                   <div 
@@ -249,6 +254,34 @@ export function SearchProfiles({ userId }: { userId: number }) {
                     }}
                     onMouseEnter={() => setShowJobTitleDropdown(true)}
                   >
+                    {/* Custom title add option */}
+                    {jobTitleSearch.trim() && !JOB_TITLES_DATABASE.some(t => t.toLowerCase() === jobTitleSearch.toLowerCase()) && (
+                      <div 
+                        onClick={() => {
+                          const customTitle = jobTitleSearch.trim();
+                          if (customTitle && !selectedJobTitles.includes(customTitle)) {
+                            setSelectedJobTitles(prev => [...prev, customTitle]);
+                          }
+                          setJobTitleSearch('');
+                        }}
+                        style={{ 
+                          padding: '10px 12px', 
+                          cursor: 'pointer', 
+                          fontSize: '12px',
+                          borderBottom: '2px solid var(--primary)',
+                          background: 'var(--info-light)',
+                          color: 'var(--primary)',
+                          fontWeight: 'bold',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px'
+                        }}
+                      >
+                        <span style={{ fontSize: '14px' }}>➕</span>
+                        Add custom: "{jobTitleSearch.trim()}"
+                        <span style={{ fontSize: '10px', opacity: 0.7, marginLeft: 'auto' }}>(any language)</span>
+                      </div>
+                    )}
                     {filteredJobTitles.map(title => (
                       <div 
                         key={title}
@@ -273,6 +306,9 @@ export function SearchProfiles({ userId }: { userId: number }) {
                   </div>
                 )}
               </div>
+              <p style={hintStyle}>
+                💡 Can't find your job title? Simply type it above and click "Add custom". Works in any language! e.g., "Softwareentwickler", "Développeur", "開発者"
+              </p>
 
               {/* Experience Levels */}
               <ScrollableMultiSelect 

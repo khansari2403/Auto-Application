@@ -391,6 +391,51 @@ function LinkedInSection({ userId }: { userId: number }) {
     );
   }
 
+  // Delete imported LinkedIn profile
+  const handleDeleteProfile = async () => {
+    if (!confirm('Are you sure you want to delete your imported LinkedIn profile? This will clear all profile data.')) {
+      return;
+    }
+    
+    // Reset profile to default
+    setProfile(defaultProfile);
+    setUrl('');
+    setScrapeStatus('');
+    
+    // Clear from database
+    await (window as any).electron.invoke('user:update-profile', {
+      ...defaultProfile,
+      experiences: JSON.stringify([]),
+      educations: JSON.stringify([]),
+      licenses: JSON.stringify([]),
+      skills: JSON.stringify([]),
+      languages: JSON.stringify([]),
+      projects: JSON.stringify([]),
+      awards: JSON.stringify([]),
+      publications: JSON.stringify([]),
+      volunteer: JSON.stringify([]),
+      linkedin_url: '',
+      id: userId
+    });
+    
+    alert('LinkedIn profile data has been deleted.');
+  };
+
+  // Open LinkedIn login popup
+  const handleOpenLinkedInLogin = async () => {
+    setScrapeStatus('Opening LinkedIn sign-in page... Please log in manually.');
+    try {
+      const result = await (window as any).electron.invoke('user:open-linkedin-login', { userId });
+      if (result.success) {
+        setScrapeStatus(result.message || 'LinkedIn window opened. Please sign in and then click "Fetch Profile".');
+      } else {
+        setScrapeStatus('Error: ' + (result.error || 'Failed to open LinkedIn'));
+      }
+    } catch (e: any) {
+      setScrapeStatus('Error: ' + e.message);
+    }
+  };
+
   // Main LinkedIn Section View
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', background: 'var(--bg-primary)' }}>
@@ -404,19 +449,38 @@ function LinkedInSection({ userId }: { userId: number }) {
 
       <div style={{ background: 'var(--bg-secondary)', padding: '20px', borderRadius: '8px', marginBottom: '20px' }}>
         <label style={labelStyle}>LinkedIn Profile URL</label>
-        <div style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
-          <input 
-            type="text" 
-            value={url} 
-            onChange={e => setUrl(e.target.value)} 
-            style={{ flex: 1, padding: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)' }} 
-            placeholder="https://linkedin.com/in/your-profile" 
-          />
+        <input 
+          type="text" 
+          value={url} 
+          onChange={e => setUrl(e.target.value)} 
+          style={{ width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--input-bg)', color: 'var(--text-primary)', marginBottom: '10px' }} 
+          placeholder="https://linkedin.com/in/your-profile" 
+        />
+        
+        {/* Buttons moved below URL input */}
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
+          <button 
+            onClick={handleOpenLinkedInLogin}
+            style={{ 
+              padding: '10px 16px', 
+              cursor: 'pointer', 
+              borderRadius: '6px', 
+              border: '1px solid #0077b5', 
+              background: 'var(--card-bg)', 
+              color: '#0077b5', 
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            🔐 Sign in to LinkedIn
+          </button>
           <button 
             onClick={handleCaptureProfile}
             disabled={isScraping || !url.includes('linkedin.com/in/')}
             style={{ 
-              padding: '12px 20px', 
+              padding: '10px 16px', 
               cursor: (isScraping || !url.includes('linkedin.com/in/')) ? 'not-allowed' : 'pointer', 
               borderRadius: '6px', 
               border: 'none', 
@@ -429,6 +493,10 @@ function LinkedInSection({ userId }: { userId: number }) {
             {isScraping ? '⏳ Fetching...' : '📥 Fetch Profile'}
           </button>
         </div>
+        
+        <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '0 0 15px 0', fontStyle: 'italic' }}>
+          💡 Click "Sign in to LinkedIn" first if you need to log in. The app will wait for you to complete the login before fetching your profile.
+        </p>
         
         {scrapeStatus && (
           <div style={{ 
@@ -448,7 +516,7 @@ function LinkedInSection({ userId }: { userId: number }) {
             onClick={() => setIsReviewing(true)}
             style={{ padding: '12px 20px', cursor: 'pointer', borderRadius: '6px', border: 'none', background: '#0077b5', color: '#fff', fontWeight: 'bold' }}
           >
-            ✏️ Edit Profile
+            ✏️ Edit Profile Manually
           </button>
         </div>
       </div>
@@ -456,7 +524,24 @@ function LinkedInSection({ userId }: { userId: number }) {
       {/* Current Profile Summary */}
       {profile.name && (
         <div style={{ background: 'var(--card-bg)', padding: '20px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-          <h4 style={{ marginTop: 0, color: 'var(--text-primary)' }}>📋 Current Profile</h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '15px' }}>
+            <h4 style={{ margin: 0, color: 'var(--text-primary)' }}>📋 Imported LinkedIn Profile</h4>
+            <button 
+              onClick={handleDeleteProfile}
+              style={{ 
+                padding: '6px 12px', 
+                background: 'var(--card-bg)', 
+                color: 'var(--danger)', 
+                border: '1px solid var(--danger)', 
+                borderRadius: '6px', 
+                cursor: 'pointer', 
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}
+            >
+              🗑️ Delete Profile
+            </button>
+          </div>
           <div style={{ display: 'flex', gap: '20px', alignItems: 'start' }}>
             {profile.photo && <img src={profile.photo} style={{ width: '60px', height: '60px', borderRadius: '8px' }} alt="" />}
             <div>
@@ -471,9 +556,11 @@ function LinkedInSection({ userId }: { userId: number }) {
             <span>🛠️ {profile.skills.length} Skills</span>
             <span>📜 {profile.licenses.length} Certifications</span>
           </div>
-          <button onClick={() => setIsReviewing(true)} style={{ marginTop: '15px', padding: '8px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
-            ✏️ Edit Full Profile
-          </button>
+          <div style={{ marginTop: '15px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button onClick={() => setIsReviewing(true)} style={{ padding: '8px 20px', background: '#0077b5', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}>
+              ✏️ Edit Full Profile
+            </button>
+          </div>
         </div>
       )}
     </div>

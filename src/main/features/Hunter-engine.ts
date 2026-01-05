@@ -179,6 +179,16 @@ ${pageData.content.substring(0, 6000)}`;
     console.log('Update data:', updateData);
     await runQuery('UPDATE job_listings', updateData);
     
+    // Step 7: Calculate compatibility score (always, regardless of auto-apply setting)
+    console.log('Step 7: Calculating compatibility score...');
+    try {
+      const compatResult = await CompatibilityService.calculateCompatibility(userId, jobId);
+      console.log(`Compatibility: ${compatResult.score}% (${compatResult.level})`);
+      await logAction(userId, 'ai_auditor', `📊 Match: ${compatResult.level.toUpperCase()} (${compatResult.score}%)`, 'completed', true);
+    } catch (compatError: any) {
+      console.log('Compatibility calculation error:', compatError.message);
+    }
+    
     await logAction(userId, 'ai_auditor', `✅ Extracted: ${jobTitle} at ${companyName}`, 'completed', true);
     console.log(`✅ SUCCESS: ${jobTitle} at ${companyName}`);
     
@@ -191,6 +201,11 @@ ${pageData.content.substring(0, 6000)}`;
     if (fallbackData.jobTitle) {
       await runQuery('UPDATE job_listings', { id: jobId, ...fallbackData, status: 'analyzed', date_imported: new Date().toLocaleDateString() });
       console.log('✅ Saved with fallback:', fallbackData);
+      
+      // Calculate compatibility even for fallback data
+      try {
+        await CompatibilityService.calculateCompatibility(userId, jobId);
+      } catch (e) {}
     } else {
       await runQuery('UPDATE job_listings', { id: jobId, status: 'manual_review' });
     }

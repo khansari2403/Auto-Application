@@ -477,14 +477,109 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                   <>
                     <div style={{ background: 'var(--info-light)', padding: '12px', borderRadius: '6px', marginBottom: '15px' }}>
                       <p style={{ margin: 0, fontSize: '12px', color: 'var(--info)' }}>
-                        <strong>ℹ️ OAuth Setup:</strong> For Gmail, you need to create OAuth credentials in Google Cloud Console.
-                        <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" style={{ marginLeft: '5px' }}>Create Credentials →</a>
+                        <strong>ℹ️ OAuth Setup Steps:</strong>
+                        <ol style={{ margin: '8px 0 0 20px', padding: 0 }}>
+                          <li>Create a project in <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer">Google Cloud Console</a></li>
+                          <li>Enable Gmail API in APIs & Services</li>
+                          <li>Create OAuth 2.0 credentials (Desktop app type)</li>
+                          <li>Add your email to Test Users in OAuth consent screen</li>
+                          <li>Paste Client ID & Secret below, then click "Start OAuth"</li>
+                        </ol>
                       </p>
                     </div>
                     <label style={labelStyle}>Client ID</label>
-                    <input style={inputStyle} value={googleClientId} onChange={e => setGoogleClientId(e.target.value)} placeholder="Your OAuth Client ID" />
+                    <input style={inputStyle} value={googleClientId} onChange={e => setGoogleClientId(e.target.value)} placeholder="Your OAuth Client ID (ends with .apps.googleusercontent.com)" />
                     <label style={labelStyle}>Client Secret</label>
                     <input style={inputStyle} type="password" value={googleClientSecret} onChange={e => setGoogleClientSecret(e.target.value)} placeholder="Your OAuth Client Secret" />
+                    
+                    {!showManualCode && !isConnected && (
+                      <button 
+                        onClick={startOAuthFlow}
+                        disabled={oauthInProgress || !googleClientId || !googleClientSecret}
+                        style={{ 
+                          width: '100%',
+                          padding: '14px 25px', 
+                          background: 'linear-gradient(135deg, #4285f4 0%, #34a853 100%)', 
+                          color: '#fff', 
+                          border: 'none', 
+                          borderRadius: '6px', 
+                          cursor: oauthInProgress ? 'wait' : 'pointer', 
+                          fontWeight: 'bold',
+                          fontSize: '14px',
+                          marginTop: '10px',
+                          opacity: (!googleClientId || !googleClientSecret) ? 0.5 : 1
+                        }}
+                      >
+                        🔐 Start OAuth - Sign in with Google
+                      </button>
+                    )}
+                    
+                    {showManualCode && (
+                      <div style={{ marginTop: '15px', padding: '15px', background: 'var(--warning-light)', borderRadius: '8px', border: '1px solid var(--warning)' }}>
+                        <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: 'var(--warning)' }}>
+                          <strong>📋 Paste Authorization Code:</strong><br/>
+                          After signing in, Google will show you a code. Copy and paste it here:
+                        </p>
+                        <input 
+                          style={{ ...inputStyle, marginBottom: '10px' }} 
+                          value={manualCode} 
+                          onChange={e => setManualCode(e.target.value)}
+                          placeholder="Paste the authorization code here..."
+                        />
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                          <button 
+                            onClick={submitOAuthCode}
+                            disabled={isTesting || !manualCode.trim()}
+                            style={{ 
+                              flex: 1,
+                              padding: '12px', 
+                              background: '#4285f4', 
+                              color: '#fff', 
+                              border: 'none', 
+                              borderRadius: '6px', 
+                              cursor: isTesting ? 'wait' : 'pointer',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            {isTesting ? '⏳ Verifying...' : '✓ Submit Code'}
+                          </button>
+                          <button 
+                            onClick={() => { setShowManualCode(false); setManualCode(''); setOauthInProgress(false); }}
+                            style={{ 
+                              padding: '12px 20px', 
+                              background: 'var(--bg-tertiary)', 
+                              color: 'var(--text-primary)', 
+                              border: '1px solid var(--border)', 
+                              borderRadius: '6px', 
+                              cursor: 'pointer'
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {isConnected && (
+                      <button 
+                        onClick={() => verifyOAuthConnection(false)}
+                        disabled={isTesting}
+                        style={{ 
+                          width: '100%',
+                          padding: '14px 25px', 
+                          background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)', 
+                          color: '#fff', 
+                          border: 'none', 
+                          borderRadius: '6px', 
+                          cursor: isTesting ? 'wait' : 'pointer', 
+                          fontWeight: 'bold',
+                          fontSize: '14px',
+                          marginTop: '10px'
+                        }}
+                      >
+                        {isTesting ? '⏳ Testing...' : '📬 Test Connection - View Inbox'}
+                      </button>
+                    )}
                   </>
                 )}
 

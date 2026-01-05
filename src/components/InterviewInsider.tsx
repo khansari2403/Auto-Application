@@ -219,6 +219,157 @@ export function InterviewInsider({ userId }: Props) {
         )}
       </div>
 
+      {/* Ask About My CV Section */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 50%, #fecfef 100%)', 
+        padding: '24px', 
+        borderRadius: '16px', 
+        marginBottom: '24px',
+        border: '2px solid #ff6b6b'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <div>
+            <h3 style={{ margin: '0 0 4px 0', color: '#333', fontSize: '18px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '24px' }}>📄</span>
+              Ask About My CV
+            </h3>
+            <p style={{ margin: 0, color: '#666', fontSize: '13px' }}>
+              HR AI will grill you with questions based on your CV and the job requirements
+            </p>
+          </div>
+          <button
+            onClick={() => setShowCvSection(!showCvSection)}
+            style={{
+              padding: '8px 16px',
+              background: showCvSection ? '#ff6b6b' : 'rgba(255,255,255,0.9)',
+              color: showCvSection ? '#fff' : '#ff6b6b',
+              border: '2px solid #ff6b6b',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 'bold',
+              fontSize: '13px'
+            }}
+          >
+            {showCvSection ? '▲ Hide' : '▼ Expand'}
+          </button>
+        </div>
+
+        {showCvSection && (
+          <div style={{ background: 'rgba(255,255,255,0.9)', borderRadius: '12px', padding: '20px' }}>
+            {/* Difficulty Dial */}
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', marginBottom: '10px', fontWeight: 600, color: '#333', fontSize: '14px' }}>
+                🔥 Difficulty Level: <span style={{ color: difficultyLevel <= 3 ? '#4CAF50' : difficultyLevel <= 6 ? '#FF9800' : '#f44336' }}>
+                  {difficultyLevel <= 3 ? 'Easy' : difficultyLevel <= 6 ? 'Medium' : difficultyLevel <= 8 ? 'Hard' : 'Extreme'}
+                </span>
+              </label>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '12px', color: '#666' }}>😊</span>
+                <input
+                  type="range"
+                  min="1"
+                  max="10"
+                  value={difficultyLevel}
+                  onChange={(e) => setDifficultyLevel(parseInt(e.target.value))}
+                  style={{ flex: 1, height: '8px', cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: '12px', color: '#666' }}>🔥</span>
+                <span style={{ 
+                  padding: '4px 12px', 
+                  background: difficultyLevel <= 3 ? '#4CAF50' : difficultyLevel <= 6 ? '#FF9800' : '#f44336',
+                  color: '#fff',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  minWidth: '30px',
+                  textAlign: 'center'
+                }}>
+                  {difficultyLevel}
+                </span>
+              </div>
+              <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#888' }}>
+                Higher difficulty = tougher questions that probe deeper into your experience gaps
+              </p>
+            </div>
+
+            <button
+              onClick={handleAskAboutCv}
+              disabled={isAskingCv || !jobUrl.trim()}
+              style={{
+                width: '100%',
+                padding: '14px 28px',
+                background: isAskingCv ? '#ccc' : 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '10px',
+                cursor: (isAskingCv || !jobUrl.trim()) ? 'not-allowed' : 'pointer',
+                fontWeight: 'bold',
+                fontSize: '14px',
+                marginBottom: '16px'
+              }}
+            >
+              {isAskingCv ? '⏳ Generating Questions...' : '🎤 Grill Me Based on Job + CV'}
+            </button>
+
+            {!jobUrl.trim() && (
+              <p style={{ margin: 0, fontSize: '12px', color: '#ff6b6b', textAlign: 'center' }}>
+                ⚠️ Please enter a Job URL above first
+              </p>
+            )}
+
+            {/* CV Questions Display */}
+            {cvQuestions.length > 0 && (
+              <div style={{ marginTop: '16px' }}>
+                <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '14px' }}>
+                  📋 {cvQuestions.length} Questions Based on Your CV & This Job:
+                </h4>
+                {cvQuestions.map((q, i) => (
+                  <div 
+                    key={i}
+                    style={{ 
+                      background: '#fff', 
+                      borderRadius: '10px', 
+                      padding: '16px', 
+                      marginBottom: '12px',
+                      border: '1px solid #eee',
+                      borderLeft: `4px solid ${q.difficulty === 'hard' ? '#f44336' : q.difficulty === 'medium' ? '#FF9800' : '#4CAF50'}`
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '8px' }}>
+                      <span style={{ 
+                        fontSize: '10px', 
+                        padding: '2px 8px', 
+                        background: q.difficulty === 'hard' ? '#ffebee' : q.difficulty === 'medium' ? '#fff3e0' : '#e8f5e9',
+                        color: q.difficulty === 'hard' ? '#f44336' : q.difficulty === 'medium' ? '#FF9800' : '#4CAF50',
+                        borderRadius: '10px',
+                        fontWeight: 'bold',
+                        textTransform: 'uppercase'
+                      }}>
+                        {q.difficulty}
+                      </span>
+                    </div>
+                    <p style={{ margin: '0 0 12px 0', fontSize: '14px', fontWeight: 600, color: '#333' }}>
+                      Q{i + 1}: {q.question}
+                    </p>
+                    <div style={{ 
+                      background: '#f8f9fa', 
+                      borderRadius: '8px', 
+                      padding: '12px',
+                      fontSize: '13px',
+                      color: '#555',
+                      lineHeight: '1.6'
+                    }}>
+                      <strong style={{ color: '#4CAF50' }}>💡 Suggested Answer:</strong><br/>
+                      {q.answer}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Job Info & Important Apps */}
       {jobInfo && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '24px' }}>

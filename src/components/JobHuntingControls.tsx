@@ -63,7 +63,11 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
     try {
       const result = await (window as any).electron.invoke('hunter:start-search', userId);
       if (result?.success) {
-        setSearchResult({ success: true, jobsFound: result.jobsFound || 0 });
+        setSearchResult({ 
+          success: true, 
+          jobsFound: result.jobsFound || 0,
+          message: result.cancelled ? 'Search cancelled' : undefined
+        });
       } else {
         setSearchResult({ success: false, message: result?.error || 'Search failed' });
       }
@@ -71,6 +75,16 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
       setSearchResult({ success: false, message: e.message });
     } finally {
       setIsSearching(false);
+    }
+  };
+
+  // Cancel ongoing Hunter search
+  const cancelHunterSearch = async () => {
+    try {
+      await (window as any).electron.invoke('hunter:cancel-search');
+      setSearchResult({ success: true, message: 'Cancelling...', jobsFound: 0 });
+    } catch (e: any) {
+      console.error('Failed to cancel:', e);
     }
   };
 

@@ -46,6 +46,7 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
   const [inboxMessages, setInboxMessages] = useState<any[]>([]);
   const [isLoadingInbox, setIsLoadingInbox] = useState(false);
   const [inboxTotalCount, setInboxTotalCount] = useState(0);
+  const [oauthInProgress, setOauthInProgress] = useState(false);
 
   useEffect(() => {
     loadConfig();
@@ -70,11 +71,129 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
         });
         
         // Auto-verify connection on load if it was previously connected
-        if (wasConnected && result.data.email_app_password) {
-          // Silent re-verification in background
-          verifyConnection(result.data.email, result.data.email_app_password, result.data.email_provider, true);
+        if (wasConnected) {
+          if (result.data.email_access_method === 'oauth' && result.data.oauth_access_token) {
+            // Silently verify OAuth connection
+            verifyOAuthConnection(true);
+          } else if (result.data.email_app_password) {
+            // Silent re-verification for app password
+            verifyConnection(result.data.email, result.data.email_app_password, result.data.email_provider, true);
+          }
         }
       }
+    }
+  };
+
+  // Verify OAuth connection
+  const verifyOAuthConnection = async (silent: boolean = false) => {
+    if (!silent) setIsTesting(true);
+    setTestResult(null);
+    
+    try {
+      const result = await (window as any).electron.invoke?.('email:oauth-test', {
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
+        email: config.email
+      });
+      
+      if (result?.success) {
+        setIsConnected(true);
+        if (!silent) {
+          setTestResult({ success: true, message: `Connected as ${result.email}` });
+          if (result.messages) {
+            setInboxMessages(result.messages);
+            setInboxTotalCount(result.totalMessages || 0);
+          }
+        }
+      } else {
+        if (!silent) {
+          setIsConnected(false);
+          setTestResult({ success: false, error: result?.error || 'OAuth verification failed' });
+        }
+      }
+    } catch (e: any) {
+      if (!silent) {
+        setTestResult({ success: false, error: e.message });
+      }
+    } finally {
+      if (!silent) setIsTesting(false);
+    }
+  };
+
+  // Start OAuth flow
+  const startOAuthFlow = async () => {
+    if (!googleClientId || !googleClientSecret) {
+      setTestResult({ success: false, error: 'Please enter Client ID and Client Secret first' });
+      return;
+    }
+    
+    setOauthInProgress(true);
+    setTestResult(null);
+    
+    try {
+      const result = await (window as any).electron.invoke?.('email:oauth-start', {
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
+        email: config.email
+      });
+      
+      if (result?.success) {
+        setShowManualCode(true);
+        setTestResult({ success: true, message: 'Browser opened. Sign in with Google and paste the code below.' });
+      } else {
+        setTestResult({ success: false, error: result?.error || 'Failed to start OAuth flow' });
+        setOauthInProgress(false);
+      }
+    } catch (e: any) {
+      setTestResult({ success: false, error: e.message });
+      setOauthInProgress(false);
+    }
+  };
+
+  // Submit OAuth authorization code
+  const submitOAuthCode = async () => {
+    if (!manualCode.trim()) {
+      setTestResult({ success: false, error: 'Please paste the authorization code' });
+      return;
+    }
+    
+    setIsTesting(true);
+    
+    try {
+      const result = await (window as any).electron.invoke?.('email:oauth-callback', {
+        clientId: googleClientId,
+        clientSecret: googleClientSecret,
+        code: manualCode.trim(),
+        email: config.email
+      });
+      
+      if (result?.success) {
+        // Save config
+        await (window as any).electron.invoke?.('settings:update', { 
+          id: 1,
+          google_client_id: googleClientId, 
+          google_client_secret: googleClientSecret,
+          email_provider: config.provider,
+          email: config.email,
+          email_access_method: config.accessMethod,
+          email_connected: true
+        });
+        
+        setIsConnected(true);
+        setShowManualCode(false);
+        setManualCode('');
+        setOauthInProgress(false);
+        setTestResult({ success: true, message: result.message || 'Email connected via OAuth!' });
+        
+        // Test the connection
+        setTimeout(() => verifyOAuthConnection(false), 1000);
+      } else {
+        setTestResult({ success: false, error: result?.error || 'Failed to verify OAuth code' });
+      }
+    } catch (e: any) {
+      setTestResult({ success: false, error: e.message });
+    } finally {
+      setIsTesting(false);
     }
   };
 

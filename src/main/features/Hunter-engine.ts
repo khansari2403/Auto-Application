@@ -2,6 +2,18 @@ import { runQuery, getDatabase, getAllQuery, logAction } from '../database';
 import { scrapeJobs, getJobPageContent } from '../scraper-service';
 import { reportGhostJob as reportGhostJobNetwork, isGhostJob as isGhostJobNetwork } from './ghost-job-network';
 
+// Cancellation flag for Hunter search
+let hunterCancelled = false;
+
+export function cancelHunterSearch() {
+  hunterCancelled = true;
+  console.log('Hunter search cancellation requested');
+}
+
+export function isHunterCancelled(): boolean {
+  return hunterCancelled;
+}
+
 export async function analyzeJobUrl(jobId: number, userId: number, url: string, hunter: any, auditor: any, callAI: Function) {
   console.log(`\n========== ANALYZING JOB ${jobId} ==========`);
   console.log(`URL: ${url}`);

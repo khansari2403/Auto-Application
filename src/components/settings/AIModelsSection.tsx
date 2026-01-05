@@ -159,7 +159,8 @@ function AIModelsSection({ userId }: { userId: number }) {
     setFormData({ 
       modelName: '', apiKey: '', role: 'Hunter', writingStyle: 'Formal', 
       wordLimit: '300', strictness: 'Balanced', functionalPrompt: '',
-      cvStylePersona: 'Classic', referenceCvId: '', cvStyleCode: ''
+      cvStylePersona: 'Classic', referenceCvId: '', cvStyleCode: '',
+      auditorSource: 'all'
     });
     setAvailableModels([]);
     setRecommendations({ Speed: [], Cost: [], Quality: [] });

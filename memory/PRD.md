@@ -214,6 +214,9 @@ Settings are stored in `settings.secretary_settings` as JSON:
 - [x] **SearchProfiles State Bug** - Verified fix using editing?.id dependency
 
 ### P1 - High Priority (Testing Needed)
+- [ ] **Google OAuth Flow** - Test with user's Google Cloud credentials
+- [ ] **LinkedIn Profile Import** - Test complete flow: sign in -> fetch profile -> save
+- [ ] **Storage Category** - Verify all documents show per company
 - [ ] End-to-end test of Smart Apply flow
 - [ ] CV generation verification
 - [ ] Document quality verification (no hallucinations)

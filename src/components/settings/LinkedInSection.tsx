@@ -83,12 +83,16 @@ function LinkedInSection({ userId }: { userId: number }) {
   // LinkedIn scraping state
   const [isScraping, setIsScraping] = useState(false);
   const [scrapeStatus, setScrapeStatus] = useState('');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const handleOpenLinkedIn = async () => {
     setScrapeStatus('Opening LinkedIn for login...');
     const result = await (window as any).electron.invoke('user:capture-linkedin', { userId });
     if (result.success) {
       setScrapeStatus(result.message || 'LinkedIn opened. Please login manually.');
+      if (result.isLoggedIn) {
+        setIsLoggedIn(true);
+      }
     } else {
       setScrapeStatus('Error: ' + result.error);
     }
@@ -116,8 +120,15 @@ function LinkedInSection({ userId }: { userId: number }) {
           languageList: result.data.languages
         });
         setIsReviewing(true);
+        setIsLoggedIn(true);
       } else {
-        setScrapeStatus(result.message || result.error || 'Capture failed. Please try again.');
+        // Check if not logged in
+        if (result.error?.includes('Not logged in') || result.error?.includes('login')) {
+          setScrapeStatus('⚠️ Not logged in. Please click "Sign in to LinkedIn" first.');
+          setIsLoggedIn(false);
+        } else {
+          setScrapeStatus(result.message || result.error || 'Capture failed. Please try again.');
+        }
       }
     } catch (e: any) {
       setScrapeStatus('Error: ' + e.message);

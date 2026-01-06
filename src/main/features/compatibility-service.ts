@@ -397,17 +397,21 @@ function areSimilarSkills(skill1: string, skill2: string): boolean {
 
 /**
  * Calculate experience match score
+ * IMPORTANT: Experience is TRANSFERABLE - 5+ years in any role indicates transition potential
  */
 function calculateExperienceMatch(profile: any, job: any): number {
   // Get user's total years of experience
   let userYears = 0;
+  let longestRoleYears = 0;
   
   if (profile.experiences && Array.isArray(profile.experiences)) {
     for (const exp of profile.experiences) {
       if (exp.start_date && exp.end_date) {
         const start = new Date(exp.start_date);
         const end = exp.end_date === 'Present' ? new Date() : new Date(exp.end_date);
-        userYears += (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365);
+        const roleYears = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365);
+        userYears += roleYears;
+        longestRoleYears = Math.max(longestRoleYears, roleYears);
       }
     }
   }
@@ -437,14 +441,19 @@ function calculateExperienceMatch(profile: any, job: any): number {
   // Calculate score
   if (requiredYears === 0) return 70; // Neutral if not specified
   
+  // TRANSITIONAL EXPERIENCE BONUS:
+  // If user has 5+ years in ANY role, they have demonstrated commitment and can transition
+  const transitionBonus = longestRoleYears >= 5 ? 15 : (longestRoleYears >= 3 ? 10 : 0);
+  
   if (userYears >= requiredYears) {
     // Full score if meets requirements, bonus for exceeding
-    const bonus = Math.min((userYears - requiredYears) * 5, 20);
-    return Math.min(80 + bonus, 100);
+    const exceedBonus = Math.min((userYears - requiredYears) * 5, 15);
+    return Math.min(85 + exceedBonus, 100);
   } else {
-    // Partial score based on how close
+    // Partial score based on how close, plus transition bonus
     const ratio = userYears / requiredYears;
-    return Math.round(ratio * 70);
+    const baseScore = Math.round(ratio * 70);
+    return Math.min(baseScore + transitionBonus, 85);
   }
 }
 

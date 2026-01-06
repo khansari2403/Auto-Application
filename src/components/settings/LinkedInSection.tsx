@@ -476,33 +476,35 @@ function LinkedInSection({ userId }: { userId: number }) {
         <div style={{ display: 'flex', gap: '10px', marginBottom: '15px', flexWrap: 'wrap' }}>
           <button 
             onClick={handleOpenLinkedInLogin}
+            disabled={isScraping}
             style={{ 
               padding: '10px 16px', 
-              cursor: 'pointer', 
+              cursor: isScraping ? 'not-allowed' : 'pointer', 
               borderRadius: '6px', 
-              border: '1px solid #0077b5', 
-              background: 'var(--card-bg)', 
-              color: '#0077b5', 
+              border: isLoggedIn ? '2px solid #4CAF50' : '1px solid #0077b5', 
+              background: isLoggedIn ? 'var(--success-light)' : 'var(--card-bg)', 
+              color: isLoggedIn ? '#4CAF50' : '#0077b5', 
               fontWeight: 'bold',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px'
+              gap: '6px',
+              opacity: isScraping ? 0.6 : 1
             }}
           >
-            🔐 Sign in to LinkedIn
+            {isLoggedIn ? '✅ Logged In' : '🔐 Sign in to LinkedIn'}
           </button>
           <button 
             onClick={handleCaptureProfile}
-            disabled={isScraping || !url.includes('linkedin.com/in/')}
+            disabled={isScraping}
             style={{ 
               padding: '10px 16px', 
-              cursor: (isScraping || !url.includes('linkedin.com/in/')) ? 'not-allowed' : 'pointer', 
+              cursor: isScraping ? 'not-allowed' : 'pointer', 
               borderRadius: '6px', 
               border: 'none', 
-              background: (isScraping || !url.includes('linkedin.com/in/')) ? 'var(--bg-tertiary)' : 'var(--success)', 
+              background: isScraping ? 'var(--bg-tertiary)' : 'var(--success)', 
               color: '#fff', 
               fontWeight: 'bold',
-              opacity: (isScraping || !url.includes('linkedin.com/in/')) ? 0.6 : 1
+              opacity: isScraping ? 0.6 : 1
             }}
           >
             {isScraping ? '⏳ Fetching...' : '📥 Fetch Profile'}
@@ -510,7 +512,9 @@ function LinkedInSection({ userId }: { userId: number }) {
         </div>
         
         <p style={{ fontSize: '11px', color: 'var(--text-tertiary)', margin: '0 0 15px 0', fontStyle: 'italic' }}>
-          💡 Click "Sign in to LinkedIn" first if you need to log in. The app will wait for you to complete the login before fetching your profile.
+          💡 {isLoggedIn 
+            ? 'You are logged in! Enter your LinkedIn URL above (optional) and click "Fetch Profile" to capture your data.'
+            : 'Click "Sign in to LinkedIn" first. A browser window will open - sign in there, then click "Fetch Profile".'}
         </p>
         
         {scrapeStatus && (

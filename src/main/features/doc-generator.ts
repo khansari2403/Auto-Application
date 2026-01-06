@@ -738,9 +738,15 @@ REQUIREMENTS:
 6. Language: Match the job description language
 7. Structure: Contact Info, Professional Summary, Work Experience, Education, Skills, Certifications, Languages
 
+ATS OPTIMIZATION:
+- IMPORTANT: Include relevant KEYWORDS from the job description in your CV where they genuinely apply
+- If the job mentions specific tools, technologies, or skills that relate to your experience, use those exact terms
+- Mirror the language and terminology used in the job posting where appropriate
+- If there are skill gaps, don't fabricate - instead, emphasize transferable skills and related experience
+
 STRUCTURE:
 - CONTACT: Name, Title, Email, Phone, Location (from profile)
-- PROFESSIONAL SUMMARY: 3-4 sentences summarizing experience relevant to this role
+- PROFESSIONAL SUMMARY: 3-4 sentences summarizing experience relevant to this role. If there's a skill gap, briefly mention eagerness to apply existing skills to new challenges.
 - WORK EXPERIENCE: List jobs from profile with title, company, dates, and bullet points
 - EDUCATION: List degrees from profile
 - SKILLS: List skills from profile, prioritizing those matching job requirements
@@ -767,14 +773,21 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 9. Output ONLY the letter content, starting with the date and recipient
 10. MUST end with proper sign-off: "Kind regards," followed by the applicant's full name
 
+HANDLING SKILL GAPS (IMPORTANT):
+- If the candidate's profile doesn't perfectly match all job requirements, DO NOT reject or avoid the task
+- Instead, express genuine enthusiasm to learn and adapt to the role's requirements
+- Highlight transferable skills that relate to the missing requirements
+- Show willingness to grow: phrases like "I am eager to expand my expertise in..." or "I look forward to developing my skills in..."
+- Frame any gaps as growth opportunities, not weaknesses
+
 STRUCTURE (follow exactly):
 1. HEADER: Date, Company Address, "Dear Hiring Manager,"
 2. OPENING (1 paragraph): State who you are, what position, and ONE compelling reason why this company
 3. COMPANY CONNECTION (1 paragraph): Reference something specific about the company - their products, services, recent news, or values. If research is limited, focus on what's clear from the job posting
 4. YOUR VALUE (2 paragraphs): 
    - First: Your most relevant experience with SPECIFIC metrics/achievements FROM YOUR ACTUAL PROFILE
-   - Second: How your skills directly solve their needs mentioned in the job posting
-5. WHY THIS ROLE (1 paragraph): Personal motivation - career goals, growth opportunity, alignment
+   - Second: How your skills directly solve their needs OR how your transferable skills and eagerness to learn make you a strong candidate
+5. WHY THIS ROLE (1 paragraph): Personal motivation - career goals, growth opportunity, alignment. EXPRESS ENTHUSIASM to learn any skills you may be developing.
 6. CLOSING: Thank them, express enthusiasm for an interview
 7. SIGN-OFF: "Kind regards," + new line + "${userProfile?.name || '[Your Name]'}"
 
@@ -784,6 +797,7 @@ MUST INCLUDE:
 - Smooth transitions between paragraphs
 - Professional but warm tone
 - Proper sign-off with full name
+- If skill gaps exist: Express enthusiasm to learn and adapt
 
 Length: Approximately ${motivationWordLimit} words. This is a formal document.
 Language: Match the job description language.
@@ -803,11 +817,16 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 4. DO NOT fabricate or hallucinate information not provided in the profile
 5. Output ONLY the letter content, starting with "Dear Hiring Manager" or similar
 
+HANDLING SKILL GAPS:
+- If there are gaps between the job requirements and the candidate's profile, highlight transferable skills
+- Express genuine enthusiasm to learn and adapt
+- Frame gaps as growth opportunities: "I am eager to develop my expertise in..."
+
 REQUIREMENTS:
 1. Be concise (approximately ${coverWordLimit} words)
 2. Address the hiring manager professionally
 3. Highlight 2-3 most relevant qualifications with specific examples FROM THE PROVIDED PROFILE ONLY
-4. Show enthusiasm for the specific role
+4. Show enthusiasm for the specific role AND for learning/growing
 5. Include a clear call to action
 6. No clichés or AI-sounding phrases
 7. Language: Match the job description

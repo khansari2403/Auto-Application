@@ -661,3 +661,159 @@ export async function getFormCoordinates(page: Page, userId: number, observerMod
     return [];
   }
 }
+
+
+/**
+ * AI-ASSISTED LINKEDIN JOB SCRAPING
+ * Uses Hunter AI to help navigate LinkedIn job search when standard scraping fails.
+ * This is a fallback for when LinkedIn's anti-bot measures block standard scraping.
+ */
+export async function scrapeLinkedInJobsWithAI(
+  query: string, 
+  location: string, 
+  userId: number, 
+  callAI: Function, 
+  hunterModel: any
+): Promise<string[]> {
+  let browser: Browser | null = null;
+  const jobUrls: string[] = [];
+  
+  try {
+    console.log(`LinkedIn AI Scraper: Searching for "${query}" in "${location}"`);
+    await logAction(userId, 'ai_hunter', `🤖 Using AI-assisted LinkedIn scraping for: ${query}`, 'in_progress');
+    
+    // Use LinkedIn browser data for session persistence
+    const linkedInDataDir = path.join(app.getPath('userData'), 'linkedin_browser_data');
+    
+    browser = await launchBrowser({ 
+      headless: false, 
+      userDataDir: linkedInDataDir,
+      args: ['--start-maximized'] 
+    });
+    
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 800 });
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+    
+    // Anti-detection
+    await page.evaluateOnNewDocument(() => {
+      Object.defineProperty(navigator, 'webdriver', { get: () => false });
+    });
+    
+    // Try LinkedIn Jobs search
+    const searchUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`;
+    
+    console.log(`LinkedIn AI Scraper: Navigating to ${searchUrl}`);
+    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    
+    // Wait for page to stabilize
+    await randomDelay(3000, 5000);
+    
+    // Handle cookies
+    await handleCookieRoadblock(page, userId, callAI);
+    
+    // Check if we're logged in or seeing job results
+    const pageContent = await page.evaluate(() => document.body.innerText);
+    
+    // If blocked or need login, try to handle it
+    if (await isPageBlocked(page) || pageContent.includes('Sign in') || pageContent.includes('Join now')) {
+      console.log('LinkedIn AI Scraper: Detected login wall or block');
+      await logAction(userId, 'ai_hunter', `⚠️ LinkedIn requires login. Please sign in manually.`, 'in_progress');
+      
+      // Give user time to login
+      await randomDelay(5000, 10000);
+      
+      // Check again
+      const newPageContent = await page.evaluate(() => document.body.innerText);
+      if (newPageContent.includes('Sign in') || await isPageBlocked(page)) {
+        await logAction(userId, 'ai_hunter', `❌ LinkedIn login required. Please configure LinkedIn credentials.`, 'failed', false);
+        return [];
+      }
+    }
+    
+    // Scroll to load jobs
+    for (let i = 0; i < 3; i++) {
+      await page.evaluate(() => window.scrollBy(0, 500));
+      await randomDelay(1500, 2500);
+    }
+    
+    // Try to extract job URLs
+    const urls = await page.evaluate(() => {
+      const links: string[] = [];
+      const selectors = [
+        'a.job-card-container__link',
+        'a.base-card__full-link',
+        '.jobs-search__results-list a[href*="/jobs/view/"]',
+        'a[data-tracking-control-name*="job"]',
+        'a[href*="/jobs/view/"]'
+      ];
+      
+      for (const sel of selectors) {
+        document.querySelectorAll(sel).forEach(el => {
+          const href = (el as HTMLAnchorElement).href;
+          if (href && href.includes('/jobs/') && !links.includes(href)) {
+            links.push(href);
+          }
+        });
+      }
+      
+      return links;
+    });
+    
+    if (urls.length > 0) {
+      console.log(`LinkedIn AI Scraper: Found ${urls.length} job URLs`);
+      jobUrls.push(...urls.slice(0, 25));
+      await logAction(userId, 'ai_hunter', `✅ Found ${urls.length} LinkedIn jobs`, 'completed', true);
+    } else {
+      // Use AI to analyze the page and find job links
+      console.log('LinkedIn AI Scraper: Standard extraction failed, using AI...');
+      
+      if (hunterModel) {
+        const pageText = await page.evaluate(() => {
+          return document.body.innerText.substring(0, 5000);
+        });
+        
+        const aiPrompt = `Analyze this LinkedIn job search results page and extract any job posting URLs or job IDs you can find.
+        
+PAGE CONTENT:
+${pageText}
+
+If you find job URLs, return them as a JSON array. If you can see job IDs (like numbers in "jobs/view/123456"), construct the full URLs.
+Return ONLY a JSON array of URLs: ["https://linkedin.com/jobs/view/123", ...]
+If no jobs found, return: []`;
+        
+        try {
+          const aiResponse = await callAI(hunterModel, aiPrompt);
+          const jsonMatch = aiResponse.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            const aiUrls = JSON.parse(jsonMatch[0]);
+            if (Array.isArray(aiUrls) && aiUrls.length > 0) {
+              jobUrls.push(...aiUrls.slice(0, 25));
+              await logAction(userId, 'ai_hunter', `✅ AI extracted ${aiUrls.length} LinkedIn jobs`, 'completed', true);
+            }
+          }
+        } catch (aiError) {
+          console.error('AI extraction failed:', aiError);
+        }
+      }
+      
+      if (jobUrls.length === 0) {
+        await logAction(userId, 'ai_hunter', `❌ Could not find LinkedIn jobs. Please try logging in manually.`, 'failed', false);
+      }
+    }
+    
+    return jobUrls;
+    
+  } catch (error: any) {
+    console.error('LinkedIn AI Scraper Error:', error.message);
+    await logAction(userId, 'ai_hunter', `❌ LinkedIn scraping error: ${error.message}`, 'failed', false);
+    return [];
+  } finally {
+    if (browser) {
+      // Don't close immediately - keep for session
+      setTimeout(() => {
+        browser?.close().catch(() => {});
+      }, 5000);
+    }
+  }
+}

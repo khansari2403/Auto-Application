@@ -338,6 +338,9 @@ export async function startHunterSearch(userId: number, callAI: Function) {
   // Reset cancellation flag at start
   hunterCancelled = false;
   
+  // Set searching state
+  isSearching = true;
+  
   try {
     await logAction(userId, 'ai_hunter', '🚀 Starting job hunt...', 'in_progress');
     
@@ -360,6 +363,7 @@ export async function startHunterSearch(userId: number, callAI: Function) {
       const errorMsg = 'No active Hunter AI model. Go to Settings > AI Models and add one with role "Hunter".';
       console.log('❌', errorMsg);
       await logAction(userId, 'ai_hunter', `❌ ${errorMsg}`, 'failed', false);
+      isSearching = false;
       return { success: false, error: errorMsg };
     }
     
@@ -367,6 +371,7 @@ export async function startHunterSearch(userId: number, callAI: Function) {
       const errorMsg = 'No active search profiles. Go to Search Profiles and create one.';
       console.log('❌', errorMsg);
       await logAction(userId, 'ai_hunter', `❌ ${errorMsg}`, 'failed', false);
+      isSearching = false;
       return { success: false, error: errorMsg };
     }
     
@@ -374,6 +379,7 @@ export async function startHunterSearch(userId: number, callAI: Function) {
       const errorMsg = 'No active job websites. Go to Job Websites and add one.';
       console.log('❌', errorMsg);
       await logAction(userId, 'ai_hunter', `❌ ${errorMsg}`, 'failed', false);
+      isSearching = false;
       return { success: false, error: errorMsg };
     }
 
@@ -384,6 +390,7 @@ export async function startHunterSearch(userId: number, callAI: Function) {
       if (hunterCancelled) {
         console.log('Hunter search cancelled by user');
         await logAction(userId, 'ai_hunter', `⏹️ Search cancelled. Found ${totalJobsFound} jobs before stopping.`, 'completed', true);
+        isSearching = false;
         return { success: true, jobsFound: totalJobsFound, cancelled: true };
       }
       
@@ -394,6 +401,7 @@ export async function startHunterSearch(userId: number, callAI: Function) {
         if (hunterCancelled) {
           console.log('Hunter search cancelled by user');
           await logAction(userId, 'ai_hunter', `⏹️ Search cancelled. Found ${totalJobsFound} jobs before stopping.`, 'completed', true);
+          isSearching = false;
           return { success: true, jobsFound: totalJobsFound, cancelled: true };
         }
         

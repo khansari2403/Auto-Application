@@ -64,18 +64,57 @@ export function JobSearch({ userId }: { userId: number }) {
     { id: 'application_url', label: 'App URL' }
   ];
 
+  // Sort preference: highest compatibility first
+  const [sortBy, setSortBy] = useState<'compatibility' | 'date' | 'company'>('compatibility');
+  const [showArchived, setShowArchived] = useState(false);
+
   const loadData = async () => {
     const jobRes = await (window as any).electron.invoke('jobs:get-all', userId);
-    if (jobRes?.success) setJobs(jobRes.data.sort((a: any) => a.needs_user_intervention ? -1 : 1));
+    if (jobRes?.success) {
+      let sortedJobs = jobRes.data;
+      
+      // Sort based on selected criteria - highest compatibility first by default
+      if (sortBy === 'compatibility') {
+        sortedJobs = sortedJobs.sort((a: any, b: any) => {
+          // First, sort by intervention needed
+          if (a.needs_user_intervention !== b.needs_user_intervention) {
+            return a.needs_user_intervention ? -1 : 1;
+          }
+          // Then by compatibility score (highest first)
+          return (b.compatibility_score || 0) - (a.compatibility_score || 0);
+        });
+      } else if (sortBy === 'date') {
+        sortedJobs = sortedJobs.sort((a: any, b: any) => 
+          new Date(b.date_imported || 0).getTime() - new Date(a.date_imported || 0).getTime()
+        );
+      } else if (sortBy === 'company') {
+        sortedJobs = sortedJobs.sort((a: any, b: any) => 
+          (a.company_name || '').localeCompare(b.company_name || '')
+        );
+      }
+      
+      // Filter archived jobs unless showing archive
+      if (!showArchived) {
+        sortedJobs = sortedJobs.filter((j: any) => j.archived !== 1);
+      }
+      
+      setJobs(sortedJobs);
+    }
     
     const settingsRes = await (window as any).electron.invoke('settings:get', userId);
     if (settingsRes?.success && settingsRes.data) {
       setAutoApply(settingsRes.data.auto_apply === 1);
       setJobHuntingActive(settingsRes.data.job_hunting_active === 1);
     }
+    
+    // Sync hunting status with actual state
+    const huntingState = await (window as any).electron.invoke('hunter:get-status');
+    if (huntingState?.success) {
+      setIsSearching(huntingState.isSearching || false);
+    }
   };
 
-  useEffect(() => { loadData(); const i = setInterval(loadData, 5000); return () => clearInterval(i); }, [userId]);
+  useEffect(() => { loadData(); const i = setInterval(loadData, 3000); return () => clearInterval(i); }, [userId, sortBy, showArchived]);
 
   // Smart Apply - uses AI to fill forms and handle questions
   const handleSmartApply = async (jobId: number) => {

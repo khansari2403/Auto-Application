@@ -141,7 +141,7 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
     }
     
     setOauthInProgress(true);
-    setTestResult(null);
+    setTestResult({ success: true, message: 'Opening browser... Please sign in with Google.' });
     
     try {
       const result = await (window as any).electron.invoke?.('email:oauth-start', {
@@ -151,10 +151,36 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
       });
       
       if (result?.success) {
-        setShowManualCode(true);
-        setTestResult({ success: true, message: 'Browser opened. Sign in with Google and paste the code below.' });
+        // With loopback method, OAuth completes automatically
+        setIsConnected(true);
+        setShowManualCode(false);
+        setOauthInProgress(false);
+        
+        // Save credentials
+        await (window as any).electron.invoke?.('settings:update', { 
+          id: 1,
+          google_client_id: googleClientId, 
+          google_client_secret: googleClientSecret,
+          email_provider: config.provider,
+          email: config.email,
+          email_access_method: config.accessMethod,
+          email_connected: true
+        });
+        
+        setTestResult({ success: true, message: result.message || '✅ Email connected successfully!' });
+        
+        // Verify connection and fetch inbox
+        setTimeout(() => verifyOAuthConnection(false), 1500);
       } else {
-        setTestResult({ success: false, error: result?.error || 'Failed to start OAuth flow' });
+        // Check if it's a redirect_uri error
+        if (result?.error?.includes('redirect_uri') || result?.error?.includes('127.0.0.1')) {
+          setTestResult({ 
+            success: false, 
+            error: `OAuth Configuration Error: Please add "http://127.0.0.1" as an Authorized redirect URI in your Google Cloud Console. Go to: APIs & Services > Credentials > Your OAuth Client > Authorized redirect URIs`
+          });
+        } else {
+          setTestResult({ success: false, error: result?.error || 'OAuth failed. Please try again.' });
+        }
         setOauthInProgress(false);
       }
     } catch (e: any) {

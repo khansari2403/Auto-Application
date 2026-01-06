@@ -499,12 +499,14 @@ Description: ${job.description || 'Not available'}`;
           // Use getJobPageContent instead of non-existent scrapeJobPage
           const pageData = await ScraperService.getJobPageContent(jobUrl, userId, aiService.callAI);
           if (pageData && pageData.content && pageData.content.length > 100) {
-            jobDescription = `Job posting content from ${jobUrl}:\n${pageData.content.substring(0, 3000)}`;
+            // Ensure content is a clean string (no non-serializable data)
+            const cleanContent = String(pageData.content || '').substring(0, 3000);
+            jobDescription = `Job posting content from ${jobUrl}:\n${cleanContent}`;
             
             // Try to extract basic info from the content
-            const titleMatch = pageData.content.match(/(?:job\s*title|position)[:\s]*([^\n]+)/i);
-            const companyMatch = pageData.content.match(/(?:company|employer)[:\s]*([^\n]+)/i);
-            const locationMatch = pageData.content.match(/(?:location|located)[:\s]*([^\n]+)/i);
+            const titleMatch = cleanContent.match(/(?:job\s*title|position)[:\s]*([^\n]+)/i);
+            const companyMatch = cleanContent.match(/(?:company|employer)[:\s]*([^\n]+)/i);
+            const locationMatch = cleanContent.match(/(?:location|located)[:\s]*([^\n]+)/i);
             
             // Try to parse JSON-LD data if available
             let parsedTitle = titleMatch?.[1]?.trim();
@@ -512,9 +514,10 @@ Description: ${job.description || 'Not available'}`;
             let parsedLocation = locationMatch?.[1]?.trim();
             
             // If content looks like JSON (from JSON-LD extraction), try to parse it
-            if (pageData.strategyUsed?.includes('JSON-LD') && pageData.content.startsWith('{')) {
+            const strategyUsed = String(pageData.strategyUsed || '');
+            if (strategyUsed.includes('JSON-LD') && cleanContent.startsWith('{')) {
               try {
-                const jsonData = JSON.parse(pageData.content);
+                const jsonData = JSON.parse(cleanContent);
                 parsedTitle = jsonData.title || jsonData.jobTitle || jsonData.name || parsedTitle;
                 parsedCompany = jsonData.hiringOrganization?.name || jsonData.companyName || parsedCompany;
                 parsedLocation = jsonData.jobLocation?.address?.addressLocality || 
@@ -525,7 +528,7 @@ Description: ${job.description || 'Not available'}`;
                 if (jsonData.skills || jsonData.requiredSkills) {
                   const skills = jsonData.skills || jsonData.requiredSkills;
                   importantApps = (typeof skills === 'string' ? skills.split(',') : skills)
-                    .map((s: string) => s.trim())
+                    .map((s: string) => String(s).trim())
                     .filter(Boolean)
                     .slice(0, 8);
                 }
@@ -534,10 +537,11 @@ Description: ${job.description || 'Not available'}`;
               }
             }
             
+            // Ensure jobInfo contains only serializable primitives
             jobInfo = {
-              title: parsedTitle || 'Position from URL',
-              company: parsedCompany || 'Company',
-              location: parsedLocation || 'See job posting'
+              title: String(parsedTitle || 'Position from URL'),
+              company: String(parsedCompany || 'Company'),
+              location: String(parsedLocation || 'See job posting')
             };
           }
         } catch (e) {

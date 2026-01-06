@@ -577,8 +577,60 @@ export function JobSearch({ userId }: { userId: number }) {
         </div>
       </div>
 
+      {/* Sorting and Archive Controls */}
+      <div style={{ display: 'flex', gap: '15px', marginBottom: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>Sort by:</span>
+          <select 
+            value={sortBy} 
+            onChange={(e) => setSortBy(e.target.value as any)}
+            style={{ 
+              padding: '6px 12px', 
+              borderRadius: '6px', 
+              border: '1px solid var(--border)', 
+              background: 'var(--card-bg)', 
+              color: 'var(--text-primary)',
+              fontSize: '12px',
+              cursor: 'pointer'
+            }}
+          >
+            <option value="compatibility">🎯 Best Match First</option>
+            <option value="date">📅 Newest First</option>
+            <option value="company">🏢 Company Name</option>
+          </select>
+        </div>
+        
+        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+          <input 
+            type="checkbox" 
+            checked={showArchived} 
+            onChange={(e) => setShowArchived(e.target.checked)} 
+          />
+          📦 Show Archived ({jobs.filter((j: any) => j.archived === 1).length})
+        </label>
+        
+        <button
+          onClick={handleClearOldJobs}
+          style={{
+            padding: '6px 12px',
+            background: 'var(--card-bg)',
+            color: 'var(--warning)',
+            border: '1px solid var(--warning)',
+            borderRadius: '6px',
+            fontSize: '11px',
+            cursor: 'pointer',
+            fontWeight: 'bold',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+        >
+          🧹 Clear Old Jobs
+        </button>
+      </div>
+
       <h2 style={{ color: 'var(--text-primary)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span>🎯 Found Jobs</span>
+        <span>🎯 Found Jobs ({jobs.length})</span>
         <button
           onClick={async () => {
             try {

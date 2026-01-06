@@ -60,6 +60,12 @@ export function SearchProfiles({ userId }: { userId: number }) {
       setSelectedLanguages(editing.languages ? editing.languages.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
       setSearchRadius(editing.search_radius || 50);
       setDistanceUnit(editing.distance_unit || 'km');
+      // Load language proficiencies
+      try {
+        setLanguageProficiencies(editing.language_proficiencies ? JSON.parse(editing.language_proficiencies) : {});
+      } catch (e) {
+        setLanguageProficiencies({});
+      }
     }
   }, [editing?.id]); // Only re-run when editing ID changes, not on every editing object change
 

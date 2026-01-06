@@ -614,13 +614,24 @@ Respond ONLY with a valid JSON array in this exact format:
       
       return { 
         success: true, 
-        questions,
-        jobInfo,
-        importantApps
+        questions: questions.map((q: any) => ({
+          id: String(q.id || ''),
+          category: String(q.category || 'general'),
+          question: String(q.question || ''),
+          suggestedAnswer: String(q.suggestedAnswer || ''),
+          difficulty: String(q.difficulty || 'medium'),
+          tips: String(q.tips || '')
+        })),
+        jobInfo: jobInfo ? {
+          title: String(jobInfo.title || ''),
+          company: String(jobInfo.company || ''),
+          location: String(jobInfo.location || '')
+        } : null,
+        importantApps: importantApps.map((a: any) => String(a))
       };
     } catch (e: any) {
       console.error('Interview prep error:', e);
-      return { success: false, error: e.message };
+      return { success: false, error: String(e.message || 'Unknown error') };
     }
   });
 

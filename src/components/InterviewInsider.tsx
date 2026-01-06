@@ -334,9 +334,33 @@ export function InterviewInsider({ userId }: Props) {
             {/* CV Questions Display */}
             {cvQuestions.length > 0 && (
               <div style={{ marginTop: '16px' }}>
-                <h4 style={{ margin: '0 0 12px 0', color: '#333', fontSize: '14px' }}>
-                  📋 {cvQuestions.length} Questions Based on Your CV & This Job:
-                </h4>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h4 style={{ margin: 0, color: '#333', fontSize: '14px' }}>
+                    📋 {cvQuestions.length} Questions Based on Your CV & This Job:
+                  </h4>
+                  <button
+                    onClick={() => handleAskAboutCv(true)}
+                    disabled={isAskingCv}
+                    style={{
+                      padding: '6px 14px',
+                      background: isAskingCv ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: isAskingCv ? 'not-allowed' : 'pointer',
+                      fontSize: '11px',
+                      fontWeight: 'bold',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
+                    }}
+                  >
+                    {isAskingCv ? '⏳ Generating...' : '➕ Generate 5 More'}
+                  </button>
+                </div>
+                <p style={{ fontSize: '11px', color: '#888', margin: '0 0 12px 0' }}>
+                  💡 Each click generates up to 5 new questions. Total generated: {cvQuestions.length}
+                </p>
                 {cvQuestions.map((q, i) => (
                   <div 
                     key={i}

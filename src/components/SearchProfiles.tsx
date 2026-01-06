@@ -82,6 +82,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
           experience_level: selectedExperienceLevels.join(', '),
           certifications: selectedCertifications.join(', '),
           languages: selectedLanguages.join(', '),
+          language_proficiencies: JSON.stringify(languageProficiencies),
           search_radius: searchRadius,
           distance_unit: distanceUnit
         };
@@ -93,7 +94,7 @@ export function SearchProfiles({ userId }: { userId: number }) {
       const timeout = setTimeout(saveData, 500);
       return () => clearTimeout(timeout);
     }
-  }, [selectedJobTitles, selectedIndustries, excludedIndustries, selectedExperienceLevels, selectedCertifications, selectedLanguages, searchRadius, distanceUnit]);
+  }, [selectedJobTitles, selectedIndustries, excludedIndustries, selectedExperienceLevels, selectedCertifications, selectedLanguages, languageProficiencies, searchRadius, distanceUnit]);
 
   // Close dropdown when clicking outside or mouse leaves
   useEffect(() => {

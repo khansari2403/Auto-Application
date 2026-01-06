@@ -434,11 +434,15 @@ function LinkedInSection({ userId }: { userId: number }) {
 
   // Open LinkedIn login popup
   const handleOpenLinkedInLogin = async () => {
-    setScrapeStatus('Opening LinkedIn sign-in page... Please log in manually.');
+    setScrapeStatus('Opening LinkedIn... Please wait.');
     try {
       const result = await (window as any).electron.invoke('user:open-linkedin-login', { userId });
       if (result.success) {
-        setScrapeStatus(result.message || 'LinkedIn window opened. Please sign in and then click "Fetch Profile".');
+        setScrapeStatus(result.message || 'LinkedIn window opened. Please sign in.');
+        if (result.isLoggedIn) {
+          setIsLoggedIn(true);
+          setScrapeStatus('✅ You are already logged in! Click "Fetch Profile" to capture your profile.');
+        }
       } else {
         setScrapeStatus('Error: ' + (result.error || 'Failed to open LinkedIn'));
       }

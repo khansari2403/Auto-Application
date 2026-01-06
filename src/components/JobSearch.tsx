@@ -398,6 +398,47 @@ export function JobSearch({ userId }: { userId: number }) {
     }
   };
 
+  // Format rejection reason for user-friendly display
+  const formatRejectionReason = (reason: string): string => {
+    if (!reason) return 'Unknown reason';
+    
+    // Remove JSON-like formatting
+    let formatted = reason;
+    
+    // Remove curly braces and square brackets
+    formatted = formatted.replace(/[\{\}\[\]]/g, '');
+    
+    // Replace escaped newlines with actual newlines
+    formatted = formatted.replace(/\\n/g, '\n');
+    
+    // Remove quotes around keys and values
+    formatted = formatted.replace(/"([^"]+)":/g, '$1:');
+    formatted = formatted.replace(/: "([^"]+)"/g, ': $1');
+    
+    // Remove trailing commas
+    formatted = formatted.replace(/,\s*\n/g, '\n');
+    
+    // Clean up multiple newlines
+    formatted = formatted.replace(/\n\s*\n/g, '\n\n');
+    
+    // Extract key information for summary
+    const lines = formatted.split('\n').filter(l => l.trim());
+    
+    // If it's still messy, provide a clean summary
+    if (formatted.includes(':') && lines.length > 10) {
+      return `The AI Auditor found that your profile data doesn't match the job requirements well enough.
+
+Common reasons:
+• Missing key skills or qualifications mentioned in the job
+• Experience level doesn't align with requirements  
+• The AI couldn't create compelling content with available profile data
+
+Tip: You can "Force Generate" to create the document anyway, but review it carefully.`;
+    }
+    
+    return formatted.trim();
+  };
+
   const renderDocIcon = (job: any, type: string, label: string, shortLabel: string) => {
     const status = job[`${type}_status`];
     const path = job[`${type}_path`];
@@ -411,8 +452,21 @@ export function JobSearch({ userId }: { userId: number }) {
         // Open the completed document
         (window as any).electron.invoke('docs:open-file', path);
       } else if (status === 'rejected' && rejectionReason) {
+        // Format the rejection reason for readability
+        const formattedReason = formatRejectionReason(rejectionReason);
+        
         // Show rejection reason with option to force generate
-        const forceGenerate = confirm(`⚠️ ${label} was rejected by the Auditor:\n\n${rejectionReason}\n\n💡 Options:\n• Click OK to FORCE GENERATE anyway (bypasses Auditor)\n• Click Cancel to close\n\nNote: Forced documents will be verified for accuracy after generation.`);
+        const forceGenerate = confirm(`⚠️ ${label} Generation Issue
+
+${formattedReason}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 Options:
+• Click OK to FORCE GENERATE (the AI will still create the document using available data)
+• Click Cancel to close
+
+Note: Forced documents will be checked for accuracy.`);
         if (forceGenerate) {
           handleForceGenerateDoc(job.id, type);
         }

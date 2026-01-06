@@ -699,69 +699,83 @@ Respond ONLY with a valid JSON array in this exact format:
       
       let jobContext = '';
       if (job) {
+        // Ensure all values are clean strings
         jobContext = `
-Job Title: ${job.job_title || 'Unknown'}
-Company: ${job.company_name || 'Unknown'}
-Requirements: ${job.required_skills || 'Not specified'}
-Experience Level: ${job.experience_level || 'Not specified'}
-Description: ${job.description?.substring(0, 1500) || 'Not available'}`;
+Job Title: ${String(job.job_title || 'Unknown')}
+Company: ${String(job.company_name || 'Unknown')}
+Requirements: ${String(job.required_skills || 'Not specified')}
+Experience Level: ${String(job.experience_level || 'Not specified')}
+Description: ${String(job.description || 'Not available').substring(0, 1500)}`;
       } else if (jobUrl) {
         // Try to scrape job info
         try {
           const ScraperService = require('../scraper-service');
-          const pageData = await ScraperService.getJobPageContent(jobUrl, userId, aiService.callAI);
+          const pageData = await ScraperService.getJobPageContent(String(jobUrl), userId, aiService.callAI);
           if (pageData?.content) {
-            jobContext = `Job posting from ${jobUrl}:\n${pageData.content.substring(0, 2000)}`;
+            // CRITICAL: Ensure content is a clean serializable string
+            const cleanContent = String(pageData.content || '').substring(0, 2000);
+            jobContext = `Job posting from ${String(jobUrl)}:\n${cleanContent}`;
           }
-        } catch (e) {
-          jobContext = `Job URL: ${jobUrl} (Could not fetch details)`;
+        } catch (e: any) {
+          console.error('Error scraping job for CV questions:', e);
+          jobContext = `Job URL: ${String(jobUrl)} (Could not fetch details)`;
         }
       }
       
-      // Build CV context
+      // Build CV context - ensure all values are serializable strings
       let cvContext = `
-Candidate Name: ${userProfile.name || 'Not provided'}
-Professional Title: ${userProfile.title || 'Not provided'}
-Location: ${userProfile.location || 'Not provided'}
-Summary: ${userProfile.summary || 'Not provided'}`;
+Candidate Name: ${String(userProfile.name || 'Not provided')}
+Professional Title: ${String(userProfile.title || 'Not provided')}
+Location: ${String(userProfile.location || 'Not provided')}
+Summary: ${String(userProfile.summary || 'Not provided')}`;
       
       // Parse experiences
       try {
-        const experiences = userProfile.experiences ? JSON.parse(userProfile.experiences) : [];
-        if (experiences.length > 0) {
+        const experiencesRaw = userProfile.experiences;
+        const experiences = typeof experiencesRaw === 'string' ? JSON.parse(experiencesRaw) : (experiencesRaw || []);
+        if (Array.isArray(experiences) && experiences.length > 0) {
           cvContext += '\n\nWork Experience:';
           experiences.slice(0, 5).forEach((exp: any, i: number) => {
-            cvContext += `\n${i + 1}. ${exp.title || 'Role'} at ${exp.company || 'Company'} (${exp.startDate || '?'} - ${exp.endDate || 'Present'}): ${exp.description?.substring(0, 200) || 'No description'}`;
+            cvContext += `\n${i + 1}. ${String(exp.title || 'Role')} at ${String(exp.company || 'Company')} (${String(exp.startDate || '?')} - ${String(exp.endDate || 'Present')}): ${String(exp.description || 'No description').substring(0, 200)}`;
           });
         }
-      } catch (e) {}
+      } catch (e) {
+        console.log('Could not parse experiences:', e);
+      }
       
       // Parse skills
       try {
-        const skills = userProfile.skills ? JSON.parse(userProfile.skills) : [];
-        if (skills.length > 0) {
-          cvContext += `\n\nSkills: ${skills.join(', ')}`;
+        const skillsRaw = userProfile.skills;
+        const skills = typeof skillsRaw === 'string' ? JSON.parse(skillsRaw) : (skillsRaw || []);
+        if (Array.isArray(skills) && skills.length > 0) {
+          cvContext += `\n\nSkills: ${skills.map((s: any) => String(s)).join(', ')}`;
         }
-      } catch (e) {}
+      } catch (e) {
+        console.log('Could not parse skills:', e);
+      }
       
       // Parse education
       try {
-        const educations = userProfile.educations ? JSON.parse(userProfile.educations) : [];
-        if (educations.length > 0) {
+        const educationsRaw = userProfile.educations;
+        const educations = typeof educationsRaw === 'string' ? JSON.parse(educationsRaw) : (educationsRaw || []);
+        if (Array.isArray(educations) && educations.length > 0) {
           cvContext += '\n\nEducation:';
           educations.slice(0, 3).forEach((edu: any, i: number) => {
-            cvContext += `\n${i + 1}. ${edu.degree || 'Degree'} in ${edu.field || 'Field'} from ${edu.school || 'School'}`;
+            cvContext += `\n${i + 1}. ${String(edu.degree || 'Degree')} in ${String(edu.field || 'Field')} from ${String(edu.school || 'School')}`;
           });
         }
-      } catch (e) {}
+      } catch (e) {
+        console.log('Could not parse educations:', e);
+      }
       
       // Determine question style based on difficulty
+      const diffLevel = Number(difficultyLevel) || 5;
       let difficultyInstruction = '';
-      if (difficultyLevel <= 3) {
+      if (diffLevel <= 3) {
         difficultyInstruction = 'Ask EASY questions - basic background, motivation, and simple experience verification. Be friendly and encouraging.';
-      } else if (difficultyLevel <= 6) {
+      } else if (diffLevel <= 6) {
         difficultyInstruction = 'Ask MEDIUM difficulty questions - probe into specific experiences, ask for examples, test technical knowledge at a moderate level.';
-      } else if (difficultyLevel <= 8) {
+      } else if (diffLevel <= 8) {
         difficultyInstruction = 'Ask HARD questions - challenge gaps in experience, ask tough behavioral questions, probe for weaknesses, test deep technical knowledge.';
       } else {
         difficultyInstruction = 'Ask EXTREME questions - be a tough interviewer, find inconsistencies, ask stress-test questions, challenge every claim, probe for failures and how they handled them.';
@@ -797,11 +811,17 @@ Respond ONLY with a valid JSON array in this exact format:
 
       const response = await aiService.callAI(hrAI, prompt);
       
-      let questions = [];
+      let questions: Array<{ question: string; answer: string; difficulty: string }> = [];
       try {
         const jsonMatch = response.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
-          questions = JSON.parse(jsonMatch[0]);
+          const parsed = JSON.parse(jsonMatch[0]);
+          // Ensure all values are clean serializable strings
+          questions = parsed.map((q: any) => ({
+            question: String(q.question || ''),
+            answer: String(q.answer || ''),
+            difficulty: String(q.difficulty || 'medium')
+          }));
         }
       } catch (e) {
         console.error('Failed to parse CV questions:', e);
@@ -812,10 +832,14 @@ Respond ONLY with a valid JSON array in this exact format:
         }];
       }
       
-      return { success: true, questions };
+      // Return only serializable data
+      return { 
+        success: true, 
+        questions: questions 
+      };
     } catch (e: any) {
       console.error('Ask about CV error:', e);
-      return { success: false, error: e.message };
+      return { success: false, error: String(e.message || 'Unknown error') };
     }
   });
 

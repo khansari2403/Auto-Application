@@ -6,6 +6,13 @@ import * as CompatibilityService from './compatibility-service';
 // Cancellation flag for Hunter search
 let hunterCancelled = false;
 
+// Track if hunter is currently searching
+export let isSearching = false;
+
+export function setSearchingState(state: boolean) {
+  isSearching = state;
+}
+
 export function cancelHunterSearch() {
   hunterCancelled = true;
   console.log('Hunter search cancellation requested');

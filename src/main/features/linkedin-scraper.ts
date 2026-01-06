@@ -1,10 +1,22 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import { logAction, getDatabase, runQuery } from '../database';
 import path from 'path';
+import fs from 'fs';
 let app: any;
 try { app = require('electron').app; } catch (e) { app = (global as any).electronApp; }
 
-const getUserDataDir = () => path.join(app.getPath('userData'), 'browser_data');
+// Get persistent user data directory for browser session
+const getUserDataDir = () => {
+  const browserDataDir = path.join(app.getPath('userData'), 'linkedin_browser_data');
+  if (!fs.existsSync(browserDataDir)) {
+    fs.mkdirSync(browserDataDir, { recursive: true });
+  }
+  return browserDataDir;
+};
+
+// Shared browser instance for session persistence
+let sharedBrowser: Browser | null = null;
+let sharedPage: Page | null = null;
 
 interface LinkedInProfile {
   name: string;
@@ -33,39 +45,135 @@ interface LinkedInProfile {
 }
 
 /**
+ * Check if user is already logged in to LinkedIn
+ */
+async function isLoggedIn(page: Page): Promise<boolean> {
+  try {
+    // Check for feed or profile indicators
+    const loggedInIndicators = await page.evaluate(() => {
+      return !!(
+        document.querySelector('.global-nav__me') ||
+        document.querySelector('.feed-identity-module') ||
+        document.querySelector('[data-test-id="nav-settings"]') ||
+        document.querySelector('.share-box-feed-entry__trigger') ||
+        window.location.href.includes('/feed/') ||
+        window.location.href.includes('/in/')
+      );
+    });
+    return loggedInIndicators;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Get or create a shared browser instance with persistent session
+ */
+async function getOrCreateBrowser(): Promise<{ browser: Browser; page: Page; isNew: boolean }> {
+  // If we have an existing browser that's still connected, reuse it
+  if (sharedBrowser && sharedBrowser.isConnected()) {
+    // Get existing pages or create new one
+    const pages = await sharedBrowser.pages();
+    if (pages.length > 0 && sharedPage && !sharedPage.isClosed()) {
+      return { browser: sharedBrowser, page: sharedPage, isNew: false };
+    }
+    // Create new page if none exist
+    sharedPage = await sharedBrowser.newPage();
+    await setupPage(sharedPage);
+    return { browser: sharedBrowser, page: sharedPage, isNew: false };
+  }
+  
+  // Launch new browser with persistent session
+  console.log('Launching new browser with user data dir:', getUserDataDir());
+  sharedBrowser = await puppeteer.launch({
+    headless: false,
+    userDataDir: getUserDataDir(),
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-blink-features=AutomationControlled',
+      '--disable-infobars',
+      '--window-size=1280,800',
+      '--start-maximized'
+    ]
+  });
+  
+  const pages = await sharedBrowser.pages();
+  sharedPage = pages.length > 0 ? pages[0] : await sharedBrowser.newPage();
+  await setupPage(sharedPage);
+  
+  return { browser: sharedBrowser, page: sharedPage, isNew: true };
+}
+
+/**
+ * Setup page with anti-detection measures
+ */
+async function setupPage(page: Page) {
+  await page.setViewport({ width: 1280, height: 800 });
+  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+  
+  // Hide webdriver property
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+    // Override permissions
+    const originalQuery = window.navigator.permissions.query;
+    (window.navigator.permissions.query as any) = (parameters: any) =>
+      parameters.name === 'notifications'
+        ? Promise.resolve({ state: 'denied' } as PermissionStatus)
+        : originalQuery(parameters);
+  });
+}
+
+/**
  * Open LinkedIn in browser for manual login
  * Returns the browser instance for later scraping
  */
-export async function openLinkedInForLogin(userId: number): Promise<{ success: boolean; message: string }> {
+export async function openLinkedInForLogin(userId: number): Promise<{ success: boolean; message: string; isLoggedIn?: boolean }> {
   try {
-    await logAction(userId, 'linkedin', '🔗 Opening LinkedIn for login...', 'in_progress');
+    await logAction(userId, 'linkedin', '🔗 Opening LinkedIn...', 'in_progress');
     
-    const browser = await puppeteer.launch({
-      headless: false,
-      userDataDir: getUserDataDir(),
-      args: ['--no-sandbox', '--start-maximized', '--disable-blink-features=AutomationControlled']
-    });
+    const { browser, page, isNew } = await getOrCreateBrowser();
     
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 800 });
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-    
-    // Hide webdriver
-    await page.evaluateOnNewDocument(() => {
-      Object.defineProperty(navigator, 'webdriver', { get: () => false });
-    });
-    
-    await page.goto('https://www.linkedin.com/login', { waitUntil: 'networkidle2' });
-    
-    // Store browser reference globally for later use
+    // Store references globally
     (global as any).linkedInBrowser = browser;
     (global as any).linkedInPage = page;
+    
+    // Check if already logged in
+    if (!isNew) {
+      const currentUrl = page.url();
+      if (currentUrl.includes('linkedin.com')) {
+        const loggedIn = await isLoggedIn(page);
+        if (loggedIn) {
+          await logAction(userId, 'linkedin', '✅ Already logged in to LinkedIn!', 'completed', true);
+          return { 
+            success: true, 
+            message: 'You are already logged in to LinkedIn. You can click "Fetch Profile" directly.',
+            isLoggedIn: true
+          };
+        }
+      }
+    }
+    
+    // Navigate to LinkedIn login
+    await page.goto('https://www.linkedin.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
+    
+    // Check if we got redirected to feed (meaning already logged in)
+    const currentUrl = page.url();
+    if (currentUrl.includes('/feed') || currentUrl.includes('/in/')) {
+      await logAction(userId, 'linkedin', '✅ Already logged in to LinkedIn!', 'completed', true);
+      return { 
+        success: true, 
+        message: 'You are already logged in to LinkedIn! Click "Fetch Profile" to capture your profile.',
+        isLoggedIn: true
+      };
+    }
     
     await logAction(userId, 'linkedin', '✅ LinkedIn opened. Please login manually.', 'completed', true);
     
     return { 
       success: true, 
-      message: 'LinkedIn opened. Please login manually, then click "Capture Profile".' 
+      message: 'LinkedIn opened. Please login manually in the browser window, then click "Fetch Profile".',
+      isLoggedIn: false
     };
   } catch (error: any) {
     await logAction(userId, 'linkedin', `❌ Error: ${error.message}`, 'failed', false);

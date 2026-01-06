@@ -125,88 +125,87 @@ export function CompatibilityDial({ score, size = 'small', source, missingSkills
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
-      {/* Hover Tooltip */}
+      {/* Hover Tooltip - positioned to the right to stay within page */}
       {showTooltip && (
         <div style={{
-          position: 'absolute',
-          bottom: '100%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          marginBottom: '8px',
+          position: 'fixed',
+          zIndex: 9999,
           padding: '12px',
           background: 'var(--card-bg, #fff)',
           border: `2px solid ${color}`,
           borderRadius: '8px',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-          zIndex: 1000,
-          minWidth: '220px',
-          maxWidth: '300px',
-          whiteSpace: 'pre-line',
-          fontSize: '11px',
-          lineHeight: '1.4',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+          minWidth: '250px',
+          maxWidth: '320px',
+          maxHeight: '400px',
+          overflowY: 'auto',
+          fontSize: '12px',
+          lineHeight: '1.5',
           color: 'var(--text-primary, #333)',
-          pointerEvents: 'none'
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)'
         }}>
-          {/* Arrow */}
-          <div style={{
-            position: 'absolute',
-            bottom: '-8px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 0,
-            height: 0,
-            borderLeft: '8px solid transparent',
-            borderRight: '8px solid transparent',
-            borderTop: `8px solid ${color}`
-          }} />
-          
           {/* Header with color indicator */}
           <div style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
-            marginBottom: '8px',
-            paddingBottom: '8px',
-            borderBottom: '1px solid var(--border, #eee)'
+            gap: '10px',
+            marginBottom: '12px',
+            paddingBottom: '10px',
+            borderBottom: `2px solid ${bg}`
           }}>
             <div style={{
-              width: '12px',
-              height: '12px',
+              width: '16px',
+              height: '16px',
               borderRadius: '50%',
-              background: bg
+              background: bg,
+              flexShrink: 0
             }} />
-            <span style={{ fontWeight: 'bold', fontSize: '12px', color }}>
+            <span style={{ fontWeight: 'bold', fontSize: '14px', color }}>
               {score}% - {label} Match
             </span>
           </div>
           
           {/* Breakdown section */}
           {breakdown && (
-            <div style={{ marginBottom: '8px' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px', color: 'var(--text-secondary, #666)' }}>
-                📊 Score Breakdown:
+            <div style={{ marginBottom: '12px', padding: '10px', background: 'var(--bg-tertiary, #f5f5f5)', borderRadius: '6px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '6px', color: 'var(--text-secondary, #666)', fontSize: '11px' }}>
+                📊 Score Breakdown
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px', fontSize: '10px' }}>
-                <span>Skills: {breakdown.skills}%</span>
-                <span>Experience: {breakdown.experience}%</span>
-                <span>Education: {breakdown.education}%</span>
-                <span>Location: {breakdown.location}%</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '11px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Skills:</span>
+                  <span style={{ fontWeight: 'bold', color: breakdown.skills >= 50 ? '#4CAF50' : '#f44336' }}>{breakdown.skills}%</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Experience:</span>
+                  <span style={{ fontWeight: 'bold', color: breakdown.experience >= 50 ? '#4CAF50' : '#f44336' }}>{breakdown.experience}%</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Education:</span>
+                  <span style={{ fontWeight: 'bold', color: breakdown.education >= 50 ? '#4CAF50' : '#f44336' }}>{breakdown.education}%</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span>Location:</span>
+                  <span style={{ fontWeight: 'bold', color: breakdown.location >= 50 ? '#4CAF50' : '#f44336' }}>{breakdown.location}%</span>
+                </div>
               </div>
             </div>
           )}
           
           {/* Missing skills section */}
           {missingSkills && missingSkills.length > 0 && (
-            <div style={{ marginBottom: '8px' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#f44336' }}>
-                ❌ Missing Qualifications:
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '6px', color: '#f44336', fontSize: '11px' }}>
+                ❌ Missing Qualifications ({missingSkills.length})
               </div>
-              <ul style={{ margin: 0, paddingLeft: '16px', color: '#f44336' }}>
+              <ul style={{ margin: 0, paddingLeft: '18px', color: '#c62828', fontSize: '11px' }}>
                 {missingSkills.slice(0, 5).map((skill, i) => (
-                  <li key={i} style={{ marginBottom: '2px' }}>{skill}</li>
+                  <li key={i} style={{ marginBottom: '3px' }}>{skill}</li>
                 ))}
                 {missingSkills.length > 5 && (
-                  <li style={{ fontStyle: 'italic', opacity: 0.8 }}>
+                  <li style={{ fontStyle: 'italic', opacity: 0.8, color: '#ef5350' }}>
                     ...and {missingSkills.length - 5} more
                   </li>
                 )}
@@ -216,20 +215,27 @@ export function CompatibilityDial({ score, size = 'small', source, missingSkills
           
           {/* Matched skills section */}
           {matchedSkills && matchedSkills.length > 0 && (
-            <div>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#4CAF50' }}>
-                ✅ Matched Skills:
+            <div style={{ marginBottom: '8px' }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '6px', color: '#4CAF50', fontSize: '11px' }}>
+                ✅ Matched Skills ({matchedSkills.length})
               </div>
-              <ul style={{ margin: 0, paddingLeft: '16px', color: '#4CAF50' }}>
-                {matchedSkills.slice(0, 3).map((skill, i) => (
-                  <li key={i} style={{ marginBottom: '2px' }}>{skill}</li>
+              <ul style={{ margin: 0, paddingLeft: '18px', color: '#2e7d32', fontSize: '11px' }}>
+                {matchedSkills.slice(0, 4).map((skill, i) => (
+                  <li key={i} style={{ marginBottom: '3px' }}>{skill}</li>
                 ))}
-                {matchedSkills.length > 3 && (
-                  <li style={{ fontStyle: 'italic', opacity: 0.8 }}>
-                    ...and {matchedSkills.length - 3} more
+                {matchedSkills.length > 4 && (
+                  <li style={{ fontStyle: 'italic', opacity: 0.8, color: '#66bb6a' }}>
+                    ...and {matchedSkills.length - 4} more
                   </li>
                 )}
               </ul>
+            </div>
+          )}
+          
+          {/* No data message */}
+          {(!missingSkills || missingSkills.length === 0) && (!matchedSkills || matchedSkills.length === 0) && !breakdown && (
+            <div style={{ padding: '10px', background: 'var(--info-light, #e3f2fd)', borderRadius: '6px', fontSize: '11px', color: 'var(--info, #1976d2)' }}>
+              💡 Click "Recalculate" to get detailed skill matching analysis
             </div>
           )}
           

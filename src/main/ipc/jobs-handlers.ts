@@ -7,7 +7,8 @@ export function registerJobsHandlers(): string[] {
     'jobs:get-all', 
     'jobs:delete', 
     'jobs:add-manual', 
-    'jobs:update-doc-confirmation'
+    'jobs:update-doc-confirmation',
+    'jobs:archive'
   ];
 
   // --- JOBS ---
@@ -50,6 +51,19 @@ export function registerJobsHandlers(): string[] {
       await runQuery('UPDATE job_listings', { 
         id: data.jobId, 
         user_confirmed_docs: data.confirmed 
+      });
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // Archive/Unarchive a job
+  ipcMain.handle('jobs:archive', async (_, data) => {
+    try {
+      await runQuery('UPDATE job_listings', { 
+        id: data.jobId, 
+        archived: data.archived 
       });
       return { success: true };
     } catch (e: any) {

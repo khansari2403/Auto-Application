@@ -330,6 +330,7 @@ function extractJobSkills(job: any): string[] {
 
 /**
  * Extract technical terms from text
+ * NOTE: We intentionally EXCLUDE soft skills here - they should NOT be used for job matching
  */
 function extractTechnicalTerms(text: string): string[] {
   const technicalPatterns = [
@@ -341,10 +342,10 @@ function extractTechnicalTerms(text: string): string[] {
     /\b(AWS|Azure|GCP|Docker|Kubernetes|Git|Jenkins|CI\/CD|Terraform|Ansible)\b/gi,
     // Databases
     /\b(SQL|PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch|Oracle|DynamoDB)\b/gi,
-    // Methodologies
+    // Methodologies (only technical ones - NOT soft skills)
     /\b(Agile|Scrum|Kanban|PMP|Six Sigma|Lean|DevOps|ITIL)\b/gi,
-    // Soft skills (common in job postings)
-    /\b(Leadership|Communication|Problem.solving|Team.?work|Project Management)\b/gi,
+    // DO NOT include soft skills like Leadership, Communication, etc.
+    // Those are handled separately in extractJobSkillsWithType()
   ];
   
   const terms: string[] = [];

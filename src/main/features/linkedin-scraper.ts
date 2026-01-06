@@ -386,10 +386,18 @@ export async function saveLinkedInProfile(userId: number, profileData: LinkedInP
  * Close LinkedIn browser if open
  */
 export async function closeLinkedInBrowser(): Promise<void> {
-  const browser = (global as any).linkedInBrowser;
-  if (browser) {
-    await browser.close();
-    (global as any).linkedInBrowser = null;
-    (global as any).linkedInPage = null;
+  if (sharedBrowser && sharedBrowser.isConnected()) {
+    await sharedBrowser.close();
+    sharedBrowser = null;
+    sharedPage = null;
   }
+  
+  // Also clear global references
+  (global as any).linkedInBrowser = null;
+  (global as any).linkedInPage = null;
 }
+
+/**
+ * Export isSearching state for UI sync
+ */
+export const isSearching = false;

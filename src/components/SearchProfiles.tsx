@@ -442,13 +442,108 @@ export function SearchProfiles({ userId }: { userId: number }) {
                 <option value="PhD">PhD / Doctorate</option>
               </select>
 
-              <ScrollableMultiSelect 
-                label="Languages" 
-                options={LANGUAGES} 
-                selected={selectedLanguages} 
-                setSelected={setSelectedLanguages}
-                maxHeight="80px"
-              />
+              {/* Language Skills with Proficiency Levels */}
+              <label style={labelStyle}>🌍 Language Skills (with Proficiency)</label>
+              <p style={{...hintStyle, marginTop: 0}}>
+                💡 Add languages you speak and select your proficiency level (A1-C2). This helps bypass language requirements in job scoring.
+              </p>
+              <div style={{ 
+                maxHeight: '200px', 
+                overflowY: 'auto', 
+                padding: '8px', 
+                border: '1px solid var(--border)', 
+                borderRadius: '6px', 
+                background: 'var(--card-bg)',
+                marginBottom: '8px'
+              }}>
+                {/* Selected languages with proficiency */}
+                {selectedLanguages.map((lang: string) => (
+                  <div key={lang} style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    gap: '8px', 
+                    padding: '6px 8px', 
+                    marginBottom: '4px',
+                    background: 'var(--success-light)',
+                    borderRadius: '6px',
+                    border: '1px solid var(--success)'
+                  }}>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-primary)' }}>
+                      ✓ {lang}
+                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <select
+                        value={languageProficiencies[lang] || 'B1'}
+                        onChange={(e) => setLanguageProficiencies(prev => ({ ...prev, [lang]: e.target.value }))}
+                        style={{ 
+                          padding: '4px 8px', 
+                          borderRadius: '4px', 
+                          border: '1px solid var(--border)', 
+                          background: 'var(--input-bg)', 
+                          color: 'var(--text-primary)', 
+                          fontSize: '11px',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        <option value="A1">A1 - Beginner</option>
+                        <option value="A2">A2 - Elementary</option>
+                        <option value="B1">B1 - Intermediate</option>
+                        <option value="B2">B2 - Upper Intermediate</option>
+                        <option value="C1">C1 - Advanced</option>
+                        <option value="C2">C2 - Proficient/Native</option>
+                      </select>
+                      <button 
+                        onClick={() => {
+                          setSelectedLanguages(prev => prev.filter(l => l !== lang));
+                          setLanguageProficiencies(prev => {
+                            const newProf = { ...prev };
+                            delete newProf[lang];
+                            return newProf;
+                          });
+                        }}
+                        style={{ 
+                          padding: '2px 6px', 
+                          background: 'var(--danger)', 
+                          color: '#fff', 
+                          border: 'none', 
+                          borderRadius: '4px', 
+                          cursor: 'pointer',
+                          fontSize: '10px'
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                
+                {/* Available languages to add */}
+                <div style={{ marginTop: selectedLanguages.length > 0 ? '10px' : '0', borderTop: selectedLanguages.length > 0 ? '1px dashed var(--border)' : 'none', paddingTop: selectedLanguages.length > 0 ? '8px' : '0' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-tertiary)', display: 'block', marginBottom: '6px' }}>Click to add:</span>
+                  {LANGUAGES.filter(lang => !selectedLanguages.includes(lang)).map((lang: string) => (
+                    <button 
+                      key={lang}
+                      onClick={() => {
+                        setSelectedLanguages(prev => [...prev, lang]);
+                        setLanguageProficiencies(prev => ({ ...prev, [lang]: 'B1' }));
+                      }}
+                      style={{ 
+                        padding: '4px 8px', 
+                        margin: '2px',
+                        fontSize: '11px',
+                        borderRadius: '12px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--card-bg)',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + {lang}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 

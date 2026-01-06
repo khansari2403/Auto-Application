@@ -413,15 +413,44 @@ export async function startHunterSearch(userId: number, callAI: Function) {
         const query = profile.job_title;
         console.log(`Search query: "${query}"`);
         
-        // Scrape job URLs
-        const jobUrls = await scrapeJobs(
-          website.website_url, 
-          query, 
-          profile.location || '', 
-          { email: website.email, password: website.password }, 
-          userId, 
-          callAI
-        );
+        // Scrape job URLs - Use AI-assisted scraping for LinkedIn
+        let jobUrls: string[] = [];
+        const ScraperService = require('../scraper-service');
+        
+        if (website.website_url.includes('linkedin.com')) {
+          // Try standard scraping first
+          jobUrls = await scrapeJobs(
+            website.website_url, 
+            query, 
+            profile.location || '', 
+            { email: website.email, password: website.password }, 
+            userId, 
+            callAI
+          );
+          
+          // If standard scraping fails, use AI-assisted approach
+          if (jobUrls.length === 0 && hunter) {
+            console.log('Standard LinkedIn scraping failed, trying AI-assisted approach...');
+            await logAction(userId, 'ai_hunter', `🤖 Trying AI-assisted LinkedIn scraping...`, 'in_progress');
+            jobUrls = await ScraperService.scrapeLinkedInJobsWithAI(
+              query,
+              profile.location || '',
+              userId,
+              callAI,
+              hunter
+            );
+          }
+        } else {
+          // Standard scraping for non-LinkedIn sites
+          jobUrls = await scrapeJobs(
+            website.website_url, 
+            query, 
+            profile.location || '', 
+            { email: website.email, password: website.password }, 
+            userId, 
+            callAI
+          );
+        }
         
         console.log(`Found ${jobUrls.length} URLs`);
         await logAction(userId, 'ai_hunter', `📥 Found ${jobUrls.length} jobs on ${website.website_name}`, 'completed', true);

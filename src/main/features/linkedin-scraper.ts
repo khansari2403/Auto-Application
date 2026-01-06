@@ -185,35 +185,48 @@ export async function openLinkedInForLogin(userId: number): Promise<{ success: b
  * Scrape the currently open LinkedIn profile
  */
 export async function scrapeLinkedInProfile(userId: number, profileUrl?: string): Promise<{ success: boolean; data?: LinkedInProfile; error?: string }> {
-  let browser: Browser | null = (global as any).linkedInBrowser;
-  let page: Page | null = (global as any).linkedInPage;
-  let shouldCloseBrowser = false;
+  let page: Page | null = null;
+  let browser: Browser | null = null;
   
   try {
     await logAction(userId, 'linkedin', '🔍 Starting LinkedIn profile capture...', 'in_progress');
     
-    // If no existing browser, launch a new one
-    if (!browser || !page) {
-      browser = await puppeteer.launch({
-        headless: false,
-        userDataDir: getUserDataDir(),
-        args: ['--no-sandbox', '--disable-blink-features=AutomationControlled']
-      });
-      page = await browser.newPage();
-      await page.setViewport({ width: 1280, height: 800 });
-      shouldCloseBrowser = true;
+    // Try to get existing browser or create new one
+    const browserResult = await getOrCreateBrowser();
+    browser = browserResult.browser;
+    page = browserResult.page;
+    
+    // Update global references
+    (global as any).linkedInBrowser = browser;
+    (global as any).linkedInPage = page;
+    
+    // Check if logged in
+    const currentUrl = page.url();
+    if (!currentUrl.includes('linkedin.com') || currentUrl.includes('/login') || currentUrl.includes('/checkpoint')) {
+      // Navigate to check login status
+      await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'networkidle2', timeout: 30000 });
+      
+      const loggedIn = await isLoggedIn(page);
+      if (!loggedIn) {
+        return { 
+          success: false, 
+          error: 'Not logged in to LinkedIn. Please click "Sign in to LinkedIn" first and complete the login process.'
+        };
+      }
     }
     
-    // Navigate to profile if URL provided
-    if (profileUrl) {
-      await page.goto(profileUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-    } else {
-      // Try to navigate to own profile
-      await page.goto('https://www.linkedin.com/in/me/', { waitUntil: 'networkidle2', timeout: 60000 });
-    }
+    // Navigate to profile if URL provided, otherwise go to own profile
+    const targetUrl = profileUrl || 'https://www.linkedin.com/in/me/';
+    console.log('Navigating to profile:', targetUrl);
+    
+    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
     
     // Wait for profile to load
-    await page.waitForSelector('.pv-top-card', { timeout: 30000 }).catch(() => {});
+    try {
+      await page.waitForSelector('.pv-top-card, .scaffold-layout__main', { timeout: 15000 });
+    } catch (e) {
+      console.log('Profile selector not found, continuing anyway...');
+    }
     
     // Random delay to appear human
     await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
@@ -223,6 +236,8 @@ export async function scrapeLinkedInProfile(userId: number, profileUrl?: string)
     await new Promise(r => setTimeout(r, 1000));
     await page.evaluate(() => window.scrollBy(0, 500));
     await new Promise(r => setTimeout(r, 1000));
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await new Promise(r => setTimeout(r, 500));
     
     // Extract profile data
     const profileData = await page.evaluate(() => {

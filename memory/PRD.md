@@ -191,6 +191,28 @@ Settings are stored in `settings.secretary_settings` as JSON:
   - Auto-reconnect on app startup
 - [x] **Added googleapis dependency** - For Gmail API integration
 
+### Session 8 - Critical Bug Fixes (Dec 2025)
+- [x] **Google OAuth Rewritten** - Fixed "Access blocked" error by switching from deprecated OOB flow to loopback method
+  - Uses local HTTP server on 127.0.0.1:PORT to receive OAuth callback
+  - Automatic token exchange - no manual code entry required
+  - Better error messages for redirect_uri_mismatch issues
+  - OAuth UI updated with clear setup instructions
+- [x] **LinkedIn Profile Import Fixed** - Resolved sign-in loop issue
+  - Persistent browser session using userDataDir
+  - Shared browser instance across operations
+  - Login state detection to skip redundant sign-ins
+  - Better UX with login status indicator
+- [x] **Storage Category File Listing Fixed** - Now shows all documents per company, not just the most recent
+  - Checks all document type paths (cv, motivation_letter, cover_letter, portfolio, proposal)
+  - Includes PDF versions
+  - Shows document status indicators (✓✓ audited, ✓ generated, ⚠ rejected)
+  - Sorts files by date within each company group
+- [x] **Jobs Archive/Clear Handlers** - Added proper backend handlers
+  - `jobs:archive` - Archive/unarchive individual jobs
+  - `jobs:clear-old` - Bulk archive jobs older than N days
+- [x] **AI Models Handler Improvements** - Better field mapping for camelCase/snake_case conversion
+- [x] **SearchProfiles State Bug** - Verified fix using editing?.id dependency
+
 ### P1 - High Priority (Testing Needed)
 - [ ] End-to-end test of Smart Apply flow
 - [ ] CV generation verification

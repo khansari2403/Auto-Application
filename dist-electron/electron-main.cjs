@@ -30,6 +30,14 @@ var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__ge
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
 // src/main/database.ts
+var database_exports = {};
+__export(database_exports, {
+  getAllQuery: () => getAllQuery,
+  getDatabase: () => getDatabase,
+  initializeDatabase: () => initializeDatabase,
+  logAction: () => logAction,
+  runQuery: () => runQuery
+});
 function getDatabase() {
   if (!dbData) {
     const dbPath = getDbPath();
@@ -5193,6 +5201,8 @@ function registerServicesHandlers() {
     }
   });
   const oauthClients = /* @__PURE__ */ new Map();
+  const LOOPBACK_REDIRECT_URI = "http://127.0.0.1";
+  let authServerInstance = null;
   import_electron12.ipcMain.handle("email:oauth-start", async (_, data) => {
     try {
       const { clientId, clientSecret, email } = data;
@@ -5200,33 +5210,145 @@ function registerServicesHandlers() {
         return { success: false, error: "Client ID and Client Secret are required" };
       }
       console.log("Starting OAuth flow for:", email);
+      const http = require("http");
+      const url = require("url");
+      const findAvailablePort = () => {
+        return new Promise((resolve, reject) => {
+          const server = http.createServer();
+          server.listen(0, "127.0.0.1", () => {
+            const port2 = server.address().port;
+            server.close(() => resolve(port2));
+          });
+          server.on("error", reject);
+        });
+      };
+      const port = await findAvailablePort();
+      const redirectUri = `${LOOPBACK_REDIRECT_URI}:${port}`;
+      console.log("Using redirect URI:", redirectUri);
       const oauth2Client = new import_googleapis.google.auth.OAuth2(
         clientId,
         clientSecret,
-        "urn:ietf:wg:oauth:2.0:oob"
-        // Use out-of-band for desktop apps
+        redirectUri
       );
-      oauthClients.set(email || "default", oauth2Client);
+      oauthClients.set(email || "default", { client: oauth2Client, redirectUri });
+      const authCodePromise = new Promise((resolve, reject) => {
+        const timeoutId = setTimeout(() => {
+          if (authServerInstance) {
+            authServerInstance.close();
+            authServerInstance = null;
+          }
+          reject(new Error("OAuth timeout - no response received within 5 minutes"));
+        }, 3e5);
+        authServerInstance = http.createServer(async (req, res) => {
+          try {
+            const queryParams = url.parse(req.url, true).query;
+            if (queryParams.code) {
+              clearTimeout(timeoutId);
+              res.writeHead(200, { "Content-Type": "text/html" });
+              res.end(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <title>Authorization Successful</title>
+                  <style>
+                    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+                           display: flex; justify-content: center; align-items: center; height: 100vh; 
+                           margin: 0; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+                    .container { background: white; padding: 40px; border-radius: 16px; text-align: center; 
+                                 box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px; }
+                    h1 { color: #4CAF50; margin-bottom: 10px; }
+                    p { color: #666; }
+                  </style>
+                </head>
+                <body>
+                  <div class="container">
+                    <h1>\u2713 Authorization Successful!</h1>
+                    <p>You can close this window and return to the app.</p>
+                    <p style="font-size: 12px; color: #888; margin-top: 20px;">This window will close automatically...</p>
+                  </div>
+                  <script>setTimeout(() => window.close(), 3000);</script>
+                </body>
+                </html>
+              `);
+              authServerInstance.close();
+              authServerInstance = null;
+              resolve(queryParams.code);
+            } else if (queryParams.error) {
+              clearTimeout(timeoutId);
+              res.writeHead(400, { "Content-Type": "text/html" });
+              res.end(`
+                <!DOCTYPE html>
+                <html>
+                <head><title>Authorization Failed</title></head>
+                <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+                  <h1 style="color: #f44336;">Authorization Failed</h1>
+                  <p>Error: ${queryParams.error}</p>
+                  <p>Please close this window and try again.</p>
+                </body>
+                </html>
+              `);
+              authServerInstance.close();
+              authServerInstance = null;
+              reject(new Error(queryParams.error));
+            }
+          } catch (err) {
+            console.error("Error handling OAuth callback:", err);
+          }
+        });
+        authServerInstance.listen(port, "127.0.0.1", () => {
+          console.log(`OAuth callback server listening on port ${port}`);
+        });
+      });
       const authUrl = oauth2Client.generateAuthUrl({
         access_type: "offline",
         scope: [
           "https://www.googleapis.com/auth/gmail.readonly",
           "https://www.googleapis.com/auth/gmail.send",
           "https://mail.google.com/"
-          // Full IMAP access
         ],
         prompt: "consent"
-        // Force consent screen to get refresh token
       });
       console.log("OAuth URL generated:", authUrl);
       await import_electron12.shell.openExternal(authUrl);
-      return {
-        success: true,
-        message: "Browser opened. Please sign in and copy the authorization code.",
-        authUrl
-      };
+      try {
+        const code = await authCodePromise;
+        const { tokens } = await oauth2Client.getToken(code);
+        oauth2Client.setCredentials(tokens);
+        console.log("OAuth tokens received:", {
+          access_token: tokens.access_token ? "present" : "missing",
+          refresh_token: tokens.refresh_token ? "present" : "missing",
+          expiry_date: tokens.expiry_date
+        });
+        const db = (init_database(), __toCommonJS(database_exports)).getDatabase();
+        if (db.settings.length === 0) {
+          db.settings.push({ id: 1 });
+        }
+        db.settings[0].oauth_access_token = tokens.access_token;
+        db.settings[0].oauth_refresh_token = tokens.refresh_token;
+        db.settings[0].oauth_expiry = tokens.expiry_date;
+        db.settings[0].email_connected = 1;
+        db.settings[0].oauth_client_id = clientId;
+        db.settings[0].oauth_client_secret = clientSecret;
+        const fs5 = require("fs");
+        const path9 = require("path");
+        const { app: app9 } = require("electron");
+        const dataDir = path9.join(app9.getPath("userData"), "data");
+        fs5.writeFileSync(path9.join(dataDir, "db.json"), JSON.stringify(db, null, 2));
+        return {
+          success: true,
+          message: "OAuth connected successfully! Your email is now linked.",
+          hasRefreshToken: !!tokens.refresh_token
+        };
+      } catch (authError) {
+        console.error("OAuth flow error:", authError);
+        return { success: false, error: authError.message };
+      }
     } catch (e) {
       console.error("OAuth start error:", e);
+      if (authServerInstance) {
+        authServerInstance.close();
+        authServerInstance = null;
+      }
       return { success: false, error: e.message };
     }
   });
@@ -5237,12 +5359,17 @@ function registerServicesHandlers() {
         return { success: false, error: "Authorization code is required" };
       }
       console.log("Processing OAuth callback for:", email);
-      let oauth2Client = oauthClients.get(email || "default");
-      if (!oauth2Client) {
+      let oauthData = oauthClients.get(email || "default");
+      let oauth2Client;
+      let redirectUri = "http://127.0.0.1";
+      if (oauthData) {
+        oauth2Client = oauthData.client;
+        redirectUri = oauthData.redirectUri || redirectUri;
+      } else {
         oauth2Client = new import_googleapis.google.auth.OAuth2(
           clientId,
           clientSecret,
-          "urn:ietf:wg:oauth:2.0:oob"
+          redirectUri
         );
       }
       const { tokens } = await oauth2Client.getToken(code);
@@ -5252,10 +5379,21 @@ function registerServicesHandlers() {
         refresh_token: tokens.refresh_token ? "present" : "missing",
         expiry_date: tokens.expiry_date
       });
-      await runQuery(
-        `UPDATE settings SET oauth_access_token = ?, oauth_refresh_token = ?, oauth_expiry = ?, email_connected = ? WHERE id = 1`,
-        [tokens.access_token, tokens.refresh_token, tokens.expiry_date, 1]
-      );
+      const db = (init_database(), __toCommonJS(database_exports)).getDatabase();
+      if (db.settings.length === 0) {
+        db.settings.push({ id: 1 });
+      }
+      db.settings[0].oauth_access_token = tokens.access_token;
+      db.settings[0].oauth_refresh_token = tokens.refresh_token;
+      db.settings[0].oauth_expiry = tokens.expiry_date;
+      db.settings[0].email_connected = 1;
+      db.settings[0].oauth_client_id = clientId;
+      db.settings[0].oauth_client_secret = clientSecret;
+      const fs5 = require("fs");
+      const path9 = require("path");
+      const { app: app9 } = require("electron");
+      const dataDir = path9.join(app9.getPath("userData"), "data");
+      fs5.writeFileSync(path9.join(dataDir, "db.json"), JSON.stringify(db, null, 2));
       return {
         success: true,
         message: "OAuth connected successfully! Your email is now linked.",
@@ -5267,7 +5405,7 @@ function registerServicesHandlers() {
       if (e.message.includes("invalid_grant")) {
         errorMsg = "Invalid or expired authorization code. Please try again.";
       } else if (e.message.includes("redirect_uri_mismatch")) {
-        errorMsg = "OAuth configuration error. Check your Google Cloud Console redirect URIs.";
+        errorMsg = 'OAuth configuration error. Please ensure you have added "http://127.0.0.1" as an authorized redirect URI in your Google Cloud Console. Go to: APIs & Services > Credentials > OAuth 2.0 Client IDs > Your Client > Authorized redirect URIs.';
       }
       return { success: false, error: errorMsg };
     }

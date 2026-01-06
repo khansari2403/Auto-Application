@@ -36,50 +36,105 @@ export function StorageSettings({ userId }: { userId: number }) {
         // Group documents by company and position
         const grouped: Record<string, StoredDocument> = {};
         
+        // First, add all documents from the documents table
         for (const doc of docs) {
           // Find the job this document belongs to
           const job = jobs.find((j: any) => j.id === doc.job_id);
-          const company = job?.company_name || 'Unknown Company';
-          const position = job?.job_title || 'Unknown Position';
+          const company = doc.company_name || job?.company_name || 'Unknown Company';
+          const position = doc.job_title || job?.job_title || 'Unknown Position';
           const key = `${company}___${position}`;
           
           if (!grouped[key]) {
             grouped[key] = { company, position, files: [] };
           }
           
-          grouped[key].files.push({
-            name: doc.file_name || `${doc.category}_${doc.id}`,
-            path: doc.file_path || '',
-            type: doc.category || 'Unknown',
-            date: doc.created_at || new Date().toISOString()
-          });
+          // Avoid duplicates
+          const fileId = doc.file_path || `${doc.category}_${doc.id}`;
+          const exists = grouped[key].files.some(f => f.path === fileId || f.name === doc.file_name);
+          if (!exists) {
+            grouped[key].files.push({
+              name: doc.file_name || `${doc.category}_${doc.id}`,
+              path: doc.file_path || '',
+              type: doc.category || 'Unknown',
+              date: doc.created_at || new Date().toISOString()
+            });
+          }
         }
         
-        // Also check for files stored via the doc generator paths
+        // Then, add all document paths from job records
         for (const job of jobs) {
           const key = `${job.company_name || 'Unknown'}___${job.job_title || 'Unknown'}`;
           if (!grouped[key]) {
             grouped[key] = { company: job.company_name || 'Unknown', position: job.job_title || 'Unknown', files: [] };
           }
           
-          // Add paths from job record
-          ['cv', 'motivation_letter', 'cover_letter', 'portfolio', 'proposal'].forEach(docType => {
-            const pathKey = `${docType}_path`;
-            if (job[pathKey]) {
-              const exists = grouped[key].files.some(f => f.path === job[pathKey]);
+          // Check ALL document type paths in job record
+          const docTypes = [
+            { key: 'cv_path', type: 'CV', status: 'cv_status' },
+            { key: 'motivation_letter_path', type: 'Motivation Letter', status: 'motivation_letter_status' },
+            { key: 'cover_letter_path', type: 'Cover Letter', status: 'cover_letter_status' },
+            { key: 'portfolio_path', type: 'Portfolio', status: 'portfolio_status' },
+            { key: 'proposal_path', type: 'Proposal', status: 'proposal_status' }
+          ];
+          
+          for (const docType of docTypes) {
+            if (job[docType.key]) {
+              const filePath = job[docType.key];
+              const exists = grouped[key].files.some(f => f.path === filePath);
               if (!exists) {
+                // Determine status
+                const status = job[docType.status] || 'unknown';
+                let statusSuffix = '';
+                if (status === 'auditor_done') statusSuffix = ' ✓✓';
+                else if (status === 'thinker_done') statusSuffix = ' ✓';
+                else if (status === 'rejected') statusSuffix = ' ⚠';
+                
                 grouped[key].files.push({
-                  name: job[pathKey].split('/').pop() || `${docType}.html`,
-                  path: job[pathKey],
-                  type: docType.replace('_', ' ').toUpperCase(),
+                  name: filePath.split('/').pop() || `${docType.type}.html`,
+                  path: filePath,
+                  type: docType.type + statusSuffix,
                   date: job.date_imported || new Date().toISOString()
                 });
               }
             }
-          });
+          }
+          
+          // Also check for PDF versions
+          const pdfTypes = ['cv_pdf_path', 'motivation_letter_pdf_path', 'cover_letter_pdf_path', 'portfolio_pdf_path', 'proposal_pdf_path'];
+          for (const pdfKey of pdfTypes) {
+            if (job[pdfKey]) {
+              const filePath = job[pdfKey];
+              const exists = grouped[key].files.some(f => f.path === filePath);
+              if (!exists) {
+                grouped[key].files.push({
+                  name: filePath.split('/').pop() || 'document.pdf',
+                  path: filePath,
+                  type: pdfKey.replace('_pdf_path', '').replace(/_/g, ' ').toUpperCase() + ' (PDF)',
+                  date: job.date_imported || new Date().toISOString()
+                });
+              }
+            }
+          }
         }
         
-        setDocuments(Object.values(grouped).filter(g => g.files.length > 0));
+        // Sort files within each group by date (newest first)
+        for (const key of Object.keys(grouped)) {
+          grouped[key].files.sort((a, b) => 
+            new Date(b.date).getTime() - new Date(a.date).getTime()
+          );
+        }
+        
+        // Filter out empty groups and set state
+        const result = Object.values(grouped).filter(g => g.files.length > 0);
+        
+        // Sort groups by most recent file date
+        result.sort((a, b) => {
+          const aDate = a.files[0]?.date || '';
+          const bDate = b.files[0]?.date || '';
+          return new Date(bDate).getTime() - new Date(aDate).getTime();
+        });
+        
+        setDocuments(result);
       }
     } catch (e) {
       console.error('Failed to load documents:', e);

@@ -570,6 +570,81 @@ function createEmptyResult(): CompatibilityResult {
 }
 
 /**
+ * Calculate language match score
+ * IMPORTANT: If user has set language proficiency in Search Profile, this bypasses job language requirements
+ */
+function calculateLanguageMatch(profile: any, job: any, languageProficiencies: Record<string, string>): number {
+  const jobDescription = (job.description || '').toLowerCase();
+  const jobLanguages = (job.languages || '').toLowerCase();
+  
+  // Extract required languages from job
+  const requiredLanguages: string[] = [];
+  const commonLanguages = ['english', 'german', 'french', 'spanish', 'italian', 'dutch', 'portuguese', 'chinese', 'japanese', 'korean', 'russian', 'arabic', 'hindi', 'polish', 'swedish', 'norwegian', 'danish', 'finnish', 'czech', 'hungarian', 'turkish', 'greek', 'hebrew', 'thai', 'vietnamese', 'indonesian', 'malay'];
+  
+  for (const lang of commonLanguages) {
+    if (jobDescription.includes(lang) || jobLanguages.includes(lang)) {
+      requiredLanguages.push(lang);
+    }
+  }
+  
+  // Also check for "native speaker" requirements
+  const hasNativeRequirement = jobDescription.includes('native speaker') || 
+                                jobDescription.includes('mother tongue') ||
+                                jobDescription.includes('fluent');
+  
+  // If no language requirements found, return high score
+  if (requiredLanguages.length === 0) {
+    return 80;
+  }
+  
+  // Get user's languages from profile
+  const userLanguages = profile.languages || [];
+  const userLanguagesLower = (Array.isArray(userLanguages) ? userLanguages : []).map((l: string) => l.toLowerCase());
+  
+  // Check proficiency levels from Search Profile (this BYPASSES job requirements)
+  const userProficienciesLower: Record<string, string> = {};
+  for (const [lang, level] of Object.entries(languageProficiencies)) {
+    userProficienciesLower[lang.toLowerCase()] = level;
+  }
+  
+  let matchedCount = 0;
+  
+  for (const required of requiredLanguages) {
+    // Check if user has this language
+    const hasLanguage = userLanguagesLower.some(l => l.includes(required) || required.includes(l));
+    
+    // Check if user has proficiency set (this gives automatic match)
+    const hasProficiency = Object.keys(userProficienciesLower).some(l => 
+      l.includes(required) || required.includes(l)
+    );
+    
+    if (hasLanguage || hasProficiency) {
+      matchedCount++;
+      
+      // Extra credit for high proficiency
+      const profLevel = Object.entries(userProficienciesLower).find(([l]) => 
+        l.includes(required) || required.includes(l)
+      )?.[1];
+      
+      if (profLevel && ['C1', 'C2'].includes(profLevel)) {
+        matchedCount += 0.2; // Bonus for high proficiency
+      }
+    }
+  }
+  
+  // Calculate score
+  const matchRatio = matchedCount / requiredLanguages.length;
+  let score = Math.round(matchRatio * 100);
+  
+  // Apply native speaker penalty only if absolutely required and not met
+  if (hasNativeRequirement && matchRatio < 1) {
+    score = Math.max(score - 10, 0);
+  }
+  
+  return score;
+}
+
+/**
  * Calculate compatibility for all jobs
  */
 export async function calculateAllCompatibility(userId: number): Promise<void> {

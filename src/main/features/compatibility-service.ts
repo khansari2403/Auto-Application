@@ -262,23 +262,54 @@ function extractSkills(profile: any): string[] {
 
 /**
  * Extract required skills from job listing - separate hard and soft skills
+ * IMPORTANT: Soft skills are NEVER exclusion factors - they only provide bonus points
  */
 function extractJobSkillsWithType(job: any): { hardSkills: string[]; softSkills: string[] } {
   const hardSkills: string[] = [];
   const softSkills: string[] = [];
   
-  // List of common soft skills that should NOT be exclusion factors
+  // Comprehensive list of soft skills that should NEVER be exclusion factors
+  // These are subjective and virtually all candidates possess some level of these
   const softSkillPatterns = [
-    'communication', 'teamwork', 'team player', 'leadership', 'problem solving',
-    'problem-solving', 'critical thinking', 'time management', 'adaptability',
-    'creativity', 'interpersonal', 'collaboration', 'flexibility', 'motivation',
-    'self-motivated', 'detail oriented', 'detail-oriented', 'organizational',
-    'multitasking', 'work ethic', 'positive attitude', 'customer service',
-    'presentation skills', 'negotiation', 'conflict resolution', 'empathy',
-    'emotional intelligence', 'stress management', 'decision making', 'initiative',
-    'punctuality', 'reliability', 'accountability', 'enthusiasm', 'patience',
-    'resilience', 'open minded', 'open-minded', 'proactive', 'self starter',
-    'self-starter', 'strong work ethic', 'analytical thinking', 'attention to detail'
+    // Communication & Interpersonal
+    'communication', 'kommunikation', 'teamwork', 'team player', 'teamarbeit', 
+    'leadership', 'führung', 'führungsqualitäten', 'interpersonal', 'collaboration', 
+    'zusammenarbeit', 'networking', 'relationship building', 'stakeholder management',
+    'written communication', 'verbal communication', 'presentation skills',
+    'public speaking', 'active listening', 'negotiation', 'persuasion',
+    
+    // Problem Solving & Thinking
+    'problem solving', 'problem-solving', 'problemlösung', 'critical thinking',
+    'analytical thinking', 'analytical skills', 'analytisch', 'strategic thinking',
+    'creative thinking', 'creativity', 'kreativität', 'innovation', 'innovative',
+    'decision making', 'entscheidungsfindung', 'judgment', 'reasoning',
+    
+    // Work Habits & Attitude
+    'time management', 'zeitmanagement', 'adaptability', 'anpassungsfähigkeit',
+    'flexibility', 'flexibilität', 'motivation', 'self-motivated', 'selbstmotiviert',
+    'detail oriented', 'detail-oriented', 'detailorientiert', 'attention to detail',
+    'organizational', 'organisiert', 'multitasking', 'prioritization',
+    'work ethic', 'strong work ethic', 'arbeitsmoral', 'positive attitude',
+    'enthusiasm', 'begeisterung', 'passion', 'leidenschaft', 'dedication',
+    'commitment', 'engagement', 'drive', 'initiative', 'eigeninitiative',
+    'proactive', 'proaktiv', 'self starter', 'self-starter', 'selbstständig',
+    
+    // Personal Qualities
+    'customer service', 'kundenservice', 'customer focus', 'kundenorientierung',
+    'conflict resolution', 'konfliktlösung', 'empathy', 'empathie', 
+    'emotional intelligence', 'emotionale intelligenz', 'stress management',
+    'punctuality', 'pünktlichkeit', 'reliability', 'zuverlässigkeit',
+    'accountability', 'verantwortungsbewusstsein', 'patience', 'geduld',
+    'resilience', 'resilienz', 'open minded', 'open-minded', 'aufgeschlossen',
+    'curious', 'neugierig', 'willingness to learn', 'lernbereitschaft',
+    'growth mindset', 'can-do attitude', 'positive mindset',
+    
+    // Generic buzzwords that should not block candidates
+    'dynamic', 'dynamisch', 'energetic', 'professional', 'professionell',
+    'fast learner', 'quick learner', 'schnelle auffassungsgabe',
+    'independent', 'selbständig', 'team-oriented', 'teamorientiert',
+    'goal-oriented', 'zielorientiert', 'results-driven', 'ergebnisorientiert',
+    'hands-on', 'hands on', 'praktisch', 'pragmatic', 'structured', 'strukturiert'
   ];
   
   const allSkills: string[] = [];

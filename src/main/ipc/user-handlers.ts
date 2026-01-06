@@ -1,5 +1,8 @@
-import { ipcMain, shell, BrowserWindow } from 'electron';
+import { ipcMain, shell, BrowserWindow, session } from 'electron';
 import { runQuery, getAllQuery, getDatabase } from '../database';
+import path from 'path';
+let app: any;
+try { app = require('electron').app; } catch (e) { app = (global as any).electronApp; }
 
 export function registerUserHandlers(): string[] {
   const channels = [
@@ -46,28 +49,15 @@ export function registerUserHandlers(): string[] {
     }
   });
 
-  // Open LinkedIn login in a popup window and wait for user to sign in
-  ipcMain.handle('user:open-linkedin-login', async () => {
+  // Open LinkedIn login using Puppeteer with persistent session
+  ipcMain.handle('user:open-linkedin-login', async (_, data) => {
     try {
-      // Create a popup window for LinkedIn login
-      const loginWindow = new BrowserWindow({
-        width: 1000,
-        height: 700,
-        title: 'LinkedIn Sign In',
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true
-        }
-      });
+      const LinkedInScraper = require('../features/linkedin-scraper');
+      const userId = data?.userId || 1;
       
-      // Navigate to LinkedIn login page
-      await loginWindow.loadURL('https://www.linkedin.com/login');
-      
-      // Return immediately - user will manually log in
-      return { 
-        success: true, 
-        message: 'LinkedIn login window opened. Please sign in manually, then close this window and click "Fetch Profile".' 
-      };
+      // Use the shared browser session from linkedin-scraper
+      const result = await LinkedInScraper.openLinkedInForLogin(userId);
+      return result;
     } catch (e: any) {
       return { success: false, error: e.message };
     }
@@ -78,8 +68,11 @@ export function registerUserHandlers(): string[] {
       const LinkedInScraper = require('../features/linkedin-scraper');
       const { userId, profileUrl } = data || {};
       
-      if (!profileUrl) {
-        return await LinkedInScraper.openLinkedInForLogin(userId || 1);
+      // If no profileUrl, this is a request to open browser for login
+      if (!profileUrl && !data?.profileUrl) {
+        // Check if we should open login or just scrape
+        // For scraping, always try to scrape with the persistent session
+        return await LinkedInScraper.scrapeLinkedInProfile(userId || 1, null);
       }
       
       return await LinkedInScraper.scrapeLinkedInProfile(userId || 1, profileUrl);

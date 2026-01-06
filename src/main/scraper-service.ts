@@ -270,10 +270,12 @@ export async function getJobPageContent(url: string, userId: number, callAI: Fun
 
 /**
  * SCRAPE JOB LISTING URLS FROM SEARCH RESULTS
+ * Now with PAGINATION support - looks for "next page" buttons to get all results
  */
 export async function scrapeJobs(baseUrl: string, query: string, location: string, credentials?: any, userId?: number, callAI?: Function): Promise<string[]> {
   let browser: Browser | null = null;
   const jobUrls: string[] = [];
+  const MAX_PAGES = 5; // Limit to prevent infinite loops
   
   try {
     console.log(`Scraper: Searching for "${query}" in "${location}" on ${baseUrl}`);
@@ -299,6 +301,8 @@ export async function scrapeJobs(baseUrl: string, query: string, location: strin
       searchUrl = `https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${encodeURIComponent(query)}&locT=C&locKeyword=${encodeURIComponent(location)}`;
     } else if (baseUrl.includes('xing')) {
       searchUrl = `https://www.xing.com/jobs/search?keywords=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`;
+    } else if (baseUrl.includes('stepstone')) {
+      searchUrl = `https://www.stepstone.de/jobs/${encodeURIComponent(query)}/in-${encodeURIComponent(location)}`;
     } else {
       searchUrl = baseUrl;
     }
@@ -313,69 +317,101 @@ export async function scrapeJobs(baseUrl: string, query: string, location: strin
     
     // Human-like behavior - wait and scroll
     await randomDelay(2000, 4000);
-    await page.evaluate(() => window.scrollBy(0, 400));
-    await randomDelay(1000, 2000);
-    await page.evaluate(() => window.scrollBy(0, 400));
-    await randomDelay(2000, 4000);
     
-    // Check if blocked
-    if (await isPageBlocked(page)) {
-      console.log('Scraper: Search page blocked');
-      if (userId) {
-        await logAction(userId, 'ai_hunter', '🚫 Search page blocked by bot detection', 'failed', false);
+    // Pagination loop
+    let currentPage = 1;
+    let hasMorePages = true;
+    
+    while (hasMorePages && currentPage <= MAX_PAGES) {
+      console.log(`Scraper: Processing page ${currentPage}...`);
+      
+      // Scroll to load all content on current page
+      await page.evaluate(() => window.scrollBy(0, 400));
+      await randomDelay(1000, 2000);
+      await page.evaluate(() => window.scrollBy(0, 400));
+      await randomDelay(1000, 2000);
+      await page.evaluate(() => window.scrollBy(0, document.body.scrollHeight));
+      await randomDelay(2000, 4000);
+      
+      // Check if blocked
+      if (await isPageBlocked(page)) {
+        console.log('Scraper: Search page blocked');
+        if (userId) {
+          await logAction(userId, 'ai_hunter', '🚫 Search page blocked by bot detection', 'failed', false);
+        }
+        break;
       }
-      return [];
-    }
-    
-    // Extract job URLs
-    const links = await page.evaluate(() => {
-      const selectors = [
-        // LinkedIn
-        'a.job-card-container__link',
-        'a.base-card__full-link',
-        'a[data-tracking-control-name="public_jobs_jserp-result_search-card"]',
-        '.jobs-search__results-list a',
-        // Indeed
-        'a.jcs-JobTitle',
-        'h2.jobTitle a',
-        '.job_seen_beacon a[data-jk]',
-        '.jobsearch-ResultsList a.tapItem',
-        // Glassdoor
-        'a.job-title',
-        '.react-job-listing a',
-        // Xing
-        'a[data-testid="job-posting-link"]',
-        '.jobs-list a',
-        // Generic
-        'a[href*="/job/"]',
-        'a[href*="/jobs/"]',
-        'a[href*="jobPosting"]'
-      ];
       
-      const foundLinks: string[] = [];
-      
-      selectors.forEach(selector => {
-        document.querySelectorAll(selector).forEach(el => {
-          const href = (el as HTMLAnchorElement).href;
-          if (href && 
-              href.startsWith('http') && 
-              !foundLinks.includes(href) &&
-              !href.includes('/login') &&
-              !href.includes('/signup') &&
-              !href.includes('/register')) {
-            foundLinks.push(href);
-          }
+      // Extract job URLs from current page
+      const links = await page.evaluate(() => {
+        const selectors = [
+          // LinkedIn
+          'a.job-card-container__link',
+          'a.base-card__full-link',
+          'a[data-tracking-control-name="public_jobs_jserp-result_search-card"]',
+          '.jobs-search__results-list a',
+          // Indeed
+          'a.jcs-JobTitle',
+          'h2.jobTitle a',
+          '.job_seen_beacon a[data-jk]',
+          '.jobsearch-ResultsList a.tapItem',
+          // Glassdoor
+          'a.job-title',
+          '.react-job-listing a',
+          // Xing
+          'a[data-testid="job-posting-link"]',
+          '.jobs-list a',
+          // Stepstone
+          'a[data-at="job-item-title"]',
+          'article a[href*="/stellenangebote"]',
+          '.job-element a',
+          '[data-testid="job-item"] a',
+          // Generic
+          'a[href*="/job/"]',
+          'a[href*="/jobs/"]',
+          'a[href*="jobPosting"]',
+          'a[href*="/stellenangebot"]'
+        ];
+        
+        const foundLinks: string[] = [];
+        
+        selectors.forEach(selector => {
+          document.querySelectorAll(selector).forEach(el => {
+            const href = (el as HTMLAnchorElement).href;
+            if (href && 
+                href.startsWith('http') && 
+                !foundLinks.includes(href) &&
+                !href.includes('/login') &&
+                !href.includes('/signup') &&
+                !href.includes('/register')) {
+              foundLinks.push(href);
+            }
+          });
         });
+        
+        return foundLinks;
       });
       
-      return foundLinks;
-    });
+      // Add new unique URLs
+      const newUrls = links.filter(url => !jobUrls.includes(url));
+      jobUrls.push(...newUrls);
+      console.log(`Scraper: Found ${newUrls.length} new URLs on page ${currentPage} (total: ${jobUrls.length})`);
+      
+      // Try to find and click "Next Page" button
+      hasMorePages = await clickNextPage(page);
+      
+      if (hasMorePages) {
+        currentPage++;
+        // Wait for page to load after clicking next
+        await randomDelay(3000, 5000);
+      }
+    }
     
-    // Limit to first 15 unique URLs
-    const uniqueLinks = [...new Set(links)].slice(0, 15);
-    jobUrls.push(...uniqueLinks);
+    // Limit total URLs
+    const uniqueLinks = [...new Set(jobUrls)].slice(0, 50);
+    console.log(`Scraper: Total found ${uniqueLinks.length} job URLs across ${currentPage} pages`);
     
-    console.log(`Scraper: Found ${jobUrls.length} job URLs`);
+    return uniqueLinks;
     
   } catch (error: any) { 
     console.error('Scraper Error:', error.message); 
@@ -386,6 +422,109 @@ export async function scrapeJobs(baseUrl: string, query: string, location: strin
   }
   
   return jobUrls;
+}
+
+/**
+ * Try to click the "Next Page" button on job search results
+ * Returns true if successfully clicked, false if no more pages
+ */
+async function clickNextPage(page: Page): Promise<boolean> {
+  try {
+    // Scroll to bottom first to ensure pagination is visible
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await randomDelay(500, 1000);
+    
+    // Common pagination selectors
+    const nextPageSelectors = [
+      // Generic next/arrow buttons
+      'button[aria-label*="next" i]',
+      'button[aria-label*="nächste" i]',
+      'a[aria-label*="next" i]',
+      'a[aria-label*="nächste" i]',
+      '[data-testid*="next"]',
+      '[data-testid*="pagination-next"]',
+      '.pagination-next',
+      '.pager-next',
+      'a.next',
+      'button.next',
+      // LinkedIn specific
+      'button[aria-label="View next page"]',
+      '.artdeco-pagination__button--next',
+      // Indeed specific
+      'a[data-testid="pagination-page-next"]',
+      '[aria-label="Next Page"]',
+      // Stepstone specific
+      'a[data-at="pagination-next"]',
+      '[data-testid="pagination-button-next"]',
+      'a.pagination__next',
+      // Generic patterns
+      'nav[aria-label*="pagination" i] a:last-child',
+      '.pagination a[rel="next"]',
+      'ul.pagination li:last-child a',
+      // Text-based (fallback)
+      'a:has-text("Next")',
+      'button:has-text("Next")',
+      'a:has-text("Nächste")',
+      'button:has-text("Nächste")',
+      'a:has-text("Weiter")',
+      'button:has-text("Weiter")'
+    ];
+    
+    for (const selector of nextPageSelectors) {
+      try {
+        const element = await page.$(selector);
+        if (element) {
+          // Check if the button is not disabled
+          const isDisabled = await page.evaluate(el => {
+            return el.hasAttribute('disabled') || 
+                   el.classList.contains('disabled') ||
+                   el.getAttribute('aria-disabled') === 'true' ||
+                   (el as HTMLElement).style.pointerEvents === 'none';
+          }, element);
+          
+          if (!isDisabled) {
+            console.log(`Scraper: Found next page button with selector: ${selector}`);
+            await element.click();
+            return true;
+          }
+        }
+      } catch (e) {
+        // Selector didn't match, try next
+      }
+    }
+    
+    // Fallback: Try to find by text content
+    const clicked = await page.evaluate(() => {
+      const nextTexts = ['next', 'nächste', 'weiter', '›', '»', 'mehr anzeigen', 'show more', 'load more'];
+      const elements = Array.from(document.querySelectorAll('button, a, div[role="button"]'));
+      
+      for (const el of elements) {
+        const text = el.textContent?.toLowerCase().trim() || '';
+        const ariaLabel = el.getAttribute('aria-label')?.toLowerCase() || '';
+        
+        if (nextTexts.some(nt => text.includes(nt) || ariaLabel.includes(nt))) {
+          // Check not disabled
+          if (!el.hasAttribute('disabled') && !el.classList.contains('disabled')) {
+            (el as HTMLElement).click();
+            return true;
+          }
+        }
+      }
+      return false;
+    });
+    
+    if (clicked) {
+      console.log('Scraper: Clicked next page via text fallback');
+      return true;
+    }
+    
+    console.log('Scraper: No more pages or next button not found');
+    return false;
+    
+  } catch (e) {
+    console.log('Scraper: Error finding next page:', e);
+    return false;
+  }
 }
 
 /**

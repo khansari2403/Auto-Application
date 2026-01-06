@@ -442,10 +442,18 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                 {/* OAuth Section */}
                 {config.accessMethod === 'oauth' && (
                   <div>
-                    <div style={{ background: 'var(--info-light)', padding: '12px', borderRadius: '6px', marginBottom: '15px' }}>
-                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--info)' }}>
-                        <strong>OAuth Setup:</strong> Create OAuth credentials in Google Cloud Console, enable Gmail API, add your email to Test Users.
+                    <div style={{ background: 'var(--info-light)', padding: '15px', borderRadius: '6px', marginBottom: '15px' }}>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: 'var(--info)', fontWeight: 'bold' }}>
+                        📋 OAuth Setup Instructions:
                       </p>
+                      <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" style={{ color: 'var(--primary)' }}>Google Cloud Console</a></li>
+                        <li>Create a new OAuth 2.0 Client ID (Desktop App type)</li>
+                        <li><strong>Important:</strong> Add <code style={{ background: 'var(--bg-tertiary)', padding: '2px 6px', borderRadius: '3px' }}>http://127.0.0.1</code> as an Authorized redirect URI</li>
+                        <li>Enable the Gmail API in APIs &amp; Services</li>
+                        <li>Add your email to Test Users in OAuth consent screen</li>
+                        <li>Copy the Client ID and Client Secret below</li>
+                      </ol>
                     </div>
                     <label style={labelStyle}>Client ID</label>
                     <input style={inputStyle} value={googleClientId} onChange={e => setGoogleClientId(e.target.value)} placeholder="Your OAuth Client ID" />

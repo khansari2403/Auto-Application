@@ -191,27 +191,39 @@ Settings are stored in `settings.secretary_settings` as JSON:
   - Auto-reconnect on app startup
 - [x] **Added googleapis dependency** - For Gmail API integration
 
-### Session 8 - Critical Bug Fixes (Dec 2025)
-- [x] **Google OAuth Rewritten** - Fixed "Access blocked" error by switching from deprecated OOB flow to loopback method
-  - Uses local HTTP server on 127.0.0.1:PORT to receive OAuth callback
-  - Automatic token exchange - no manual code entry required
-  - Better error messages for redirect_uri_mismatch issues
-  - OAuth UI updated with clear setup instructions
-- [x] **LinkedIn Profile Import Fixed** - Resolved sign-in loop issue
-  - Persistent browser session using userDataDir
-  - Shared browser instance across operations
-  - Login state detection to skip redundant sign-ins
-  - Better UX with login status indicator
-- [x] **Storage Category File Listing Fixed** - Now shows all documents per company, not just the most recent
-  - Checks all document type paths (cv, motivation_letter, cover_letter, portfolio, proposal)
-  - Includes PDF versions
-  - Shows document status indicators (✓✓ audited, ✓ generated, ⚠ rejected)
-  - Sorts files by date within each company group
-- [x] **Jobs Archive/Clear Handlers** - Added proper backend handlers
-  - `jobs:archive` - Archive/unarchive individual jobs
-  - `jobs:clear-old` - Bulk archive jobs older than N days
-- [x] **AI Models Handler Improvements** - Better field mapping for camelCase/snake_case conversion
-- [x] **SearchProfiles State Bug** - Verified fix using editing?.id dependency
+### Session 9 - Major Bug Fixes & Feature Updates (Dec 2025)
+- [x] **LinkedIn Profile Timeout Fix** - Changed from `networkidle2` to `domcontentloaded` with fallback
+  - Reduced navigation timeout from 60s to 45s
+  - Added multiple selector fallbacks for profile detection
+  - Better error handling for partial page loads
+- [x] **Auditor Soft Skills Update** - Soft skills no longer exclusion factors
+  - Separated hard skills from soft skills in matching
+  - Soft skills now give bonus points, don't penalize
+  - Added list of 40+ soft skill patterns to detect
+- [x] **Language Proficiency Feature** - Added A1-C2 levels to Search Profiles
+  - New language proficiency selector under Languages section
+  - Proficiency bypasses Auditor language scoring
+  - Saves to `language_proficiencies` JSON field
+- [x] **Transitional Experience Recognition** - Experience is now transferable
+  - 5+ years in any role = 15% transition bonus
+  - 3+ years = 10% transition bonus
+  - Recognition that deep experience transfers to new roles
+- [x] **Auditor Yellow Job Fix** - Documents now generate for Yellow+ jobs
+  - Special "reach job" flexibility note in Auditor prompt
+  - Allows transferable skills and willingness to learn
+  - Only rejects for FABRICATED information, not skill gaps
+- [x] **Interview Insider Clone Error Fix** - Fixed IPC serialization
+  - All return values now explicitly cast to String
+  - jobInfo, questions, and importantApps properly serialized
+- [x] **Archive Button Removed** - Removed from job list per user request
+  - Archive functionality still exists in backend for Ghost Job Platform
+  - Will be connected to separate website later
+- [x] **Compatibility Scoring Updated** - New weighted formula:
+  - Hard Skills: 35% (down from 40%)
+  - Experience: 30% (with transition bonus)
+  - Education: 15% (down from 20%)
+  - Location: 10%
+  - Language: 10% (new - respects user proficiency)
 
 ### P1 - High Priority (Testing Needed)
 - [ ] **Google OAuth Flow** - Test with user's Google Cloud credentials

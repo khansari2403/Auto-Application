@@ -326,10 +326,8 @@ export async function scrapeLinkedInProfile(userId: number, profileUrl?: string)
     
     await logAction(userId, 'linkedin', `✅ Profile captured: ${profileData.name}`, 'completed', true);
     
-    // Clean up
-    if (shouldCloseBrowser && browser) {
-      await browser.close();
-    }
+    // Don't close the browser - keep it open for future scraping
+    // The session will persist due to userDataDir
     
     return { success: true, data: profileData as LinkedInProfile };
     
@@ -337,9 +335,7 @@ export async function scrapeLinkedInProfile(userId: number, profileUrl?: string)
     console.error('LinkedIn scrape error:', error);
     await logAction(userId, 'linkedin', `❌ Capture failed: ${error.message}`, 'failed', false);
     
-    if (shouldCloseBrowser && browser) {
-      await browser.close();
-    }
+    // Don't close the browser on error - let user retry
     
     return { success: false, error: error.message };
   }

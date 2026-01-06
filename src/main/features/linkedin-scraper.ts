@@ -200,11 +200,21 @@ export async function scrapeLinkedInProfile(userId: number, profileUrl?: string)
     (global as any).linkedInBrowser = browser;
     (global as any).linkedInPage = page;
     
+    // Set more generous timeouts
+    page.setDefaultNavigationTimeout(90000);
+    page.setDefaultTimeout(30000);
+    
     // Check if logged in
     const currentUrl = page.url();
     if (!currentUrl.includes('linkedin.com') || currentUrl.includes('/login') || currentUrl.includes('/checkpoint')) {
-      // Navigate to check login status
-      await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'networkidle2', timeout: 30000 });
+      // Navigate to check login status - use domcontentloaded instead of networkidle2 for faster response
+      try {
+        await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'domcontentloaded', timeout: 45000 });
+        // Wait a bit for page to stabilize
+        await new Promise(r => setTimeout(r, 2000));
+      } catch (navError: any) {
+        console.log('Feed navigation timeout, checking if page loaded anyway...');
+      }
       
       const loggedIn = await isLoggedIn(page);
       if (!loggedIn) {
@@ -219,13 +229,28 @@ export async function scrapeLinkedInProfile(userId: number, profileUrl?: string)
     const targetUrl = profileUrl || 'https://www.linkedin.com/in/me/';
     console.log('Navigating to profile:', targetUrl);
     
-    await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
-    
-    // Wait for profile to load
+    // Use domcontentloaded for faster initial load
     try {
-      await page.waitForSelector('.pv-top-card, .scaffold-layout__main', { timeout: 15000 });
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    } catch (navError: any) {
+      console.log('Profile navigation timeout, checking if page loaded anyway...');
+      // Check if we're on the right page despite timeout
+      const currentPageUrl = page.url();
+      if (!currentPageUrl.includes('/in/')) {
+        throw new Error('Failed to navigate to profile page');
+      }
+    }
+    
+    // Wait for profile to load with multiple possible selectors
+    try {
+      await Promise.race([
+        page.waitForSelector('.pv-top-card', { timeout: 15000 }),
+        page.waitForSelector('.scaffold-layout__main', { timeout: 15000 }),
+        page.waitForSelector('h1.text-heading-xlarge', { timeout: 15000 }),
+        page.waitForSelector('.pv-text-details__left-panel', { timeout: 15000 })
+      ]);
     } catch (e) {
-      console.log('Profile selector not found, continuing anyway...');
+      console.log('Profile selector not found within timeout, continuing anyway...');
     }
     
     // Random delay to appear human

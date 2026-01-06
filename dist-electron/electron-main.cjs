@@ -222,31 +222,104 @@ var init_database = __esm({
 var linkedin_scraper_exports = {};
 __export(linkedin_scraper_exports, {
   closeLinkedInBrowser: () => closeLinkedInBrowser,
+  isSearching: () => isSearching,
   openLinkedInForLogin: () => openLinkedInForLogin,
   saveLinkedInProfile: () => saveLinkedInProfile,
   scrapeLinkedInProfile: () => scrapeLinkedInProfile
 });
+async function isLoggedIn(page) {
+  try {
+    const loggedInIndicators = await page.evaluate(() => {
+      return !!(document.querySelector(".global-nav__me") || document.querySelector(".feed-identity-module") || document.querySelector('[data-test-id="nav-settings"]') || document.querySelector(".share-box-feed-entry__trigger") || window.location.href.includes("/feed/") || window.location.href.includes("/in/"));
+    });
+    return loggedInIndicators;
+  } catch (e) {
+    return false;
+  }
+}
+async function getOrCreateBrowser() {
+  if (sharedBrowser && sharedBrowser.isConnected()) {
+    const pages2 = await sharedBrowser.pages();
+    if (pages2.length > 0 && sharedPage && !sharedPage.isClosed()) {
+      return { browser: sharedBrowser, page: sharedPage, isNew: false };
+    }
+    sharedPage = await sharedBrowser.newPage();
+    await setupPage(sharedPage);
+    return { browser: sharedBrowser, page: sharedPage, isNew: false };
+  }
+  console.log("Launching new browser with user data dir:", getUserDataDir());
+  sharedBrowser = await import_puppeteer.default.launch({
+    headless: false,
+    userDataDir: getUserDataDir(),
+    args: [
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-blink-features=AutomationControlled",
+      "--disable-infobars",
+      "--window-size=1280,800",
+      "--start-maximized"
+    ]
+  });
+  const pages = await sharedBrowser.pages();
+  sharedPage = pages.length > 0 ? pages[0] : await sharedBrowser.newPage();
+  await setupPage(sharedPage);
+  return { browser: sharedBrowser, page: sharedPage, isNew: true };
+}
+async function setupPage(page) {
+  await page.setViewport({ width: 1280, height: 800 });
+  await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, "webdriver", { get: () => false });
+    const originalQuery = window.navigator.permissions.query;
+    window.navigator.permissions.query = (parameters) => parameters.name === "notifications" ? Promise.resolve({ state: "denied" }) : originalQuery(parameters);
+  });
+}
 async function openLinkedInForLogin(userId) {
   try {
-    await logAction(userId, "linkedin", "\u{1F517} Opening LinkedIn for login...", "in_progress");
-    const browser = await import_puppeteer.default.launch({
-      headless: false,
-      userDataDir: getUserDataDir(),
-      args: ["--no-sandbox", "--start-maximized", "--disable-blink-features=AutomationControlled"]
-    });
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 800 });
-    await page.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36");
-    await page.evaluateOnNewDocument(() => {
-      Object.defineProperty(navigator, "webdriver", { get: () => false });
-    });
-    await page.goto("https://www.linkedin.com/login", { waitUntil: "networkidle2" });
+    await logAction(userId, "linkedin", "\u{1F517} Opening LinkedIn...", "in_progress");
+    const { browser, page, isNew } = await getOrCreateBrowser();
+    page.setDefaultNavigationTimeout(6e4);
+    page.setDefaultTimeout(3e4);
     global.linkedInBrowser = browser;
     global.linkedInPage = page;
+    if (!isNew) {
+      const currentUrl2 = page.url();
+      if (currentUrl2.includes("linkedin.com")) {
+        const loggedIn = await isLoggedIn(page);
+        if (loggedIn) {
+          await logAction(userId, "linkedin", "\u2705 Already logged in to LinkedIn!", "completed", true);
+          return {
+            success: true,
+            message: 'You are already logged in to LinkedIn. You can click "Fetch Profile" directly.',
+            isLoggedIn: true
+          };
+        }
+      }
+    }
+    try {
+      await page.goto("https://www.linkedin.com/login", { waitUntil: "domcontentloaded", timeout: 45e3 });
+    } catch (navError) {
+      console.log("Navigation timeout, checking if page loaded...");
+      const currentUrl2 = page.url();
+      if (!currentUrl2.includes("linkedin.com")) {
+        throw new Error("Failed to open LinkedIn. Please check your internet connection.");
+      }
+    }
+    await new Promise((r) => setTimeout(r, 2e3));
+    const currentUrl = page.url();
+    if (currentUrl.includes("/feed") || currentUrl.includes("/in/")) {
+      await logAction(userId, "linkedin", "\u2705 Already logged in to LinkedIn!", "completed", true);
+      return {
+        success: true,
+        message: 'You are already logged in to LinkedIn! Click "Fetch Profile" to capture your profile.',
+        isLoggedIn: true
+      };
+    }
     await logAction(userId, "linkedin", "\u2705 LinkedIn opened. Please login manually.", "completed", true);
     return {
       success: true,
-      message: 'LinkedIn opened. Please login manually, then click "Capture Profile".'
+      message: 'LinkedIn opened. Please login manually in the browser window, then click "Fetch Profile".',
+      isLoggedIn: false
     };
   } catch (error) {
     await logAction(userId, "linkedin", `\u274C Error: ${error.message}`, "failed", false);
@@ -254,33 +327,61 @@ async function openLinkedInForLogin(userId) {
   }
 }
 async function scrapeLinkedInProfile(userId, profileUrl) {
-  let browser = global.linkedInBrowser;
-  let page = global.linkedInPage;
-  let shouldCloseBrowser = false;
+  let page = null;
+  let browser = null;
   try {
     await logAction(userId, "linkedin", "\u{1F50D} Starting LinkedIn profile capture...", "in_progress");
-    if (!browser || !page) {
-      browser = await import_puppeteer.default.launch({
-        headless: false,
-        userDataDir: getUserDataDir(),
-        args: ["--no-sandbox", "--disable-blink-features=AutomationControlled"]
-      });
-      page = await browser.newPage();
-      await page.setViewport({ width: 1280, height: 800 });
-      shouldCloseBrowser = true;
+    const browserResult = await getOrCreateBrowser();
+    browser = browserResult.browser;
+    page = browserResult.page;
+    global.linkedInBrowser = browser;
+    global.linkedInPage = page;
+    page.setDefaultNavigationTimeout(9e4);
+    page.setDefaultTimeout(3e4);
+    const currentUrl = page.url();
+    if (!currentUrl.includes("linkedin.com") || currentUrl.includes("/login") || currentUrl.includes("/checkpoint")) {
+      try {
+        await page.goto("https://www.linkedin.com/feed/", { waitUntil: "domcontentloaded", timeout: 45e3 });
+        await new Promise((r) => setTimeout(r, 2e3));
+      } catch (navError) {
+        console.log("Feed navigation timeout, checking if page loaded anyway...");
+      }
+      const loggedIn = await isLoggedIn(page);
+      if (!loggedIn) {
+        return {
+          success: false,
+          error: 'Not logged in to LinkedIn. Please click "Sign in to LinkedIn" first and complete the login process.'
+        };
+      }
     }
-    if (profileUrl) {
-      await page.goto(profileUrl, { waitUntil: "networkidle2", timeout: 6e4 });
-    } else {
-      await page.goto("https://www.linkedin.com/in/me/", { waitUntil: "networkidle2", timeout: 6e4 });
+    const targetUrl = profileUrl || "https://www.linkedin.com/in/me/";
+    console.log("Navigating to profile:", targetUrl);
+    try {
+      await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 45e3 });
+    } catch (navError) {
+      console.log("Profile navigation timeout, checking if page loaded anyway...");
+      const currentPageUrl = page.url();
+      if (!currentPageUrl.includes("/in/")) {
+        throw new Error("Failed to navigate to profile page");
+      }
     }
-    await page.waitForSelector(".pv-top-card", { timeout: 3e4 }).catch(() => {
-    });
+    try {
+      await Promise.race([
+        page.waitForSelector(".pv-top-card", { timeout: 15e3 }),
+        page.waitForSelector(".scaffold-layout__main", { timeout: 15e3 }),
+        page.waitForSelector("h1.text-heading-xlarge", { timeout: 15e3 }),
+        page.waitForSelector(".pv-text-details__left-panel", { timeout: 15e3 })
+      ]);
+    } catch (e) {
+      console.log("Profile selector not found within timeout, continuing anyway...");
+    }
     await new Promise((r) => setTimeout(r, 2e3 + Math.random() * 2e3));
     await page.evaluate(() => window.scrollBy(0, 500));
     await new Promise((r) => setTimeout(r, 1e3));
     await page.evaluate(() => window.scrollBy(0, 500));
     await new Promise((r) => setTimeout(r, 1e3));
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await new Promise((r) => setTimeout(r, 500));
     const profileData = await page.evaluate(() => {
       const getText = (selector) => {
         var _a, _b;
@@ -358,16 +459,10 @@ async function scrapeLinkedInProfile(userId, profileUrl) {
       return { name, title, location, photo, summary, experiences, educations, skills, licenses, languages };
     });
     await logAction(userId, "linkedin", `\u2705 Profile captured: ${profileData.name}`, "completed", true);
-    if (shouldCloseBrowser && browser) {
-      await browser.close();
-    }
     return { success: true, data: profileData };
   } catch (error) {
     console.error("LinkedIn scrape error:", error);
     await logAction(userId, "linkedin", `\u274C Capture failed: ${error.message}`, "failed", false);
-    if (shouldCloseBrowser && browser) {
-      await browser.close();
-    }
     return { success: false, error: error.message };
   }
 }
@@ -403,25 +498,36 @@ async function saveLinkedInProfile(userId, profileData) {
   }
 }
 async function closeLinkedInBrowser() {
-  const browser = global.linkedInBrowser;
-  if (browser) {
-    await browser.close();
-    global.linkedInBrowser = null;
-    global.linkedInPage = null;
+  if (sharedBrowser && sharedBrowser.isConnected()) {
+    await sharedBrowser.close();
+    sharedBrowser = null;
+    sharedPage = null;
   }
+  global.linkedInBrowser = null;
+  global.linkedInPage = null;
 }
-var import_puppeteer, import_path2, app2, getUserDataDir;
+var import_puppeteer, import_path2, import_fs2, app2, getUserDataDir, sharedBrowser, sharedPage, isSearching;
 var init_linkedin_scraper = __esm({
   "src/main/features/linkedin-scraper.ts"() {
     import_puppeteer = __toESM(require("puppeteer"), 1);
     init_database();
     import_path2 = __toESM(require("path"), 1);
+    import_fs2 = __toESM(require("fs"), 1);
     try {
       app2 = require("electron").app;
     } catch (e) {
       app2 = global.electronApp;
     }
-    getUserDataDir = () => import_path2.default.join(app2.getPath("userData"), "browser_data");
+    getUserDataDir = () => {
+      const browserDataDir = import_path2.default.join(app2.getPath("userData"), "linkedin_browser_data");
+      if (!import_fs2.default.existsSync(browserDataDir)) {
+        import_fs2.default.mkdirSync(browserDataDir, { recursive: true });
+      }
+      return browserDataDir;
+    };
+    sharedBrowser = null;
+    sharedPage = null;
+    isSearching = false;
   }
 });
 
@@ -814,20 +920,20 @@ async function getFormCoordinates(page, userId, observerModel, callAI2) {
     return [];
   }
 }
-var import_puppeteer2, import_path3, app3, activeBrowser, getUserDataDir2;
+var import_puppeteer2, import_path3, app4, activeBrowser, getUserDataDir2;
 var init_scraper_service = __esm({
   "src/main/scraper-service.ts"() {
     import_puppeteer2 = __toESM(require("puppeteer"), 1);
     init_database();
     import_path3 = __toESM(require("path"), 1);
     try {
-      app3 = require("electron").app;
+      app4 = require("electron").app;
     } catch (e) {
-      app3 = global.electronApp;
+      app4 = global.electronApp;
     }
     activeBrowser = null;
     getUserDataDir2 = () => {
-      return import_path3.default.join(app3.getPath("userData"), "browser_data");
+      return import_path3.default.join(app4.getPath("userData"), "browser_data");
     };
   }
 });
@@ -874,6 +980,15 @@ async function getProfileBySource(userId) {
 }
 async function calculateCompatibility(userId, jobId) {
   const { profile, source } = await getProfileBySource(userId);
+  const searchProfiles = await getAllQuery("SELECT * FROM search_profiles");
+  const activeProfile = searchProfiles.find((p) => p.is_active === 1) || searchProfiles[0];
+  let languageProficiencies = {};
+  try {
+    if (activeProfile == null ? void 0 : activeProfile.language_proficiencies) {
+      languageProficiencies = JSON.parse(activeProfile.language_proficiencies);
+    }
+  } catch (e) {
+  }
   const jobs = await getAllQuery("SELECT * FROM job_listings");
   const job = jobs.find((j) => j.id === jobId);
   if (!profile || !job) {
@@ -883,8 +998,9 @@ async function calculateCompatibility(userId, jobId) {
   const experienceScore = calculateExperienceMatch(profile, job);
   const educationScore = calculateEducationMatch(profile, job);
   const locationScore = calculateLocationMatch(profile, job);
+  const languageScore = calculateLanguageMatch(profile, job, languageProficiencies);
   const totalScore = Math.round(
-    skillsScore.score * 0.4 + experienceScore * 0.3 + educationScore * 0.2 + locationScore * 0.1
+    skillsScore.score * 0.35 + experienceScore * 0.3 + educationScore * 0.15 + locationScore * 0.1 + languageScore * 0.1
   );
   let level;
   if (totalScore >= 76) level = "gold";
@@ -901,7 +1017,8 @@ async function calculateCompatibility(userId, jobId) {
       skills: skillsScore.score,
       experience: experienceScore,
       education: educationScore,
-      location: locationScore
+      location: locationScore,
+      language: languageScore
     })
   });
   return {
@@ -923,9 +1040,10 @@ async function calculateCompatibility(userId, jobId) {
 }
 function calculateSkillsMatch(profile, job) {
   const userSkills = extractSkills(profile);
-  const requiredSkills = extractJobSkills(job);
+  const { hardSkills, softSkills } = extractJobSkillsWithType(job);
+  const requiredSkills = hardSkills;
   if (requiredSkills.length === 0) {
-    return { score: 50, matched: [], missing: [] };
+    return { score: 60, matched: [], missing: [] };
   }
   const matched = [];
   const missing = [];
@@ -939,7 +1057,16 @@ function calculateSkillsMatch(profile, job) {
       missing.push(required);
     }
   }
-  const score = Math.round(matched.length / requiredSkills.length * 100);
+  let score = requiredSkills.length > 0 ? Math.round(matched.length / requiredSkills.length * 100) : 60;
+  const softSkillsMatched = softSkills.filter(
+    (soft) => userSkills.some(
+      (skill) => skill.toLowerCase().includes(soft.toLowerCase()) || soft.toLowerCase().includes(skill.toLowerCase())
+    )
+  );
+  if (softSkills.length > 0 && softSkillsMatched.length > 0) {
+    const softBonus = Math.round(softSkillsMatched.length / softSkills.length * 15);
+    score = Math.min(100, score + softBonus);
+  }
   return { score, matched, missing };
 }
 function extractSkills(profile) {
@@ -964,20 +1091,85 @@ function extractSkills(profile) {
   }
   return [...new Set(skills.filter((s) => s.length > 1))];
 }
-function extractJobSkills(job) {
-  const skills = [];
+function extractJobSkillsWithType(job) {
+  const hardSkills = [];
+  const softSkills = [];
+  const softSkillPatterns = [
+    "communication",
+    "teamwork",
+    "team player",
+    "leadership",
+    "problem solving",
+    "problem-solving",
+    "critical thinking",
+    "time management",
+    "adaptability",
+    "creativity",
+    "interpersonal",
+    "collaboration",
+    "flexibility",
+    "motivation",
+    "self-motivated",
+    "detail oriented",
+    "detail-oriented",
+    "organizational",
+    "multitasking",
+    "work ethic",
+    "positive attitude",
+    "customer service",
+    "presentation skills",
+    "negotiation",
+    "conflict resolution",
+    "empathy",
+    "emotional intelligence",
+    "stress management",
+    "decision making",
+    "initiative",
+    "punctuality",
+    "reliability",
+    "accountability",
+    "enthusiasm",
+    "patience",
+    "resilience",
+    "open minded",
+    "open-minded",
+    "proactive",
+    "self starter",
+    "self-starter",
+    "strong work ethic",
+    "analytical thinking",
+    "attention to detail"
+  ];
+  const allSkills = [];
   if (job.required_skills) {
     if (typeof job.required_skills === "string") {
-      skills.push(...job.required_skills.split(",").map((s) => s.trim()));
+      allSkills.push(...job.required_skills.split(",").map((s) => s.trim()));
     } else if (Array.isArray(job.required_skills)) {
-      skills.push(...job.required_skills);
+      allSkills.push(...job.required_skills);
     }
   }
   if (job.description) {
     const technicalTerms = extractTechnicalTerms(job.description);
-    skills.push(...technicalTerms);
+    allSkills.push(...technicalTerms);
   }
-  return [...new Set(skills.filter((s) => s.length > 1))].slice(0, 20);
+  const uniqueSkills = [...new Set(allSkills.filter((s) => s.length > 1))];
+  for (const skill of uniqueSkills) {
+    const skillLower = skill.toLowerCase();
+    const isSoftSkill = softSkillPatterns.some(
+      (pattern) => skillLower.includes(pattern) || pattern.includes(skillLower)
+    );
+    if (isSoftSkill) {
+      softSkills.push(skill);
+    } else {
+      hardSkills.push(skill);
+    }
+  }
+  return {
+    hardSkills: hardSkills.slice(0, 20),
+    // Limit to top 20 hard skills
+    softSkills: softSkills.slice(0, 10)
+    // Limit to top 10 soft skills
+  };
 }
 function extractTechnicalTerms(text) {
   const technicalPatterns = [
@@ -1029,12 +1221,15 @@ function areSimilarSkills(skill1, skill2) {
 }
 function calculateExperienceMatch(profile, job) {
   let userYears = 0;
+  let longestRoleYears = 0;
   if (profile.experiences && Array.isArray(profile.experiences)) {
     for (const exp of profile.experiences) {
       if (exp.start_date && exp.end_date) {
         const start = new Date(exp.start_date);
         const end = exp.end_date === "Present" ? /* @__PURE__ */ new Date() : new Date(exp.end_date);
-        userYears += (end.getTime() - start.getTime()) / (1e3 * 60 * 60 * 24 * 365);
+        const roleYears = (end.getTime() - start.getTime()) / (1e3 * 60 * 60 * 24 * 365);
+        userYears += roleYears;
+        longestRoleYears = Math.max(longestRoleYears, roleYears);
       }
     }
   }
@@ -1055,12 +1250,14 @@ function calculateExperienceMatch(profile, job) {
     requiredYears = Math.max(requiredYears, parseInt(yearsMatch[1]));
   }
   if (requiredYears === 0) return 70;
+  const transitionBonus = longestRoleYears >= 5 ? 15 : longestRoleYears >= 3 ? 10 : 0;
   if (userYears >= requiredYears) {
-    const bonus = Math.min((userYears - requiredYears) * 5, 20);
-    return Math.min(80 + bonus, 100);
+    const exceedBonus = Math.min((userYears - requiredYears) * 5, 15);
+    return Math.min(85 + exceedBonus, 100);
   } else {
     const ratio = userYears / requiredYears;
-    return Math.round(ratio * 70);
+    const baseScore = Math.round(ratio * 70);
+    return Math.min(baseScore + transitionBonus, 85);
   }
 }
 function calculateEducationMatch(profile, job) {
@@ -1142,6 +1339,50 @@ function createEmptyResult() {
     }
   };
 }
+function calculateLanguageMatch(profile, job, languageProficiencies) {
+  var _a;
+  const jobDescription = (job.description || "").toLowerCase();
+  const jobLanguages = (job.languages || "").toLowerCase();
+  const requiredLanguages = [];
+  const commonLanguages = ["english", "german", "french", "spanish", "italian", "dutch", "portuguese", "chinese", "japanese", "korean", "russian", "arabic", "hindi", "polish", "swedish", "norwegian", "danish", "finnish", "czech", "hungarian", "turkish", "greek", "hebrew", "thai", "vietnamese", "indonesian", "malay"];
+  for (const lang of commonLanguages) {
+    if (jobDescription.includes(lang) || jobLanguages.includes(lang)) {
+      requiredLanguages.push(lang);
+    }
+  }
+  const hasNativeRequirement = jobDescription.includes("native speaker") || jobDescription.includes("mother tongue") || jobDescription.includes("fluent");
+  if (requiredLanguages.length === 0) {
+    return 80;
+  }
+  const userLanguages = profile.languages || [];
+  const userLanguagesLower = (Array.isArray(userLanguages) ? userLanguages : []).map((l) => l.toLowerCase());
+  const userProficienciesLower = {};
+  for (const [lang, level] of Object.entries(languageProficiencies)) {
+    userProficienciesLower[lang.toLowerCase()] = level;
+  }
+  let matchedCount = 0;
+  for (const required of requiredLanguages) {
+    const hasLanguage = userLanguagesLower.some((l) => l.includes(required) || required.includes(l));
+    const hasProficiency = Object.keys(userProficienciesLower).some(
+      (l) => l.includes(required) || required.includes(l)
+    );
+    if (hasLanguage || hasProficiency) {
+      matchedCount++;
+      const profLevel = (_a = Object.entries(userProficienciesLower).find(
+        ([l]) => l.includes(required) || required.includes(l)
+      )) == null ? void 0 : _a[1];
+      if (profLevel && ["C1", "C2"].includes(profLevel)) {
+        matchedCount += 0.2;
+      }
+    }
+  }
+  const matchRatio = matchedCount / requiredLanguages.length;
+  let score = Math.round(matchRatio * 100);
+  if (hasNativeRequirement && matchRatio < 1) {
+    score = Math.max(score - 10, 0);
+  }
+  return score;
+}
 async function calculateAllCompatibility(userId) {
   const jobs = await getAllQuery("SELECT * FROM job_listings");
   for (const job of jobs) {
@@ -1173,13 +1414,13 @@ __export(Hunter_engine_exports, {
   cancelHunterSearch: () => cancelHunterSearch,
   isGhostJob: () => isGhostJob,
   isHunterCancelled: () => isHunterCancelled,
-  isSearching: () => isSearching,
+  isSearching: () => isSearching2,
   reportGhostJobLocal: () => reportGhostJobLocal,
   setSearchingState: () => setSearchingState,
   startHunterSearch: () => startHunterSearch
 });
 function setSearchingState(state) {
-  isSearching = state;
+  isSearching2 = state;
 }
 function cancelHunterSearch() {
   hunterCancelled = true;
@@ -1425,7 +1666,7 @@ async function startHunterSearch(userId, callAI2) {
   var _a;
   console.log("\n========== STARTING HUNTER SEARCH ==========");
   hunterCancelled = false;
-  isSearching = true;
+  isSearching2 = true;
   try {
     await logAction(userId, "ai_hunter", "\u{1F680} Starting job hunt...", "in_progress");
     const db = getDatabase();
@@ -1443,21 +1684,21 @@ async function startHunterSearch(userId, callAI2) {
       const errorMsg = 'No active Hunter AI model. Go to Settings > AI Models and add one with role "Hunter".';
       console.log("\u274C", errorMsg);
       await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
-      isSearching = false;
+      isSearching2 = false;
       return { success: false, error: errorMsg };
     }
     if (profiles.length === 0) {
       const errorMsg = "No active search profiles. Go to Search Profiles and create one.";
       console.log("\u274C", errorMsg);
       await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
-      isSearching = false;
+      isSearching2 = false;
       return { success: false, error: errorMsg };
     }
     if (websites.length === 0) {
       const errorMsg = "No active job websites. Go to Job Websites and add one.";
       console.log("\u274C", errorMsg);
       await logAction(userId, "ai_hunter", `\u274C ${errorMsg}`, "failed", false);
-      isSearching = false;
+      isSearching2 = false;
       return { success: false, error: errorMsg };
     }
     let totalJobsFound = 0;
@@ -1465,7 +1706,7 @@ async function startHunterSearch(userId, callAI2) {
       if (hunterCancelled) {
         console.log("Hunter search cancelled by user");
         await logAction(userId, "ai_hunter", `\u23F9\uFE0F Search cancelled. Found ${totalJobsFound} jobs before stopping.`, "completed", true);
-        isSearching = false;
+        isSearching2 = false;
         return { success: true, jobsFound: totalJobsFound, cancelled: true };
       }
       console.log(`
@@ -1474,7 +1715,7 @@ Profile: ${profile.job_title} in ${profile.location}`);
         if (hunterCancelled) {
           console.log("Hunter search cancelled by user");
           await logAction(userId, "ai_hunter", `\u23F9\uFE0F Search cancelled. Found ${totalJobsFound} jobs before stopping.`, "completed", true);
-          isSearching = false;
+          isSearching2 = false;
           return { success: true, jobsFound: totalJobsFound, cancelled: true };
         }
         console.log(`Website: ${website.website_name} (${website.website_url})`);
@@ -1520,25 +1761,25 @@ Profile: ${profile.job_title} in ${profile.location}`);
     console.log(`
 ========== HUNT COMPLETE: ${totalJobsFound} jobs ==========
 `);
-    isSearching = false;
+    isSearching2 = false;
     return { success: true, jobsFound: totalJobsFound };
   } catch (error) {
     console.error("Hunt error:", error);
     await logAction(userId, "ai_hunter", `\u274C Error: ${error.message}`, "failed", false);
-    isSearching = false;
+    isSearching2 = false;
     return { success: false, error: error.message };
   } finally {
-    isSearching = false;
+    isSearching2 = false;
   }
 }
-var hunterCancelled, isSearching;
+var hunterCancelled, isSearching2;
 var init_Hunter_engine = __esm({
   "src/main/features/Hunter-engine.ts"() {
     init_database();
     init_scraper_service();
     init_compatibility_service();
     hunterCancelled = false;
-    isSearching = false;
+    isSearching2 = false;
   }
 });
 
@@ -1971,7 +2212,7 @@ function saveDocumentFile(content, jobId, docType, format = "html", companyName,
   const timestamp = Date.now();
   const fileName = `${docType}_job${jobId}_${timestamp}.${format}`;
   const filePath = path4.join(docsDir, fileName);
-  fs2.writeFileSync(filePath, content, "utf-8");
+  fs3.writeFileSync(filePath, content, "utf-8");
   console.log(`Document saved: ${filePath}`);
   return filePath;
 }
@@ -2279,13 +2520,30 @@ Return ONLY the proposal content.`
   return prompts[docKey] || prompts["motivation_letter"];
 }
 function buildAuditorPrompt(docKey, docLabel, content, job) {
+  const compatScore = job.compatibility_score || 0;
+  const missingSkills = job.compatibility_missing_skills ? JSON.parse(job.compatibility_missing_skills) : [];
+  const isReachJob = compatScore >= 26 && compatScore < 76;
+  let flexibilityNote = "";
+  if (isReachJob && missingSkills.length > 0) {
+    flexibilityNote = `
+**SPECIAL NOTE - REACH APPLICATION:**
+This is a "reach" job where the applicant is applying despite some skill gaps. The following skills are listed as requirements but the applicant may not have direct experience:
+- ${missingSkills.slice(0, 5).join("\n- ")}
+
+FOR THESE CASES:
+- Allow the applicant to highlight TRANSFERABLE skills and RELATED experience
+- Allow honest statements about willingness to learn
+- Do NOT reject simply because the applicant can't claim direct experience with missing skills
+- DO reject if the document FABRICATES experience the applicant doesn't have
+`;
+  }
   return `You are the "Auditor" agent. Your job is to review this ${docLabel} for accuracy, quality, and FACTUAL CORRECTNESS.
 
 JOB: ${job.job_title} at ${job.company_name}
 
 CONTENT TO REVIEW:
 ${content}
-
+${flexibilityNote}
 EVALUATION CRITERIA:
 
 **CRITICAL - HALLUCINATION CHECK:**
@@ -2295,6 +2553,13 @@ EVALUATION CRITERIA:
    - Job titles or responsibilities that seem inconsistent
    - Skills or certifications not typically mentioned together
 2. COMPANY FACTS: Are any company facts stated that could be false? (If unsure, flag as potentially fabricated)
+
+**IMPORTANT - NOT GROUNDS FOR REJECTION:**
+- Soft skills (communication, teamwork, leadership) - these are subjective and acceptable
+- Transferable experience from different but related roles
+- Statements of willingness to learn or grow
+- General industry knowledge without specific metrics
+- Experience in related fields that could transfer to the target role
 
 **FORMAT & QUALITY:**
 3. LANGUAGE: Is it in the same language as the job description?
@@ -2311,7 +2576,9 @@ EVALUATION CRITERIA:
 
 RESPONSE FORMAT:
 If it passes ALL criteria, respond with exactly: "APPROVED"
-If it fails any criteria (especially hallucination), respond with: "REJECTED: " followed by specific feedback on what to fix.`;
+If it fails any criteria (especially FABRICATED facts), respond with: "REJECTED: " followed by specific feedback on what to fix.
+
+REMEMBER: Only reject for FABRICATED information or format issues, NOT for skill gaps or experience differences.`;
 }
 async function generateSingleDocument(jobId, userId, docType, thinker, auditor, callAI2) {
   var _a, _b, _c, _d;
@@ -2333,22 +2600,22 @@ async function generateSingleDocument(jobId, userId, docType, thinker, auditor, 
   }
   return { success: false, error: "Document generation failed" };
 }
-var fs2, path4, app4, getBaseDocsDir, getOrganizedDocsDir, getDocsDir, DOC_TYPES;
+var fs3, path4, app5, getBaseDocsDir, getOrganizedDocsDir, getDocsDir, DOC_TYPES;
 var init_doc_generator = __esm({
   "src/main/features/doc-generator.ts"() {
     init_database();
     init_scraper_service();
-    fs2 = __toESM(require("fs"), 1);
+    fs3 = __toESM(require("fs"), 1);
     path4 = __toESM(require("path"), 1);
     try {
-      app4 = require("electron").app;
+      app5 = require("electron").app;
     } catch (e) {
-      app4 = global.electronApp;
+      app5 = global.electronApp;
     }
     getBaseDocsDir = () => {
-      const docsPath = path4.join(app4.getPath("userData"), "generated_docs");
-      if (!fs2.existsSync(docsPath)) {
-        fs2.mkdirSync(docsPath, { recursive: true });
+      const docsPath = path4.join(app5.getPath("userData"), "generated_docs");
+      if (!fs3.existsSync(docsPath)) {
+        fs3.mkdirSync(docsPath, { recursive: true });
       }
       return docsPath;
     };
@@ -2357,8 +2624,8 @@ var init_doc_generator = __esm({
       const company = sanitize(companyName || "Unknown_Company");
       const pos = sanitize(position || "Unknown_Position");
       const docsPath = path4.join(getBaseDocsDir(), company, pos);
-      if (!fs2.existsSync(docsPath)) {
-        fs2.mkdirSync(docsPath, { recursive: true });
+      if (!fs3.existsSync(docsPath)) {
+        fs3.mkdirSync(docsPath, { recursive: true });
       }
       return docsPath;
     };
@@ -2975,9 +3242,9 @@ async function handleFileUpload(page, field, jobId, userId) {
     } else if (label.includes("portfolio")) {
       docPath = job == null ? void 0 : job.portfolio_path;
     }
-    if (!docPath || !fs3.existsSync(docPath)) {
+    if (!docPath || !fs4.existsSync(docPath)) {
       const pdfPath = docPath == null ? void 0 : docPath.replace(".html", ".pdf");
-      if (pdfPath && fs3.existsSync(pdfPath)) {
+      if (pdfPath && fs4.existsSync(pdfPath)) {
         docPath = pdfPath;
       } else {
         return { success: false, error: `Document not found: ${label}` };
@@ -3005,20 +3272,20 @@ async function cancelApplication(jobId) {
   }
   activeApplications.delete(jobId);
 }
-var import_puppeteer4, import_path5, fs3, app6, getUserDataDir3, activeApplications;
+var import_puppeteer4, import_path5, fs4, app7, getUserDataDir3, activeApplications;
 var init_smart_applicant = __esm({
   "src/main/features/smart-applicant.ts"() {
     init_database();
     import_puppeteer4 = __toESM(require("puppeteer"), 1);
     import_path5 = __toESM(require("path"), 1);
-    fs3 = __toESM(require("fs"), 1);
+    fs4 = __toESM(require("fs"), 1);
     init_secretary_service();
     try {
-      app6 = require("electron").app;
+      app7 = require("electron").app;
     } catch (e) {
-      app6 = global.electronApp;
+      app7 = global.electronApp;
     }
-    getUserDataDir3 = () => import_path5.default.join(app6.getPath("userData"), "browser_data");
+    getUserDataDir3 = () => import_path5.default.join(app7.getPath("userData"), "browser_data");
     activeApplications = /* @__PURE__ */ new Map();
   }
 });
@@ -3034,10 +3301,10 @@ async function convertHtmlToPdf(htmlPath, userId) {
   let browser = null;
   try {
     await logAction(userId, "pdf", `\u{1F4C4} Converting to PDF: ${path7.basename(htmlPath)}`, "in_progress");
-    if (!fs4.existsSync(htmlPath)) {
+    if (!fs5.existsSync(htmlPath)) {
       return { success: false, error: "HTML file not found" };
     }
-    const htmlContent = fs4.readFileSync(htmlPath, "utf-8");
+    const htmlContent = fs5.readFileSync(htmlPath, "utf-8");
     browser = await import_puppeteer5.default.launch({
       headless: true,
       args: ["--no-sandbox", "--disable-setuid-sandbox"]
@@ -3079,7 +3346,7 @@ async function convertAllJobDocsToPdf(jobId, userId) {
   const errors = [];
   for (const docType of docTypes) {
     const htmlPath = job[`${docType}_path`];
-    if (htmlPath && fs4.existsSync(htmlPath)) {
+    if (htmlPath && fs5.existsSync(htmlPath)) {
       const result = await convertHtmlToPdf(htmlPath, userId);
       if (result.success && result.pdfPath) {
         pdfs.push(result.pdfPath);
@@ -3187,22 +3454,22 @@ async function generatePdfFromContent(content, fileName, userId, options) {
     return { success: false, error: error.message };
   }
 }
-var import_puppeteer5, fs4, path7, app7, getDocsDir2;
+var import_puppeteer5, fs5, path7, app8, getDocsDir2;
 var init_pdf_export = __esm({
   "src/main/features/pdf-export.ts"() {
     import_puppeteer5 = __toESM(require("puppeteer"), 1);
-    fs4 = __toESM(require("fs"), 1);
+    fs5 = __toESM(require("fs"), 1);
     path7 = __toESM(require("path"), 1);
     init_database();
     try {
-      app7 = require("electron").app;
+      app8 = require("electron").app;
     } catch (e) {
-      app7 = global.electronApp;
+      app8 = global.electronApp;
     }
     getDocsDir2 = () => {
-      const docsPath = path7.join(app7.getPath("userData"), "generated_docs");
-      if (!fs4.existsSync(docsPath)) {
-        fs4.mkdirSync(docsPath, { recursive: true });
+      const docsPath = path7.join(app8.getPath("userData"), "generated_docs");
+      if (!fs5.existsSync(docsPath)) {
+        fs5.mkdirSync(docsPath, { recursive: true });
       }
       return docsPath;
     };
@@ -3211,7 +3478,7 @@ var init_pdf_export = __esm({
 
 // electron-main.ts
 var import_electron14 = require("electron");
-var import_path6 = __toESM(require("path"), 1);
+var import_path7 = __toESM(require("path"), 1);
 var import_electron_is_dev = __toESM(require("electron-is-dev"), 1);
 init_database();
 
@@ -3245,6 +3512,12 @@ function registerSettingsHandlers() {
 // src/main/ipc/user-handlers.ts
 var import_electron3 = require("electron");
 init_database();
+var app3;
+try {
+  app3 = require("electron").app;
+} catch (e) {
+  app3 = global.electronApp;
+}
 function registerUserHandlers() {
   const channels = [
     "user:get-profile",
@@ -3284,22 +3557,12 @@ function registerUserHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron3.ipcMain.handle("user:open-linkedin-login", async () => {
+  import_electron3.ipcMain.handle("user:open-linkedin-login", async (_, data) => {
     try {
-      const loginWindow = new import_electron3.BrowserWindow({
-        width: 1e3,
-        height: 700,
-        title: "LinkedIn Sign In",
-        webPreferences: {
-          nodeIntegration: false,
-          contextIsolation: true
-        }
-      });
-      await loginWindow.loadURL("https://www.linkedin.com/login");
-      return {
-        success: true,
-        message: 'LinkedIn login window opened. Please sign in manually, then close this window and click "Fetch Profile".'
-      };
+      const LinkedInScraper = (init_linkedin_scraper(), __toCommonJS(linkedin_scraper_exports));
+      const userId = (data == null ? void 0 : data.userId) || 1;
+      const result = await LinkedInScraper.openLinkedInForLogin(userId);
+      return result;
     } catch (e) {
       return { success: false, error: e.message };
     }
@@ -3308,8 +3571,8 @@ function registerUserHandlers() {
     try {
       const LinkedInScraper = (init_linkedin_scraper(), __toCommonJS(linkedin_scraper_exports));
       const { userId, profileUrl } = data || {};
-      if (!profileUrl) {
-        return await LinkedInScraper.openLinkedInForLogin(userId || 1);
+      if (!profileUrl && !(data == null ? void 0 : data.profileUrl)) {
+        return await LinkedInScraper.scrapeLinkedInProfile(userId || 1, null);
       }
       return await LinkedInScraper.scrapeLinkedInProfile(userId || 1, profileUrl);
     } catch (e) {
@@ -3415,9 +3678,9 @@ async function submitApplication(jobId, userId, observerModel, callAI2) {
       if (value) {
         await executeMouseAction(page, { type: "type", x: coord.x, y: coord.y, text: value });
       } else if (coord.field.includes("upload") && tailoredDoc) {
-        const fs5 = require("fs");
+        const fs7 = require("fs");
         const tempPath = import_path4.default.join(import_electron5.app.getPath("temp"), `tailored_cv_${jobId}.txt`);
-        fs5.writeFileSync(tempPath, tailoredDoc.content);
+        fs7.writeFileSync(tempPath, tailoredDoc.content);
         await executeMouseAction(page, { type: "upload", x: coord.x, y: coord.y, filePath: tempPath });
       }
     }
@@ -3667,7 +3930,8 @@ function registerJobsHandlers() {
     "jobs:delete",
     "jobs:add-manual",
     "jobs:update-doc-confirmation",
-    "jobs:archive"
+    "jobs:archive",
+    "jobs:clear-old"
   ];
   import_electron6.ipcMain.handle("jobs:get-all", async () => {
     try {
@@ -3717,6 +3981,39 @@ function registerJobsHandlers() {
         archived: data.archived
       });
       return { success: true };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron6.ipcMain.handle("jobs:clear-old", async (_, data) => {
+    try {
+      const { daysOld = 14 } = data || {};
+      const db = getDatabase();
+      const jobs = db.job_listings || [];
+      const cutoffDate = /* @__PURE__ */ new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+      let archivedCount = 0;
+      for (const job of jobs) {
+        if (job.archived === 1 || job.status === "applied") continue;
+        let shouldArchive = false;
+        if (job.deadline) {
+          const deadline = new Date(job.deadline);
+          if (deadline < /* @__PURE__ */ new Date()) shouldArchive = true;
+        }
+        if (job.posted_date) {
+          const postedDate = new Date(job.posted_date);
+          if (postedDate < cutoffDate) shouldArchive = true;
+        }
+        if (job.date_imported) {
+          const importedDate = new Date(job.date_imported);
+          if (importedDate < cutoffDate) shouldArchive = true;
+        }
+        if (shouldArchive) {
+          await runQuery("UPDATE job_listings", { id: job.id, archived: 1 });
+          archivedCount++;
+        }
+      }
+      return { success: true, archivedCount };
     } catch (e) {
       return { success: false, error: e.message };
     }
@@ -4117,7 +4414,7 @@ TIPS:
     }
   });
   import_electron7.ipcMain.handle("ai:generate-interview-prep", async (_, data) => {
-    var _a, _b, _c, _d, _e, _f, _g, _h;
+    var _a, _b, _c, _d, _e, _f, _g;
     try {
       const { jobUrl, userId, generateMore } = data;
       const models = await getAllQuery("SELECT * FROM ai_models");
@@ -4155,32 +4452,34 @@ Description: ${job.description || "Not available"}`;
           const ScraperService = (init_scraper_service(), __toCommonJS(scraper_service_exports));
           const pageData = await ScraperService.getJobPageContent(jobUrl, userId, callAI);
           if (pageData && pageData.content && pageData.content.length > 100) {
+            const cleanContent = String(pageData.content || "").substring(0, 3e3);
             jobDescription = `Job posting content from ${jobUrl}:
-${pageData.content.substring(0, 3e3)}`;
-            const titleMatch = pageData.content.match(/(?:job\s*title|position)[:\s]*([^\n]+)/i);
-            const companyMatch = pageData.content.match(/(?:company|employer)[:\s]*([^\n]+)/i);
-            const locationMatch = pageData.content.match(/(?:location|located)[:\s]*([^\n]+)/i);
+${cleanContent}`;
+            const titleMatch = cleanContent.match(/(?:job\s*title|position)[:\s]*([^\n]+)/i);
+            const companyMatch = cleanContent.match(/(?:company|employer)[:\s]*([^\n]+)/i);
+            const locationMatch = cleanContent.match(/(?:location|located)[:\s]*([^\n]+)/i);
             let parsedTitle = (_a = titleMatch == null ? void 0 : titleMatch[1]) == null ? void 0 : _a.trim();
             let parsedCompany = (_b = companyMatch == null ? void 0 : companyMatch[1]) == null ? void 0 : _b.trim();
             let parsedLocation = (_c = locationMatch == null ? void 0 : locationMatch[1]) == null ? void 0 : _c.trim();
-            if (((_d = pageData.strategyUsed) == null ? void 0 : _d.includes("JSON-LD")) && pageData.content.startsWith("{")) {
+            const strategyUsed = String(pageData.strategyUsed || "");
+            if (strategyUsed.includes("JSON-LD") && cleanContent.startsWith("{")) {
               try {
-                const jsonData = JSON.parse(pageData.content);
+                const jsonData = JSON.parse(cleanContent);
                 parsedTitle = jsonData.title || jsonData.jobTitle || jsonData.name || parsedTitle;
-                parsedCompany = ((_e = jsonData.hiringOrganization) == null ? void 0 : _e.name) || jsonData.companyName || parsedCompany;
-                parsedLocation = ((_g = (_f = jsonData.jobLocation) == null ? void 0 : _f.address) == null ? void 0 : _g.addressLocality) || ((_h = jsonData.jobLocation) == null ? void 0 : _h.name) || jsonData.location || parsedLocation;
+                parsedCompany = ((_d = jsonData.hiringOrganization) == null ? void 0 : _d.name) || jsonData.companyName || parsedCompany;
+                parsedLocation = ((_f = (_e = jsonData.jobLocation) == null ? void 0 : _e.address) == null ? void 0 : _f.addressLocality) || ((_g = jsonData.jobLocation) == null ? void 0 : _g.name) || jsonData.location || parsedLocation;
                 if (jsonData.skills || jsonData.requiredSkills) {
                   const skills = jsonData.skills || jsonData.requiredSkills;
-                  importantApps = (typeof skills === "string" ? skills.split(",") : skills).map((s) => s.trim()).filter(Boolean).slice(0, 8);
+                  importantApps = (typeof skills === "string" ? skills.split(",") : skills).map((s) => String(s).trim()).filter(Boolean).slice(0, 8);
                 }
               } catch (parseError) {
                 console.log("Could not parse JSON-LD data:", parseError);
               }
             }
             jobInfo = {
-              title: parsedTitle || "Position from URL",
-              company: parsedCompany || "Company",
-              location: parsedLocation || "See job posting"
+              title: String(parsedTitle || "Position from URL"),
+              company: String(parsedCompany || "Company"),
+              location: String(parsedLocation || "See job posting")
             };
           }
         } catch (e) {
@@ -4248,13 +4547,24 @@ Respond ONLY with a valid JSON array in this exact format:
       }
       return {
         success: true,
-        questions,
-        jobInfo,
-        importantApps
+        questions: questions.map((q) => ({
+          id: String(q.id || ""),
+          category: String(q.category || "general"),
+          question: String(q.question || ""),
+          suggestedAnswer: String(q.suggestedAnswer || ""),
+          difficulty: String(q.difficulty || "medium"),
+          tips: String(q.tips || "")
+        })),
+        jobInfo: jobInfo ? {
+          title: String(jobInfo.title || ""),
+          company: String(jobInfo.company || ""),
+          location: String(jobInfo.location || "")
+        } : null,
+        importantApps: importantApps.map((a) => String(a))
       };
     } catch (e) {
       console.error("Interview prep error:", e);
-      return { success: false, error: e.message };
+      return { success: false, error: String(e.message || "Unknown error") };
     }
   });
   import_electron7.ipcMain.handle("ai:smart-apply", async (_, data) => {
@@ -4547,6 +4857,14 @@ function registerWebsitesHandlers() {
 // src/main/ipc/ai-models-handlers.ts
 var import_electron10 = require("electron");
 init_database();
+var import_fs3 = __toESM(require("fs"), 1);
+var import_path6 = __toESM(require("path"), 1);
+var app9;
+try {
+  app9 = require("electron").app;
+} catch (e) {
+  app9 = global.electronApp;
+}
 function registerAIModelsHandlers() {
   const channels = ["ai-models:get-all", "ai-models:add", "ai-models:update", "ai-models:delete"];
   import_electron10.ipcMain.handle("ai-models:get-all", async () => {
@@ -4559,7 +4877,26 @@ function registerAIModelsHandlers() {
   });
   import_electron10.ipcMain.handle("ai-models:add", async (_, data) => {
     try {
-      const result = await runQuery("INSERT INTO ai_models", [data]);
+      const dbData2 = {
+        model_name: data.modelName,
+        api_key: data.apiKey,
+        role: data.role,
+        writing_style: data.writingStyle,
+        word_limit: data.wordLimit,
+        strictness: data.strictness,
+        functional_prompt: data.functionalPrompt,
+        cv_style_persona: data.cvStylePersona,
+        reference_cv_id: data.referenceCvId,
+        cv_style_code: data.cvStyleCode,
+        auditor_source: data.auditorSource,
+        thinker_source: data.thinkerSource,
+        motivation_letter_word_limit: data.motivationLetterWordLimit,
+        cover_letter_word_limit: data.coverLetterWordLimit,
+        status: "active",
+        user_id: data.userId || 1
+      };
+      const result = await runQuery("INSERT INTO ai_models", [dbData2]);
+      saveDbToFile();
       return { success: true, id: result.id };
     } catch (e) {
       return { success: false, error: e.message };
@@ -4567,7 +4904,39 @@ function registerAIModelsHandlers() {
   });
   import_electron10.ipcMain.handle("ai-models:update", async (_, data) => {
     try {
-      await runQuery("UPDATE ai_models", [data]);
+      const dbData2 = { id: data.id };
+      if (data.modelName !== void 0) dbData2.model_name = data.modelName;
+      if (data.model_name !== void 0) dbData2.model_name = data.model_name;
+      if (data.apiKey !== void 0) dbData2.api_key = data.apiKey;
+      if (data.api_key !== void 0) dbData2.api_key = data.api_key;
+      if (data.role !== void 0) dbData2.role = data.role;
+      if (data.writingStyle !== void 0) dbData2.writing_style = data.writingStyle;
+      if (data.writing_style !== void 0) dbData2.writing_style = data.writing_style;
+      if (data.wordLimit !== void 0) dbData2.word_limit = data.wordLimit;
+      if (data.word_limit !== void 0) dbData2.word_limit = data.word_limit;
+      if (data.strictness !== void 0) dbData2.strictness = data.strictness;
+      if (data.functionalPrompt !== void 0) dbData2.functional_prompt = data.functionalPrompt;
+      if (data.functional_prompt !== void 0) dbData2.functional_prompt = data.functional_prompt;
+      if (data.cvStylePersona !== void 0) dbData2.cv_style_persona = data.cvStylePersona;
+      if (data.cv_style_persona !== void 0) dbData2.cv_style_persona = data.cv_style_persona;
+      if (data.referenceCvId !== void 0) dbData2.reference_cv_id = data.referenceCvId;
+      if (data.reference_cv_id !== void 0) dbData2.reference_cv_id = data.reference_cv_id;
+      if (data.cvStyleCode !== void 0) dbData2.cv_style_code = data.cvStyleCode;
+      if (data.cv_style_code !== void 0) dbData2.cv_style_code = data.cv_style_code;
+      if (data.auditorSource !== void 0) dbData2.auditor_source = data.auditorSource;
+      if (data.auditor_source !== void 0) dbData2.auditor_source = data.auditor_source;
+      if (data.thinkerSource !== void 0) dbData2.thinker_source = data.thinkerSource;
+      if (data.thinker_source !== void 0) dbData2.thinker_source = data.thinker_source;
+      if (data.motivationLetterWordLimit !== void 0) dbData2.motivation_letter_word_limit = data.motivationLetterWordLimit;
+      if (data.motivation_letter_word_limit !== void 0) dbData2.motivation_letter_word_limit = data.motivation_letter_word_limit;
+      if (data.coverLetterWordLimit !== void 0) dbData2.cover_letter_word_limit = data.coverLetterWordLimit;
+      if (data.cover_letter_word_limit !== void 0) dbData2.cover_letter_word_limit = data.cover_letter_word_limit;
+      if (data.status !== void 0) dbData2.status = data.status;
+      if (data.last_test_status !== void 0) dbData2.last_test_status = data.last_test_status;
+      if (data.last_test_message !== void 0) dbData2.last_test_message = data.last_test_message;
+      if (data.last_tested !== void 0) dbData2.last_tested = data.last_tested;
+      await runQuery("UPDATE ai_models", [dbData2]);
+      saveDbToFile();
       return { success: true };
     } catch (e) {
       return { success: false, error: e.message };
@@ -4576,12 +4945,25 @@ function registerAIModelsHandlers() {
   import_electron10.ipcMain.handle("ai-models:delete", async (_, id) => {
     try {
       await runQuery("DELETE FROM ai_models", { id });
+      saveDbToFile();
       return { success: true };
     } catch (e) {
       return { success: false, error: e.message };
     }
   });
   return channels;
+}
+function saveDbToFile() {
+  try {
+    const db = getDatabase();
+    const dataDir = import_path6.default.join(app9.getPath("userData"), "data");
+    if (!import_fs3.default.existsSync(dataDir)) {
+      import_fs3.default.mkdirSync(dataDir, { recursive: true });
+    }
+    import_fs3.default.writeFileSync(import_path6.default.join(dataDir, "db.json"), JSON.stringify(db, null, 2));
+  } catch (e) {
+    console.error("Failed to save db to file:", e);
+  }
 }
 
 // src/main/ipc/system-handlers.ts
@@ -4986,7 +5368,6 @@ async function updateSecretaryPermissions(userId, permissions) {
 
 // src/main/ipc/services-handlers.ts
 var import_imap2 = __toESM(require("imap"), 1);
-init_database();
 var import_googleapis = require("googleapis");
 function registerServicesHandlers() {
   const channels = [
@@ -5329,11 +5710,11 @@ function registerServicesHandlers() {
         db.settings[0].email_connected = 1;
         db.settings[0].oauth_client_id = clientId;
         db.settings[0].oauth_client_secret = clientSecret;
-        const fs5 = require("fs");
-        const path9 = require("path");
-        const { app: app9 } = require("electron");
-        const dataDir = path9.join(app9.getPath("userData"), "data");
-        fs5.writeFileSync(path9.join(dataDir, "db.json"), JSON.stringify(db, null, 2));
+        const fs7 = require("fs");
+        const path10 = require("path");
+        const { app: app11 } = require("electron");
+        const dataDir = path10.join(app11.getPath("userData"), "data");
+        fs7.writeFileSync(path10.join(dataDir, "db.json"), JSON.stringify(db, null, 2));
         return {
           success: true,
           message: "OAuth connected successfully! Your email is now linked.",
@@ -5389,11 +5770,11 @@ function registerServicesHandlers() {
       db.settings[0].email_connected = 1;
       db.settings[0].oauth_client_id = clientId;
       db.settings[0].oauth_client_secret = clientSecret;
-      const fs5 = require("fs");
-      const path9 = require("path");
-      const { app: app9 } = require("electron");
-      const dataDir = path9.join(app9.getPath("userData"), "data");
-      fs5.writeFileSync(path9.join(dataDir, "db.json"), JSON.stringify(db, null, 2));
+      const fs7 = require("fs");
+      const path10 = require("path");
+      const { app: app11 } = require("electron");
+      const dataDir = path10.join(app11.getPath("userData"), "data");
+      fs7.writeFileSync(path10.join(dataDir, "db.json"), JSON.stringify(db, null, 2));
       return {
         success: true,
         message: "OAuth connected successfully! Your email is now linked.",
@@ -5411,24 +5792,46 @@ function registerServicesHandlers() {
     }
   });
   import_electron12.ipcMain.handle("email:oauth-test", async (_, data) => {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e;
     try {
-      const { clientId, clientSecret, email } = data;
-      const settings = await getAllQuery("SELECT * FROM settings WHERE id = 1");
-      const settingsRow = (settings == null ? void 0 : settings[0]) || {};
+      let { clientId, clientSecret, email } = data || {};
+      const db = (init_database(), __toCommonJS(database_exports)).getDatabase();
+      const settingsRow = ((_a = db.settings) == null ? void 0 : _a[0]) || {};
       if (!settingsRow.oauth_access_token) {
         return { success: false, error: "No OAuth tokens found. Please connect first." };
       }
-      console.log("Testing OAuth connection for:", email);
+      clientId = clientId || settingsRow.oauth_client_id;
+      clientSecret = clientSecret || settingsRow.oauth_client_secret;
+      if (!clientId || !clientSecret) {
+        return { success: false, error: "OAuth credentials not found. Please reconnect." };
+      }
+      console.log("Testing OAuth connection...");
       const oauth2Client = new import_googleapis.google.auth.OAuth2(
         clientId,
         clientSecret,
-        "urn:ietf:wg:oauth:2.0:oob"
+        "http://127.0.0.1"
       );
       oauth2Client.setCredentials({
         access_token: settingsRow.oauth_access_token,
         refresh_token: settingsRow.oauth_refresh_token,
         expiry_date: settingsRow.oauth_expiry
+      });
+      oauth2Client.on("tokens", (tokens) => {
+        console.log("New tokens received during test");
+        if (tokens.access_token) {
+          db.settings[0].oauth_access_token = tokens.access_token;
+        }
+        if (tokens.refresh_token) {
+          db.settings[0].oauth_refresh_token = tokens.refresh_token;
+        }
+        if (tokens.expiry_date) {
+          db.settings[0].oauth_expiry = tokens.expiry_date;
+        }
+        const fs7 = require("fs");
+        const path10 = require("path");
+        const { app: app11 } = require("electron");
+        const dataDir = path10.join(app11.getPath("userData"), "data");
+        fs7.writeFileSync(path10.join(dataDir, "db.json"), JSON.stringify(db, null, 2));
       });
       const gmail = import_googleapis.google.gmail({ version: "v1", auth: oauth2Client });
       const profile = await gmail.users.getProfile({ userId: "me" });
@@ -5447,11 +5850,11 @@ function registerServicesHandlers() {
             format: "metadata",
             metadataHeaders: ["From", "Subject", "Date"]
           });
-          const headers = ((_a = fullMsg.data.payload) == null ? void 0 : _a.headers) || [];
+          const headers = ((_b = fullMsg.data.payload) == null ? void 0 : _b.headers) || [];
           messages.push({
-            from: ((_b = headers.find((h) => h.name === "From")) == null ? void 0 : _b.value) || "Unknown",
-            subject: ((_c = headers.find((h) => h.name === "Subject")) == null ? void 0 : _c.value) || "(No Subject)",
-            date: ((_d = headers.find((h) => h.name === "Date")) == null ? void 0 : _d.value) || "",
+            from: ((_c = headers.find((h) => h.name === "From")) == null ? void 0 : _c.value) || "Unknown",
+            subject: ((_d = headers.find((h) => h.name === "Subject")) == null ? void 0 : _d.value) || "(No Subject)",
+            date: ((_e = headers.find((h) => h.name === "Date")) == null ? void 0 : _e.value) || "",
             snippet: fullMsg.data.snippet
           });
         }
@@ -5465,8 +5868,8 @@ function registerServicesHandlers() {
     } catch (e) {
       console.error("OAuth test error:", e);
       let errorMsg = e.message;
-      if (e.message.includes("invalid_grant") || e.message.includes("Token has been expired")) {
-        errorMsg = "OAuth token expired. Please reconnect your email.";
+      if (e.message.includes("invalid_grant") || e.message.includes("Token has been expired") || e.message.includes("Invalid Credentials")) {
+        errorMsg = "OAuth token expired or invalid. Please reconnect your email.";
       }
       return { success: false, error: errorMsg };
     }
@@ -5661,12 +6064,12 @@ function createWindow() {
     minWidth: 1e3,
     minHeight: 700,
     webPreferences: {
-      preload: import_path6.default.join(__dirname, "preload.cjs"),
+      preload: import_path7.default.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false
     }
   });
-  const startUrl = import_electron_is_dev.default ? "http://localhost:5173" : `file://${import_path6.default.join(__dirname, "../dist/index.html")}`;
+  const startUrl = import_electron_is_dev.default ? "http://localhost:5173" : `file://${import_path7.default.join(__dirname, "../dist/index.html")}`;
   mainWindow.loadURL(startUrl);
   if (import_electron_is_dev.default) mainWindow.webContents.openDevTools();
   mainWindow.webContents.on("context-menu", (event, params) => {

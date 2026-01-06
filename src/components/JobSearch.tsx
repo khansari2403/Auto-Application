@@ -228,6 +228,72 @@ export function JobSearch({ userId }: { userId: number }) {
     await handleSmartApply(jobId);
   };
 
+  // Archive a job (hide from main list but keep for records)
+  const handleArchiveJob = async (jobId: number) => {
+    try {
+      await (window as any).electron.invoke('jobs:archive', { jobId, archived: 1 });
+      loadData();
+    } catch (e: any) {
+      console.error('Archive error:', e);
+    }
+  };
+
+  // Unarchive a job
+  const handleUnarchiveJob = async (jobId: number) => {
+    try {
+      await (window as any).electron.invoke('jobs:archive', { jobId, archived: 0 });
+      loadData();
+    } catch (e: any) {
+      console.error('Unarchive error:', e);
+    }
+  };
+
+  // Clear old/expired jobs from list (archive them)
+  const handleClearOldJobs = async () => {
+    const oldJobs = jobs.filter((j: any) => {
+      // Jobs that are not applied and are older than search criteria or expired
+      if (j.status === 'applied') return false;
+      
+      // Check if deadline has passed
+      if (j.deadline) {
+        const deadline = new Date(j.deadline);
+        if (deadline < new Date()) return true;
+      }
+      
+      // Check if posted date is older than 30 days
+      if (j.posted_date) {
+        const postedDate = new Date(j.posted_date);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        if (postedDate < thirtyDaysAgo) return true;
+      }
+      
+      // Check if imported more than 14 days ago and not applied
+      if (j.date_imported) {
+        const importedDate = new Date(j.date_imported);
+        const fourteenDaysAgo = new Date();
+        fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+        if (importedDate < fourteenDaysAgo && j.status !== 'applied') return true;
+      }
+      
+      return false;
+    });
+
+    if (oldJobs.length === 0) {
+      alert('No old or expired jobs to clear.');
+      return;
+    }
+
+    const confirm_clear = confirm(`Archive ${oldJobs.length} old/expired jobs? They will be moved to archive and can be viewed later.`);
+    if (confirm_clear) {
+      for (const job of oldJobs) {
+        await (window as any).electron.invoke('jobs:archive', { jobId: job.id, archived: 1 });
+      }
+      loadData();
+      alert(`Archived ${oldJobs.length} old jobs.`);
+    }
+  };
+
   const handleGenerateDocs = async (jobId: number) => {
     setProcessingId(jobId);
     try {

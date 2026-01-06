@@ -66,15 +66,45 @@ export function registerUserHandlers(): string[] {
   ipcMain.handle('user:capture-linkedin', async (_, data) => {
     try {
       const LinkedInScraper = require('../features/linkedin-scraper');
-      const { userId, profileUrl } = data || {};
+      const { getAllQuery } = require('../database');
+      const aiService = require('../ai-service');
+      const { userId, profileUrl, useAI } = data || {};
+      
+      // Get Hunter AI model for AI-enhanced scraping
+      let hunterModel = null;
+      if (useAI !== false) { // Default to using AI if not explicitly disabled
+        try {
+          const models = await getAllQuery('SELECT * FROM ai_models');
+          hunterModel = models.find((m: any) => m.role === 'Hunter' && m.status === 'active');
+        } catch (e) {
+          console.log('Could not load Hunter model for AI enhancement');
+        }
+      }
       
       // If no profileUrl, this is a request to open browser for login
       if (!profileUrl && !data?.profileUrl) {
         // Check if we should open login or just scrape
         // For scraping, always try to scrape with the persistent session
+        if (hunterModel) {
+          return await LinkedInScraper.scrapeLinkedInProfileWithAI(
+            userId || 1, 
+            null, 
+            aiService.callAI, 
+            hunterModel
+          );
+        }
         return await LinkedInScraper.scrapeLinkedInProfile(userId || 1, null);
       }
       
+      // With profileUrl - use AI enhanced if available
+      if (hunterModel) {
+        return await LinkedInScraper.scrapeLinkedInProfileWithAI(
+          userId || 1, 
+          profileUrl, 
+          aiService.callAI, 
+          hunterModel
+        );
+      }
       return await LinkedInScraper.scrapeLinkedInProfile(userId || 1, profileUrl);
     } catch (e: any) {
       return { success: false, error: e.message };

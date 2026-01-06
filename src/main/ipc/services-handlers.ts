@@ -535,29 +535,57 @@ export function registerServicesHandlers(): string[] {
   // Test OAuth connection by fetching emails
   ipcMain.handle('email:oauth-test', async (_, data) => {
     try {
-      const { clientId, clientSecret, email } = data;
+      let { clientId, clientSecret, email } = data || {};
       
-      // Get stored tokens
-      const settings = await getAllQuery('SELECT * FROM settings WHERE id = 1');
-      const settingsRow = settings?.[0] || {};
+      // Get stored tokens and credentials from database
+      const db = require('../database').getDatabase();
+      const settingsRow = db.settings?.[0] || {};
       
       if (!settingsRow.oauth_access_token) {
         return { success: false, error: 'No OAuth tokens found. Please connect first.' };
       }
       
-      console.log('Testing OAuth connection for:', email);
+      // Use stored credentials if not provided
+      clientId = clientId || settingsRow.oauth_client_id;
+      clientSecret = clientSecret || settingsRow.oauth_client_secret;
+      
+      if (!clientId || !clientSecret) {
+        return { success: false, error: 'OAuth credentials not found. Please reconnect.' };
+      }
+      
+      console.log('Testing OAuth connection...');
       
       // Create OAuth2 client with stored tokens
       const oauth2Client = new google.auth.OAuth2(
         clientId,
         clientSecret,
-        'urn:ietf:wg:oauth:2.0:oob'
+        'http://127.0.0.1'
       );
       
       oauth2Client.setCredentials({
         access_token: settingsRow.oauth_access_token,
         refresh_token: settingsRow.oauth_refresh_token,
         expiry_date: settingsRow.oauth_expiry
+      });
+      
+      // Handle token refresh if expired
+      oauth2Client.on('tokens', (tokens: any) => {
+        console.log('New tokens received during test');
+        if (tokens.access_token) {
+          db.settings[0].oauth_access_token = tokens.access_token;
+        }
+        if (tokens.refresh_token) {
+          db.settings[0].oauth_refresh_token = tokens.refresh_token;
+        }
+        if (tokens.expiry_date) {
+          db.settings[0].oauth_expiry = tokens.expiry_date;
+        }
+        // Save updated tokens
+        const fs = require('fs');
+        const path = require('path');
+        const { app } = require('electron');
+        const dataDir = path.join(app.getPath('userData'), 'data');
+        fs.writeFileSync(path.join(dataDir, 'db.json'), JSON.stringify(db, null, 2));
       });
       
       // Test by fetching user profile
@@ -605,8 +633,8 @@ export function registerServicesHandlers(): string[] {
       console.error('OAuth test error:', e);
       
       let errorMsg = e.message;
-      if (e.message.includes('invalid_grant') || e.message.includes('Token has been expired')) {
-        errorMsg = 'OAuth token expired. Please reconnect your email.';
+      if (e.message.includes('invalid_grant') || e.message.includes('Token has been expired') || e.message.includes('Invalid Credentials')) {
+        errorMsg = 'OAuth token expired or invalid. Please reconnect your email.';
       }
       
       return { success: false, error: errorMsg };

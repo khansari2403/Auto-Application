@@ -726,6 +726,7 @@ export function JobSearch({ userId }: { userId: number }) {
                   <td style={{ padding: '12px' }}>
                     <a href={job.url} target='_blank' rel='noreferrer' style={{ color: '#0077b5', textDecoration: 'none', fontWeight: 'bold' }}>{job.job_title} 🔗</a>
                     {job.status === 'ghost_job_detected' && <div style={{ fontSize: '9px', color: 'var(--warning)', fontWeight: 'bold' }}>👻 GHOST JOB DETECTED</div>}
+                    {job.archived === 1 && <div style={{ fontSize: '9px', color: 'var(--text-tertiary)', fontWeight: 'bold' }}>📦 ARCHIVED</div>}
                   </td>
                 )}
                 {allColumns.filter(c => visibleColumns.includes(c.id) && c.id !== 'job_title').map(col => (
@@ -753,6 +754,14 @@ export function JobSearch({ userId }: { userId: number }) {
                             }}
                           >
                             {processingId === job.id ? '⏳...' : job.status === 'applied' ? '✓ Applied' : '🤖 Smart Apply'}
+                          </button>
+                          {/* Archive/Unarchive button */}
+                          <button 
+                            onClick={() => job.archived === 1 ? handleUnarchiveJob(job.id) : handleArchiveJob(job.id)} 
+                            title={job.archived === 1 ? 'Unarchive' : 'Archive'}
+                            style={{ padding: '6px 8px', background: 'var(--card-bg)', color: job.archived === 1 ? 'var(--success)' : 'var(--text-tertiary)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer' }}
+                          >
+                            {job.archived === 1 ? '📤' : '📦'}
                           </button>
                           <button onClick={() => (window as any).electron.invoke('jobs:delete', job.id).then(loadData)} style={{ padding: '6px 8px', background: 'var(--card-bg)', color: 'var(--danger)', border: '1px solid var(--danger-light)', borderRadius: '4px', cursor: 'pointer' }}>🗑️</button>
                         </div>

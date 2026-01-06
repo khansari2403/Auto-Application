@@ -465,11 +465,16 @@ export async function startHunterSearch(userId: number, callAI: Function) {
     
     await logAction(userId, 'ai_hunter', `✅ Done! Processed ${totalJobsFound} jobs.`, 'completed', true);
     console.log(`\n========== HUNT COMPLETE: ${totalJobsFound} jobs ==========\n`);
+    isSearching = false;
     return { success: true, jobsFound: totalJobsFound };
     
   } catch (error: any) { 
     console.error('Hunt error:', error);
     await logAction(userId, 'ai_hunter', `❌ Error: ${error.message}`, 'failed', false);
+    isSearching = false;
     return { success: false, error: error.message }; 
+  } finally {
+    // Always reset searching state when done
+    isSearching = false;
   }
 }

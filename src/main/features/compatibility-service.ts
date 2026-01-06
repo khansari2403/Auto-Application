@@ -261,27 +261,71 @@ function extractSkills(profile: any): string[] {
 }
 
 /**
- * Extract required skills from job listing
+ * Extract required skills from job listing - separate hard and soft skills
  */
-function extractJobSkills(job: any): string[] {
-  const skills: string[] = [];
+function extractJobSkillsWithType(job: any): { hardSkills: string[]; softSkills: string[] } {
+  const hardSkills: string[] = [];
+  const softSkills: string[] = [];
+  
+  // List of common soft skills that should NOT be exclusion factors
+  const softSkillPatterns = [
+    'communication', 'teamwork', 'team player', 'leadership', 'problem solving',
+    'problem-solving', 'critical thinking', 'time management', 'adaptability',
+    'creativity', 'interpersonal', 'collaboration', 'flexibility', 'motivation',
+    'self-motivated', 'detail oriented', 'detail-oriented', 'organizational',
+    'multitasking', 'work ethic', 'positive attitude', 'customer service',
+    'presentation skills', 'negotiation', 'conflict resolution', 'empathy',
+    'emotional intelligence', 'stress management', 'decision making', 'initiative',
+    'punctuality', 'reliability', 'accountability', 'enthusiasm', 'patience',
+    'resilience', 'open minded', 'open-minded', 'proactive', 'self starter',
+    'self-starter', 'strong work ethic', 'analytical thinking', 'attention to detail'
+  ];
+  
+  const allSkills: string[] = [];
   
   // From required_skills field
   if (job.required_skills) {
     if (typeof job.required_skills === 'string') {
-      skills.push(...job.required_skills.split(',').map((s: string) => s.trim()));
+      allSkills.push(...job.required_skills.split(',').map((s: string) => s.trim()));
     } else if (Array.isArray(job.required_skills)) {
-      skills.push(...job.required_skills);
+      allSkills.push(...job.required_skills);
     }
   }
   
   // From description
   if (job.description) {
     const technicalTerms = extractTechnicalTerms(job.description);
-    skills.push(...technicalTerms);
+    allSkills.push(...technicalTerms);
   }
   
-  return [...new Set(skills.filter(s => s.length > 1))].slice(0, 20); // Limit to top 20
+  // Categorize skills
+  const uniqueSkills = [...new Set(allSkills.filter(s => s.length > 1))];
+  
+  for (const skill of uniqueSkills) {
+    const skillLower = skill.toLowerCase();
+    const isSoftSkill = softSkillPatterns.some(pattern => 
+      skillLower.includes(pattern) || pattern.includes(skillLower)
+    );
+    
+    if (isSoftSkill) {
+      softSkills.push(skill);
+    } else {
+      hardSkills.push(skill);
+    }
+  }
+  
+  return { 
+    hardSkills: hardSkills.slice(0, 20), // Limit to top 20 hard skills
+    softSkills: softSkills.slice(0, 10)  // Limit to top 10 soft skills
+  };
+}
+
+/**
+ * Extract required skills from job listing (legacy - kept for compatibility)
+ */
+function extractJobSkills(job: any): string[] {
+  const { hardSkills, softSkills } = extractJobSkillsWithType(job);
+  return [...hardSkills, ...softSkills];
 }
 
 /**

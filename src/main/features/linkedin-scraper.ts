@@ -383,6 +383,139 @@ export async function scrapeLinkedInProfile(userId: number, profileUrl?: string)
 }
 
 /**
+ * Enhance incomplete LinkedIn profile using Hunter AI
+ * If DOM scraping returns incomplete data, use AI to extract from raw page text
+ */
+export async function enhanceProfileWithAI(
+  userId: number, 
+  incompleteProfile: LinkedInProfile, 
+  pageContent: string, 
+  callAI: Function,
+  hunterModel: any
+): Promise<LinkedInProfile> {
+  // Check what fields are missing
+  const missing: string[] = [];
+  if (!incompleteProfile.experiences || incompleteProfile.experiences.length === 0) missing.push('experiences');
+  if (!incompleteProfile.educations || incompleteProfile.educations.length === 0) missing.push('educations');
+  if (!incompleteProfile.skills || incompleteProfile.skills.length === 0) missing.push('skills');
+  if (!incompleteProfile.licenses || incompleteProfile.licenses.length === 0) missing.push('certifications');
+  if (!incompleteProfile.languages || incompleteProfile.languages.length === 0) missing.push('languages');
+  if (!incompleteProfile.summary) missing.push('summary');
+  
+  if (missing.length === 0) {
+    console.log('Profile is complete, no AI enhancement needed');
+    return incompleteProfile;
+  }
+  
+  console.log(`Profile incomplete, missing: ${missing.join(', ')}. Using AI to extract...`);
+  await logAction(userId, 'linkedin', `🤖 Using Hunter AI to extract: ${missing.join(', ')}`, 'in_progress');
+  
+  try {
+    const prompt = `You are a LinkedIn profile data extractor. Extract the following information from this LinkedIn profile page content.
+
+WHAT TO EXTRACT: ${missing.join(', ')}
+
+PAGE CONTENT:
+${pageContent.substring(0, 8000)}
+
+EXISTING DATA (DO NOT CHANGE):
+Name: ${incompleteProfile.name}
+Title: ${incompleteProfile.title}
+Location: ${incompleteProfile.location}
+
+Return ONLY a valid JSON object with the missing fields. Use these exact formats:
+
+{
+  ${missing.includes('experiences') ? '"experiences": [{"title": "Job Title", "company": "Company Name", "location": "City", "startDate": "Month Year", "endDate": "Month Year or Present", "description": "Brief description"}],' : ''}
+  ${missing.includes('educations') ? '"educations": [{"school": "University Name", "degree": "Degree Type", "field": "Field of Study", "startYear": "2020", "endYear": "2024"}],' : ''}
+  ${missing.includes('skills') ? '"skills": ["Skill 1", "Skill 2", "Skill 3"],' : ''}
+  ${missing.includes('certifications') ? '"certifications": ["Cert 1", "Cert 2"],' : ''}
+  ${missing.includes('languages') ? '"languages": ["Language 1", "Language 2"],' : ''}
+  ${missing.includes('summary') ? '"summary": "Professional summary text",' : ''}
+}
+
+If you cannot find data for a field, use an empty array [] or empty string "".
+IMPORTANT: Return ONLY valid JSON, no explanation.`;
+
+    const response = await callAI(hunterModel, prompt);
+    
+    // Parse AI response
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const extracted = JSON.parse(jsonMatch[0]);
+        
+        // Merge with existing profile
+        const enhanced: LinkedInProfile = {
+          ...incompleteProfile,
+          experiences: (extracted.experiences?.length > 0) ? extracted.experiences : incompleteProfile.experiences,
+          educations: (extracted.educations?.length > 0) ? extracted.educations : incompleteProfile.educations,
+          skills: (extracted.skills?.length > 0) ? extracted.skills : incompleteProfile.skills,
+          licenses: (extracted.certifications?.length > 0) ? extracted.certifications : incompleteProfile.licenses,
+          languages: (extracted.languages?.length > 0) ? extracted.languages : incompleteProfile.languages,
+          summary: extracted.summary || incompleteProfile.summary
+        };
+        
+        await logAction(userId, 'linkedin', `✅ AI extracted additional profile data`, 'completed', true);
+        return enhanced;
+      }
+    } catch (parseError) {
+      console.error('Failed to parse AI profile extraction:', parseError);
+    }
+  } catch (aiError: any) {
+    console.error('AI profile enhancement failed:', aiError);
+    await logAction(userId, 'linkedin', `⚠️ AI enhancement failed: ${aiError.message}`, 'failed', false);
+  }
+  
+  return incompleteProfile;
+}
+
+/**
+ * Scrape LinkedIn profile with AI enhancement for incomplete data
+ */
+export async function scrapeLinkedInProfileWithAI(
+  userId: number, 
+  profileUrl: string | undefined, 
+  callAI: Function,
+  hunterModel: any
+): Promise<{ success: boolean; data?: LinkedInProfile; error?: string }> {
+  // First try normal scraping
+  const result = await scrapeLinkedInProfile(userId, profileUrl);
+  
+  if (!result.success || !result.data) {
+    return result;
+  }
+  
+  // Check if profile data is incomplete
+  const profile = result.data;
+  const isIncomplete = 
+    (!profile.experiences || profile.experiences.length === 0) ||
+    (!profile.skills || profile.skills.length === 0) ||
+    (!profile.educations || profile.educations.length === 0);
+  
+  if (isIncomplete && hunterModel && callAI) {
+    console.log('Profile data incomplete, attempting AI enhancement...');
+    
+    // Get page content for AI
+    let pageContent = '';
+    try {
+      if (sharedPage && !sharedPage.isClosed()) {
+        pageContent = await sharedPage.evaluate(() => document.body.innerText);
+      }
+    } catch (e) {
+      console.log('Could not get page content for AI enhancement');
+    }
+    
+    if (pageContent && pageContent.length > 500) {
+      const enhanced = await enhanceProfileWithAI(userId, profile, pageContent, callAI, hunterModel);
+      return { success: true, data: enhanced };
+    }
+  }
+  
+  return result;
+}
+
+/**
  * Save scraped profile to database
  */
 export async function saveLinkedInProfile(userId: number, profileData: LinkedInProfile): Promise<{ success: boolean }> {

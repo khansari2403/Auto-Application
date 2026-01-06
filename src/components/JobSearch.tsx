@@ -809,14 +809,6 @@ Note: Forced documents will be checked for accuracy.`);
                           >
                             {processingId === job.id ? '⏳...' : job.status === 'applied' ? '✓ Applied' : '🤖 Smart Apply'}
                           </button>
-                          {/* Archive/Unarchive button */}
-                          <button 
-                            onClick={() => job.archived === 1 ? handleUnarchiveJob(job.id) : handleArchiveJob(job.id)} 
-                            title={job.archived === 1 ? 'Unarchive' : 'Archive'}
-                            style={{ padding: '6px 8px', background: 'var(--card-bg)', color: job.archived === 1 ? 'var(--success)' : 'var(--text-tertiary)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer' }}
-                          >
-                            {job.archived === 1 ? '📤' : '📦'}
-                          </button>
                           <button onClick={() => (window as any).electron.invoke('jobs:delete', job.id).then(loadData)} style={{ padding: '6px 8px', background: 'var(--card-bg)', color: 'var(--danger)', border: '1px solid var(--danger-light)', borderRadius: '4px', cursor: 'pointer' }}>🗑️</button>
                         </div>
                       </>

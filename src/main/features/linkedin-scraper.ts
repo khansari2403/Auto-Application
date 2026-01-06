@@ -134,6 +134,10 @@ export async function openLinkedInForLogin(userId: number): Promise<{ success: b
     
     const { browser, page, isNew } = await getOrCreateBrowser();
     
+    // Set generous timeouts
+    page.setDefaultNavigationTimeout(60000);
+    page.setDefaultTimeout(30000);
+    
     // Store references globally
     (global as any).linkedInBrowser = browser;
     (global as any).linkedInPage = page;
@@ -154,8 +158,20 @@ export async function openLinkedInForLogin(userId: number): Promise<{ success: b
       }
     }
     
-    // Navigate to LinkedIn login
-    await page.goto('https://www.linkedin.com/login', { waitUntil: 'networkidle2', timeout: 30000 });
+    // Navigate to LinkedIn login - use domcontentloaded for faster response
+    try {
+      await page.goto('https://www.linkedin.com/login', { waitUntil: 'domcontentloaded', timeout: 45000 });
+    } catch (navError: any) {
+      console.log('Navigation timeout, checking if page loaded...');
+      // Check if we're on LinkedIn despite the timeout
+      const currentUrl = page.url();
+      if (!currentUrl.includes('linkedin.com')) {
+        throw new Error('Failed to open LinkedIn. Please check your internet connection.');
+      }
+    }
+    
+    // Wait a bit for page to stabilize
+    await new Promise(r => setTimeout(r, 2000));
     
     // Check if we got redirected to feed (meaning already logged in)
     const currentUrl = page.url();

@@ -875,13 +875,36 @@ Return ONLY the proposal content.`
 
 // Build Auditor prompt
 function buildAuditorPrompt(docKey: string, docLabel: string, content: string, job: any): string {
+  // Get compatibility score and missing skills from job
+  const compatScore = job.compatibility_score || 0;
+  const missingSkills = job.compatibility_missing_skills ? 
+    JSON.parse(job.compatibility_missing_skills) : [];
+  
+  // Determine if this is a "reach" job (Yellow or higher) where user wants to apply despite gaps
+  const isReachJob = compatScore >= 26 && compatScore < 76; // Yellow or Green range
+  
+  let flexibilityNote = '';
+  if (isReachJob && missingSkills.length > 0) {
+    flexibilityNote = `
+**SPECIAL NOTE - REACH APPLICATION:**
+This is a "reach" job where the applicant is applying despite some skill gaps. The following skills are listed as requirements but the applicant may not have direct experience:
+- ${missingSkills.slice(0, 5).join('\n- ')}
+
+FOR THESE CASES:
+- Allow the applicant to highlight TRANSFERABLE skills and RELATED experience
+- Allow honest statements about willingness to learn
+- Do NOT reject simply because the applicant can't claim direct experience with missing skills
+- DO reject if the document FABRICATES experience the applicant doesn't have
+`;
+  }
+  
   return `You are the "Auditor" agent. Your job is to review this ${docLabel} for accuracy, quality, and FACTUAL CORRECTNESS.
 
 JOB: ${job.job_title} at ${job.company_name}
 
 CONTENT TO REVIEW:
 ${content}
-
+${flexibilityNote}
 EVALUATION CRITERIA:
 
 **CRITICAL - HALLUCINATION CHECK:**
@@ -891,6 +914,13 @@ EVALUATION CRITERIA:
    - Job titles or responsibilities that seem inconsistent
    - Skills or certifications not typically mentioned together
 2. COMPANY FACTS: Are any company facts stated that could be false? (If unsure, flag as potentially fabricated)
+
+**IMPORTANT - NOT GROUNDS FOR REJECTION:**
+- Soft skills (communication, teamwork, leadership) - these are subjective and acceptable
+- Transferable experience from different but related roles
+- Statements of willingness to learn or grow
+- General industry knowledge without specific metrics
+- Experience in related fields that could transfer to the target role
 
 **FORMAT & QUALITY:**
 3. LANGUAGE: Is it in the same language as the job description?
@@ -907,7 +937,9 @@ EVALUATION CRITERIA:
 
 RESPONSE FORMAT:
 If it passes ALL criteria, respond with exactly: "APPROVED"
-If it fails any criteria (especially hallucination), respond with: "REJECTED: " followed by specific feedback on what to fix.`;
+If it fails any criteria (especially FABRICATED facts), respond with: "REJECTED: " followed by specific feedback on what to fix.
+
+REMEMBER: Only reject for FABRICATED information or format issues, NOT for skill gaps or experience differences.`;
 }
 
 // Export individual document generator for direct calls

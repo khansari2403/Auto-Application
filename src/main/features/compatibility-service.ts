@@ -175,13 +175,17 @@ export async function calculateCompatibility(userId: number, jobId: number): Pro
 
 /**
  * Calculate skills match score
+ * IMPORTANT: Soft skills should NEVER be exclusion factors
  */
 function calculateSkillsMatch(profile: any, job: any): { score: number; matched: string[]; missing: string[] } {
   const userSkills = extractSkills(profile);
-  const requiredSkills = extractJobSkills(job);
+  const { hardSkills, softSkills } = extractJobSkillsWithType(job);
+  
+  // Only consider hard skills for matching - soft skills are bonus, not requirements
+  const requiredSkills = hardSkills;
   
   if (requiredSkills.length === 0) {
-    return { score: 50, matched: [], missing: [] }; // Neutral if no requirements
+    return { score: 60, matched: [], missing: [] }; // Higher neutral if no hard requirements
   }
   
   const matched: string[] = [];
@@ -201,7 +205,24 @@ function calculateSkillsMatch(profile: any, job: any): { score: number; matched:
     }
   }
   
-  const score = Math.round((matched.length / requiredSkills.length) * 100);
+  // Calculate base score from hard skills
+  let score = requiredSkills.length > 0 
+    ? Math.round((matched.length / requiredSkills.length) * 100)
+    : 60;
+  
+  // Bonus for soft skills (they're positive, not exclusionary)
+  const softSkillsMatched = softSkills.filter(soft => 
+    userSkills.some(skill => 
+      skill.toLowerCase().includes(soft.toLowerCase()) ||
+      soft.toLowerCase().includes(skill.toLowerCase())
+    )
+  );
+  
+  // Add up to 15% bonus for soft skills matches
+  if (softSkills.length > 0 && softSkillsMatched.length > 0) {
+    const softBonus = Math.round((softSkillsMatched.length / softSkills.length) * 15);
+    score = Math.min(100, score + softBonus);
+  }
   
   return { score, matched, missing };
 }

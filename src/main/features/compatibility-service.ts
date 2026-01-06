@@ -83,10 +83,25 @@ async function getProfileBySource(userId: number): Promise<{ profile: any; sourc
  * - Yellow: 26-50 (Fair match)
  * - Green: 51-75 (Good match)
  * - Gold: 76-100 (Excellent match)
+ * 
+ * IMPORTANT AUDITOR RULES:
+ * 1. Soft skills should NEVER be exclusion factors
+ * 2. Experience is transferable - 5+ years in one role indicates potential for transition
+ * 3. Language proficiency from Search Profile bypasses language scoring
  */
 export async function calculateCompatibility(userId: number, jobId: number): Promise<CompatibilityResult> {
   // Get user profile based on Auditor source setting
   const { profile, source } = await getProfileBySource(userId);
+  
+  // Get search profiles for language proficiency override
+  const searchProfiles = await getAllQuery('SELECT * FROM search_profiles');
+  const activeProfile = searchProfiles.find((p: any) => p.is_active === 1) || searchProfiles[0];
+  let languageProficiencies: Record<string, string> = {};
+  try {
+    if (activeProfile?.language_proficiencies) {
+      languageProficiencies = JSON.parse(activeProfile.language_proficiencies);
+    }
+  } catch (e) {}
   
   // Get job listing
   const jobs = await getAllQuery('SELECT * FROM job_listings');
@@ -96,18 +111,25 @@ export async function calculateCompatibility(userId: number, jobId: number): Pro
     return createEmptyResult();
   }
   
-  // Calculate each component
+  // Calculate each component (soft skills are NOT exclusion factors)
   const skillsScore = calculateSkillsMatch(profile, job);
   const experienceScore = calculateExperienceMatch(profile, job);
   const educationScore = calculateEducationMatch(profile, job);
   const locationScore = calculateLocationMatch(profile, job);
+  const languageScore = calculateLanguageMatch(profile, job, languageProficiencies);
   
-  // Weighted average (skills 40%, experience 30%, education 20%, location 10%)
+  // Weighted average:
+  // - Hard skills: 35% (reduced from 40%)
+  // - Experience: 30% (includes transferability bonus)
+  // - Education: 15% (reduced from 20%)
+  // - Location: 10%
+  // - Language: 10% (new - can be bypassed with proficiency)
   const totalScore = Math.round(
-    skillsScore.score * 0.4 +
-    experienceScore * 0.3 +
-    educationScore * 0.2 +
-    locationScore * 0.1
+    skillsScore.score * 0.35 +
+    experienceScore * 0.30 +
+    educationScore * 0.15 +
+    locationScore * 0.10 +
+    languageScore * 0.10
   );
   
   // Determine level
@@ -128,7 +150,8 @@ export async function calculateCompatibility(userId: number, jobId: number): Pro
       skills: skillsScore.score,
       experience: experienceScore,
       education: educationScore,
-      location: locationScore
+      location: locationScore,
+      language: languageScore
     })
   });
   

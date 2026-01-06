@@ -8,7 +8,8 @@ export function registerJobsHandlers(): string[] {
     'jobs:delete', 
     'jobs:add-manual', 
     'jobs:update-doc-confirmation',
-    'jobs:archive'
+    'jobs:archive',
+    'jobs:clear-old'
   ];
 
   // --- JOBS ---
@@ -66,6 +67,54 @@ export function registerJobsHandlers(): string[] {
         archived: data.archived 
       });
       return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
+  // Clear old/expired jobs (archive them in bulk)
+  ipcMain.handle('jobs:clear-old', async (_, data) => {
+    try {
+      const { daysOld = 14 } = data || {};
+      const db = getDatabase();
+      const jobs = db.job_listings || [];
+      
+      const cutoffDate = new Date();
+      cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+      
+      let archivedCount = 0;
+      
+      for (const job of jobs) {
+        // Skip already archived or applied jobs
+        if (job.archived === 1 || job.status === 'applied') continue;
+        
+        let shouldArchive = false;
+        
+        // Check if deadline has passed
+        if (job.deadline) {
+          const deadline = new Date(job.deadline);
+          if (deadline < new Date()) shouldArchive = true;
+        }
+        
+        // Check if posted date is older than cutoff
+        if (job.posted_date) {
+          const postedDate = new Date(job.posted_date);
+          if (postedDate < cutoffDate) shouldArchive = true;
+        }
+        
+        // Check if imported older than cutoff and not applied
+        if (job.date_imported) {
+          const importedDate = new Date(job.date_imported);
+          if (importedDate < cutoffDate) shouldArchive = true;
+        }
+        
+        if (shouldArchive) {
+          await runQuery('UPDATE job_listings', { id: job.id, archived: 1 });
+          archivedCount++;
+        }
+      }
+      
+      return { success: true, archivedCount };
     } catch (e: any) {
       return { success: false, error: e.message };
     }

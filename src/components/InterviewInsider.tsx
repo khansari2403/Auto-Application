@@ -32,8 +32,12 @@ export function InterviewInsider({ userId }: Props) {
   const [isAskingCv, setIsAskingCv] = useState(false);
   const [difficultyLevel, setDifficultyLevel] = useState(5); // 1-10 scale
   const [showCvSection, setShowCvSection] = useState(false);
+  const [cvQuestionsCount, setCvQuestionsCount] = useState(0); // Track how many CV questions generated
 
-  const handleAskAboutCv = async () => {
+  const handleAskAboutCv = async (generateMore: boolean = false) => {
+    // Max 5 questions per generation
+    const MAX_QUESTIONS = 5;
+    
     setIsAskingCv(true);
     setError(null);
 
@@ -41,11 +45,21 @@ export function InterviewInsider({ userId }: Props) {
       const result = await (window as any).electron.invoke('ai:ask-about-cv', {
         jobUrl,
         userId,
-        difficultyLevel
+        difficultyLevel,
+        generateMore,
+        maxQuestions: MAX_QUESTIONS
       });
 
       if (result.success) {
-        setCvQuestions(result.questions || []);
+        if (generateMore) {
+          // Append new questions
+          setCvQuestions(prev => [...prev, ...(result.questions || [])]);
+          setCvQuestionsCount(prev => prev + (result.questions?.length || 0));
+        } else {
+          // Replace questions
+          setCvQuestions(result.questions || []);
+          setCvQuestionsCount(result.questions?.length || 0);
+        }
       } else {
         setError(result.error || 'Failed to generate CV questions');
       }

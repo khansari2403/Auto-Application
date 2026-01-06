@@ -452,27 +452,30 @@ export function EmailMonitoringSection({ userId }: { userId: number }) {
                     <label style={labelStyle}>Client Secret</label>
                     <input style={inputStyle} type="password" value={googleClientSecret} onChange={e => setGoogleClientSecret(e.target.value)} placeholder="Your OAuth Client Secret" />
                     
-                    {!showManualCode && !isConnected && (
+                    {!isConnected && (
                       <button 
                         onClick={startOAuthFlow}
                         disabled={oauthInProgress || !googleClientId || !googleClientSecret}
                         style={{ 
                           width: '100%', padding: '14px 25px', 
-                          background: 'linear-gradient(135deg, #4285f4 0%, #34a853 100%)', 
+                          background: oauthInProgress 
+                            ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                            : 'linear-gradient(135deg, #4285f4 0%, #34a853 100%)', 
                           color: '#fff', border: 'none', borderRadius: '6px', 
                           cursor: oauthInProgress ? 'wait' : 'pointer', 
                           fontWeight: 'bold', fontSize: '14px', marginTop: '10px',
                           opacity: (!googleClientId || !googleClientSecret) ? 0.5 : 1
                         }}
                       >
-                        🔐 Start OAuth - Sign in with Google
+                        {oauthInProgress ? '⏳ Connecting... Please complete sign-in in browser' : '🔐 Connect with Google'}
                       </button>
                     )}
                     
+                    {/* Manual code fallback - kept for edge cases */}
                     {showManualCode && (
                       <div style={{ marginTop: '15px', padding: '15px', background: 'var(--warning-light)', borderRadius: '8px', border: '1px solid var(--warning)' }}>
                         <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: 'var(--warning)' }}>
-                          <strong>Paste Authorization Code:</strong> After signing in, Google will show you a code. Copy and paste it here:
+                          <strong>Manual Code Entry (Fallback):</strong> If the automatic connection didn't work, paste the authorization code here:
                         </p>
                         <input 
                           style={{ ...inputStyle, marginBottom: '10px' }} 

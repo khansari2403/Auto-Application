@@ -7,6 +7,7 @@ export function registerSystemHandlers(): string[] {
     'apps:get-all',
     'scheduler:toggle',
     'scheduler:get-status',
+    'hunter:get-status',
     'qa:get-all',
     'qa:update',
     'qa:delete'
@@ -57,6 +58,19 @@ export function registerSystemHandlers(): string[] {
       };
     } catch (e: any) {
       return { success: false, error: e.message };
+    }
+  });
+
+  // Hunter (job scraper) status - for syncing UI state
+  ipcMain.handle('hunter:get-status', async () => {
+    try {
+      const HunterEngine = require('../features/Hunter-engine');
+      return { 
+        success: true, 
+        isSearching: HunterEngine.isSearching || false
+      };
+    } catch (e: any) {
+      return { success: false, error: e.message, isSearching: false };
     }
   });
 

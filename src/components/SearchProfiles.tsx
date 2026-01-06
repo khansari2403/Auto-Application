@@ -30,8 +30,9 @@ export function SearchProfiles({ userId }: { userId: number }) {
   const [selectedCertifications, setSelectedCertifications] = useState<string[]>([]);
   const [customCertification, setCustomCertification] = useState('');
   
-  // Languages
+  // Languages with proficiency levels
   const [selectedLanguages, setSelectedLanguages] = useState<string[]>([]);
+  const [languageProficiencies, setLanguageProficiencies] = useState<Record<string, string>>({});
 
   // Location with distance
   const [distanceUnit, setDistanceUnit] = useState<'km' | 'miles'>('km');

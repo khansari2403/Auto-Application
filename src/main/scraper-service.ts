@@ -176,6 +176,45 @@ export async function getJobPageContent(url: string, userId: number, callAI: Fun
       return { content: '', strategyUsed: 'Blocked' };
     }
 
+    // LinkedIn-specific: Expand "Show more" button to get full job description
+    if (url.includes('linkedin.com')) {
+      try {
+        console.log('Scraper: Attempting to expand LinkedIn job description...');
+        
+        // Try to click "Show more" button with multiple selector patterns
+        const expanded = await page.evaluate(() => {
+          const showMoreSelectors = [
+            'button.show-more-less-html__button--more',
+            'button[aria-label*="Show more"]',
+            'button[data-tracking-control-name="public_jobs_show-more-html-btn"]',
+            '.show-more-less-html__button--more',
+            'button:has-text("Show more")',
+            'button:has-text("See more")'
+          ];
+          
+          for (const selector of showMoreSelectors) {
+            try {
+              const btn = document.querySelector(selector) as HTMLElement;
+              if (btn && btn.offsetParent !== null) { // Check if visible
+                btn.click();
+                return true;
+              }
+            } catch (e) {}
+          }
+          return false;
+        });
+        
+        if (expanded) {
+          console.log('Scraper: ✅ Expanded LinkedIn job description');
+          await randomDelay(1000, 2000); // Wait for content to load
+        } else {
+          console.log('Scraper: No "Show more" button found (content may already be expanded)');
+        }
+      } catch (e) {
+        console.log('Scraper: Could not expand content:', e);
+      }
+    }
+
     // Try extraction strategies in order
     const result = await page.evaluate(() => {
       const getCleanText = (el: Element | null) => el ? (el as HTMLElement).innerText.replace(/\s+/g, ' ').trim() : '';

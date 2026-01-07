@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { AlertsQASection } from './AlertsQASection';
 import { JobHuntingControls } from './JobHuntingControls';
 import { CompatibilityDial } from './job-search';
+import { AuditorQAPanel } from './AuditorQAPanel';
 
 interface PendingQuestion {
   field: string;

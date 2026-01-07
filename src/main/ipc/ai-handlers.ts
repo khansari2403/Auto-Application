@@ -843,5 +843,95 @@ Respond ONLY with a valid JSON array in this exact format:
     }
   });
 
+  // --- AUDITOR Q&A HANDLERS ---
+  
+  // Get pending questions for the Auditor
+  ipcMain.handle('auditor:get-pending-questions', async (_, data) => {
+    try {
+      const { userId } = data;
+      const db = getDatabase();
+      const questions = db.auditor_questions || [];
+      const pending = questions.filter((q: any) => q.user_id === userId && !q.answered);
+      return { success: true, questions: pending };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+  
+  // Get learned criteria
+  ipcMain.handle('auditor:get-learned-criteria', async (_, data) => {
+    try {
+      const { userId } = data;
+      const db = getDatabase();
+      const criteria = db.auditor_criteria || [];
+      const userCriteria = criteria.filter((c: any) => c.user_id === userId);
+      return { success: true, criteria: userCriteria };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+  
+  // Save a learned criteria (from user answering a question)
+  ipcMain.handle('auditor:save-criteria', async (_, data) => {
+    try {
+      const { userId, questionId, jobId, criteria, answer } = data;
+      
+      const criteriaId = `crit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Save the criteria
+      await runQuery('INSERT INTO auditor_criteria', {
+        id: criteriaId,
+        user_id: userId,
+        criteria: criteria,
+        userAnswer: answer,
+        job_id: jobId,
+        timestamp: Date.now()
+      });
+      
+      // Mark the question as answered
+      if (questionId) {
+        await runQuery('UPDATE auditor_questions SET answered = true WHERE id = ?', [questionId]);
+      }
+      
+      return { success: true, criteriaId };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+  
+  // Delete a learned criteria
+  ipcMain.handle('auditor:delete-criteria', async (_, data) => {
+    try {
+      const { criteriaId } = data;
+      await runQuery('DELETE FROM auditor_criteria WHERE id = ?', [criteriaId]);
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+  
+  // Add a question from the Auditor (called during job analysis)
+  ipcMain.handle('auditor:add-question', async (_, data) => {
+    try {
+      const { userId, jobId, question, criteria } = data;
+      
+      const questionId = `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      await runQuery('INSERT INTO auditor_questions', {
+        id: questionId,
+        user_id: userId,
+        job_id: jobId,
+        question: question,
+        criteria: criteria,
+        answered: false,
+        timestamp: Date.now()
+      });
+      
+      return { success: true, questionId };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+
   return channels;
 }

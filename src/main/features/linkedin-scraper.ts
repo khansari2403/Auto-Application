@@ -272,6 +272,9 @@ export async function scrapeLinkedInProfile(userId: number, profileUrl?: string)
     // Random delay to appear human
     await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
     
+    // IMPORTANT: Click all "See more" and "Show all X" buttons to expand sections
+    await expandAllLinkedInSections(page);
+    
     // Scroll to load lazy content
     await page.evaluate(() => window.scrollBy(0, 500));
     await new Promise(r => setTimeout(r, 1000));

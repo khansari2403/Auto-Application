@@ -679,7 +679,10 @@ Respond ONLY with a valid JSON array in this exact format:
   // --- ASK ABOUT CV (HR AI grilling based on Job + CV) ---
   ipcMain.handle('ai:ask-about-cv', async (_, data) => {
     try {
-      const { jobUrl, userId, difficultyLevel } = data;
+      // Safely extract primitive values from data to avoid clone errors
+      const jobUrl = String(data?.jobUrl || '');
+      const userId = Number(data?.userId) || 1;
+      const difficultyLevel = Number(data?.difficultyLevel) || 5;
       
       const models = await getAllQuery('SELECT * FROM ai_models');
       const hrAI = models.find((m: any) => m.role === 'HR AI' && m.status === 'active') ||
@@ -711,20 +714,24 @@ Company: ${String(job.company_name || 'Unknown')}
 Requirements: ${String(job.required_skills || 'Not specified')}
 Experience Level: ${String(job.experience_level || 'Not specified')}
 Description: ${String(job.description || 'Not available').substring(0, 1500)}`;
-      } else if (jobUrl) {
-        // Try to scrape job info
+      } else if (jobUrl && jobUrl.startsWith('http')) {
+        // Try to scrape job info - wrap in try-catch to prevent clone errors
         try {
           const ScraperService = require('../scraper-service');
-          const pageData = await ScraperService.getJobPageContent(String(jobUrl), userId, aiService.callAI);
-          if (pageData?.content) {
-            // CRITICAL: Ensure content is a clean serializable string
+          const pageData = await ScraperService.getJobPageContent(jobUrl, userId, aiService.callAI);
+          if (pageData && typeof pageData === 'object' && pageData.content) {
+            // CRITICAL: Extract only primitive string values
             const cleanContent = String(pageData.content || '').substring(0, 2000);
-            jobContext = `Job posting from ${String(jobUrl)}:\n${cleanContent}`;
+            jobContext = `Job posting from ${jobUrl}:\n${cleanContent}`;
+          } else {
+            jobContext = `Job URL: ${jobUrl} (Could not fetch details - page may require login)`;
           }
-        } catch (e: any) {
-          console.error('Error scraping job for CV questions:', e);
-          jobContext = `Job URL: ${String(jobUrl)} (Could not fetch details)`;
+        } catch (scrapeError: any) {
+          console.error('Error scraping job for CV questions:', scrapeError);
+          jobContext = `Job URL: ${jobUrl} (Scraping failed: ${String(scrapeError.message || 'Unknown error')})`;
         }
+      } else {
+        jobContext = 'No job URL provided - generating general interview questions';
       }
       
       // Build CV context - ensure all values are serializable strings
@@ -734,10 +741,15 @@ Professional Title: ${String(userProfile.title || 'Not provided')}
 Location: ${String(userProfile.location || 'Not provided')}
 Summary: ${String(userProfile.summary || 'Not provided')}`;
       
-      // Parse experiences
+      // Parse experiences - wrap in try-catch
       try {
         const experiencesRaw = userProfile.experiences;
-        const experiences = typeof experiencesRaw === 'string' ? JSON.parse(experiencesRaw) : (experiencesRaw || []);
+        let experiences: any[] = [];
+        if (typeof experiencesRaw === 'string' && experiencesRaw.length > 2) {
+          experiences = JSON.parse(experiencesRaw);
+        } else if (Array.isArray(experiencesRaw)) {
+          experiences = experiencesRaw;
+        }
         if (Array.isArray(experiences) && experiences.length > 0) {
           cvContext += '\n\nWork Experience:';
           experiences.slice(0, 5).forEach((exp: any, i: number) => {
@@ -748,10 +760,15 @@ Summary: ${String(userProfile.summary || 'Not provided')}`;
         console.log('Could not parse experiences:', e);
       }
       
-      // Parse skills
+      // Parse skills - wrap in try-catch
       try {
         const skillsRaw = userProfile.skills;
-        const skills = typeof skillsRaw === 'string' ? JSON.parse(skillsRaw) : (skillsRaw || []);
+        let skills: any[] = [];
+        if (typeof skillsRaw === 'string' && skillsRaw.length > 2) {
+          skills = JSON.parse(skillsRaw);
+        } else if (Array.isArray(skillsRaw)) {
+          skills = skillsRaw;
+        }
         if (Array.isArray(skills) && skills.length > 0) {
           cvContext += `\n\nSkills: ${skills.map((s: any) => String(s)).join(', ')}`;
         }
@@ -759,10 +776,15 @@ Summary: ${String(userProfile.summary || 'Not provided')}`;
         console.log('Could not parse skills:', e);
       }
       
-      // Parse education
+      // Parse education - wrap in try-catch
       try {
         const educationsRaw = userProfile.educations;
-        const educations = typeof educationsRaw === 'string' ? JSON.parse(educationsRaw) : (educationsRaw || []);
+        let educations: any[] = [];
+        if (typeof educationsRaw === 'string' && educationsRaw.length > 2) {
+          educations = JSON.parse(educationsRaw);
+        } else if (Array.isArray(educationsRaw)) {
+          educations = educationsRaw;
+        }
         if (Array.isArray(educations) && educations.length > 0) {
           cvContext += '\n\nEducation:';
           educations.slice(0, 3).forEach((edu: any, i: number) => {
@@ -774,13 +796,12 @@ Summary: ${String(userProfile.summary || 'Not provided')}`;
       }
       
       // Determine question style based on difficulty
-      const diffLevel = Number(difficultyLevel) || 5;
       let difficultyInstruction = '';
-      if (diffLevel <= 3) {
+      if (difficultyLevel <= 3) {
         difficultyInstruction = 'Ask EASY questions - basic background, motivation, and simple experience verification. Be friendly and encouraging.';
-      } else if (diffLevel <= 6) {
+      } else if (difficultyLevel <= 6) {
         difficultyInstruction = 'Ask MEDIUM difficulty questions - probe into specific experiences, ask for examples, test technical knowledge at a moderate level.';
-      } else if (diffLevel <= 8) {
+      } else if (difficultyLevel <= 8) {
         difficultyInstruction = 'Ask HARD questions - challenge gaps in experience, ask tough behavioral questions, probe for weaknesses, test deep technical knowledge.';
       } else {
         difficultyInstruction = 'Ask EXTREME questions - be a tough interviewer, find inconsistencies, ask stress-test questions, challenge every claim, probe for failures and how they handled them.';
@@ -821,15 +842,17 @@ Respond ONLY with a valid JSON array in this exact format:
         const jsonMatch = response.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
-          // Ensure all values are clean serializable strings
-          questions = parsed.map((q: any) => ({
-            question: String(q.question || ''),
-            answer: String(q.answer || ''),
-            difficulty: String(q.difficulty || 'medium')
-          }));
+          // CRITICAL: Create new plain objects with only primitive string values
+          questions = parsed.map((q: any) => {
+            return {
+              question: String(q.question || ''),
+              answer: String(q.answer || ''),
+              difficulty: String(q.difficulty || 'medium')
+            };
+          });
         }
-      } catch (e) {
-        console.error('Failed to parse CV questions:', e);
+      } catch (parseError) {
+        console.error('Failed to parse CV questions:', parseError);
         questions = [{
           question: 'Tell me about your most relevant experience for this role.',
           answer: 'Focus on specific achievements and how they relate to the job requirements.',
@@ -837,14 +860,15 @@ Respond ONLY with a valid JSON array in this exact format:
         }];
       }
       
-      // Return only serializable data
+      // Return only a plain object with primitive values - this prevents clone errors
       return { 
         success: true, 
         questions: questions 
       };
     } catch (e: any) {
       console.error('Ask about CV error:', e);
-      return { success: false, error: String(e.message || 'Unknown error') };
+      // Return a plain object with the error as a string
+      return { success: false, error: String(e.message || 'Unknown error occurred') };
     }
   });
 

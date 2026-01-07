@@ -198,6 +198,112 @@ export async function openLinkedInForLogin(userId: number): Promise<{ success: b
 }
 
 /**
+ * Expand all LinkedIn profile sections by clicking "See more", "Show all X experiences", etc.
+ * This ensures we capture ALL profile data, not just what's visible initially
+ */
+async function expandAllLinkedInSections(page: Page): Promise<void> {
+  console.log('Expanding LinkedIn profile sections...');
+  
+  // Scroll through the entire page first to trigger lazy loading
+  await page.evaluate(async () => {
+    const scrollStep = 500;
+    const scrollDelay = 300;
+    const pageHeight = document.body.scrollHeight;
+    
+    for (let position = 0; position < pageHeight; position += scrollStep) {
+      window.scrollTo(0, position);
+      await new Promise(r => setTimeout(r, scrollDelay));
+    }
+    window.scrollTo(0, 0);
+  });
+  
+  await new Promise(r => setTimeout(r, 1000));
+  
+  // List of selectors for "Show all" and "See more" buttons
+  const expandSelectors = [
+    // Show all experiences
+    'a[href*="details/experience"]',
+    '#experience ~ .pvs-list__footer-wrapper a',
+    'button[aria-label*="Show all"][aria-label*="experience"]',
+    
+    // Show all education
+    'a[href*="details/education"]',
+    '#education ~ .pvs-list__footer-wrapper a',
+    'button[aria-label*="Show all"][aria-label*="education"]',
+    
+    // Show all skills
+    'a[href*="details/skills"]',
+    '#skills ~ .pvs-list__footer-wrapper a',
+    'button[aria-label*="Show all"][aria-label*="skill"]',
+    
+    // Show all licenses/certifications
+    'a[href*="details/certifications"]',
+    '#licenses_and_certifications ~ .pvs-list__footer-wrapper a',
+    
+    // Show all languages
+    'a[href*="details/languages"]',
+    '#languages ~ .pvs-list__footer-wrapper a',
+    
+    // "See more" buttons for descriptions
+    'button.inline-show-more-text__button',
+    'button[aria-label*="see more"]',
+    'button[aria-label*="See more"]',
+    '.pvs-list__item--line-clamp button',
+    
+    // About section "see more"
+    '#about ~ .display-flex button.inline-show-more-text__button',
+    '.pv-about-section button.inline-show-more-text__button',
+  ];
+  
+  // Click each expand button with delays
+  for (const selector of expandSelectors) {
+    try {
+      const buttons = await page.$$(selector);
+      for (const button of buttons) {
+        try {
+          // Check if button is visible
+          const isVisible = await button.evaluate(el => {
+            const rect = el.getBoundingClientRect();
+            return rect.width > 0 && rect.height > 0;
+          });
+          
+          if (isVisible) {
+            await button.click();
+            console.log(`Clicked: ${selector}`);
+            await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
+          }
+        } catch (clickError) {
+          // Button might have been removed, continue
+        }
+      }
+    } catch (e) {
+      // Selector not found, continue
+    }
+  }
+  
+  // Also try clicking using JavaScript for stubborn buttons
+  await page.evaluate(() => {
+    const clickTexts = ['see more', 'show all', 'mehr anzeigen', 'alle anzeigen'];
+    
+    document.querySelectorAll('button, a').forEach(el => {
+      const text = el.textContent?.toLowerCase() || '';
+      const ariaLabel = el.getAttribute('aria-label')?.toLowerCase() || '';
+      
+      for (const clickText of clickTexts) {
+        if (text.includes(clickText) || ariaLabel.includes(clickText)) {
+          try {
+            (el as HTMLElement).click();
+          } catch (e) {}
+        }
+      }
+    });
+  });
+  
+  await new Promise(r => setTimeout(r, 1000));
+  console.log('Finished expanding sections');
+}
+
+/**
  * Scrape the currently open LinkedIn profile
  */
 export async function scrapeLinkedInProfile(userId: number, profileUrl?: string): Promise<{ success: boolean; data?: LinkedInProfile; error?: string }> {

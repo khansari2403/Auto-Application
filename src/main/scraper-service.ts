@@ -207,18 +207,25 @@ export async function getJobPageContent(url: string, userId: number, callAI: Fun
         } catch (e) {}
       }
       
-      // STRATEGY 2: Job-specific selectors
+      // STRATEGY 2: Job-specific selectors (LinkedIn & others)
       const jobSelectors = [
+        // LinkedIn 2025 selectors
+        '.jobs-description__content',
+        '.jobs-description-content__text',
+        '.jobs-box__html-content',
+        '.show-more-less-html__markup',
+        '.description__text',
+        'div.jobs-description',
+        'article.jobs-description__container',
+        // Generic job board selectors
         '.job-description', 
         '#jobDescriptionText', 
-        '.description__text', 
-        '.show-more-less-html__markup', 
-        '.jobs-description__content',
-        '.jobs-box__html-content',
         '[data-testid="job-description"]', 
         '.job-details',
         '.jobsearch-JobComponent-description',
-        '#job-details'
+        '#job-details',
+        '.job-description-content',
+        '.position-description'
       ];
       
       for (const sel of jobSelectors) {

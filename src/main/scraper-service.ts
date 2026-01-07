@@ -172,6 +172,7 @@ export async function getJobPageContent(url: string, userId: number, callAI: Fun
     // Check if blocked
     if (await isPageBlocked(page)) {
       console.log('Scraper: Page blocked by bot detection');
+      // Return plain primitives only
       return { content: '', strategyUsed: 'Blocked' };
     }
 
@@ -256,11 +257,18 @@ export async function getJobPageContent(url: string, userId: number, callAI: Fun
     });
 
     console.log(`Scraper: Extracted using ${result.strategy}, length: ${result.content.length}`);
-    return { content: result.content, strategyUsed: result.strategy };
+    
+    // CRITICAL: Create new plain object with only string primitives
+    // This prevents IPC clone errors when passing data between processes
+    const safeContent = String(result.content || '');
+    const safeStrategy = String(result.strategy || 'Unknown');
+    
+    return { content: safeContent, strategyUsed: safeStrategy };
     
   } catch (error: any) {
     console.error('Scraper Error:', error.message);
-    return { content: '', strategyUsed: 'Failed: ' + error.message };
+    // Return plain primitives only
+    return { content: '', strategyUsed: 'Failed: ' + String(error.message || 'Unknown error') };
   } finally {
     if (browser) {
       await browser.close();

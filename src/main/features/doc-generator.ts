@@ -880,69 +880,91 @@ function buildAuditorPrompt(docKey: string, docLabel: string, content: string, j
   const missingSkills = job.compatibility_missing_skills ? 
     JSON.parse(job.compatibility_missing_skills) : [];
   
-  // Allow document generation for Yellow (26-50%), Green (51-75%), and Gold (76-100%) jobs
-  // Only Red jobs (0-25%) should potentially be blocked, but even then we're lenient
+  // Determine job match level
+  const isGoldJob = compatScore >= 76; // 76-100%
+  const isGreenJob = compatScore >= 51 && compatScore < 76; // 51-75%
+  const isYellowJob = compatScore >= 26 && compatScore < 51; // 26-50%
   const isAcceptableJob = compatScore >= 26; // Yellow, Green, or Gold
   
   let flexibilityNote = '';
-  if (isAcceptableJob) {
+  
+  if (isGoldJob) {
     flexibilityNote = `
-**IMPORTANT - THIS IS A COMPATIBLE JOB (Score: ${compatScore}%):**
-The user has chosen to apply for this job. Your job is to ensure the document is well-written and factually accurate, NOT to judge if the user should apply.
+**CRITICAL - THIS IS A GOLD JOB (Score: ${compatScore}%) - ALMOST GUARANTEED TO APPROVE:**
+This is an EXCELLENT match. The user is highly qualified for this position.
+Your ONLY job is to check for obvious factual errors and typos.
+DO NOT reject for:
+- Style choices
+- Word count variations
+- Minor formatting differences
+- Wording preferences
 
-${missingSkills.length > 0 ? `Some skills may be missing, but the applicant wants to highlight transferable experience:
+APPROVE unless there is CLEAR fabrication of facts that don't exist in the user's profile.
+`;
+  } else if (isGreenJob) {
+    flexibilityNote = `
+**IMPORTANT - THIS IS A GREEN JOB (Score: ${compatScore}%) - HIGHLY LIKELY TO APPROVE:**
+This is a GOOD match. The user has applied to a position they're well-suited for.
+Be LENIENT. Your job is to ensure basic factual accuracy, not to judge quality.
+
+${missingSkills.length > 0 ? `Some skills may differ, but the applicant wants to highlight transferable experience:
 - ${missingSkills.slice(0, 5).join('\n- ')}
 
-FOR THESE CASES:
-- Allow the applicant to highlight TRANSFERABLE skills and RELATED experience
-- Allow honest statements about willingness to learn
-- Do NOT reject simply because the applicant can't claim direct experience with missing skills
-- DO reject ONLY if the document FABRICATES experience the applicant doesn't have` : ''}
+DO NOT reject because the applicant can't claim direct experience. Allow them to highlight TRANSFERABLE skills and willingness to learn.` : ''}
+
+APPROVE unless there is OBVIOUS fabrication or major format issues.
+`;
+  } else if (isYellowJob) {
+    flexibilityNote = `
+**NOTICE - THIS IS A YELLOW JOB (Score: ${compatScore}%):**
+This is a reasonable match. The user has chosen to apply despite some gaps.
+
+${missingSkills.length > 0 ? `Missing skills (user is aware):
+- ${missingSkills.slice(0, 5).join('\n- ')}
+
+Allow:
+- Transferable skills and related experience
+- Honest statements about willingness to learn
+- Highlighting adjacent experience
+
+DO NOT reject simply because the applicant can't claim direct experience.` : ''}
+
+APPROVE unless there is FABRICATED information or critical format issues.
 `;
   }
   
-  return `You are the "Auditor" agent. Your job is to review this ${docLabel} for accuracy, quality, and FACTUAL CORRECTNESS.
+  return `You are the "Auditor" agent. Your job is to review this ${docLabel}.
 
 JOB: ${job.job_title} at ${job.company_name}
+COMPATIBILITY SCORE: ${compatScore}%
 
 CONTENT TO REVIEW:
 ${content}
 ${flexibilityNote}
-EVALUATION CRITERIA:
+**YOUR DECISION RULES:**
 
-**CRITICAL - HALLUCINATION CHECK:**
-1. FACTUAL ACCURACY: Does the document contain any information that seems fabricated or not from the applicant's actual profile? Look for:
-   - Specific company names, dates, or achievements that seem invented
-   - Metrics or percentages that appear made up (e.g., "increased sales by 47%" without context)
-   - Job titles or responsibilities that seem inconsistent
-   - Skills or certifications not typically mentioned together
-2. COMPANY FACTS: Are any company facts stated that could be false? (If unsure, flag as potentially fabricated)
+1. For GOLD/GREEN jobs (score 51%+): APPROVE unless you find FABRICATED facts
+2. For YELLOW jobs (score 26-50%): APPROVE unless you find fabrication or major issues
+3. Fabrication means: claiming specific jobs/achievements/certifications the person never had
 
-**IMPORTANT - NOT GROUNDS FOR REJECTION:**
-- Soft skills (communication, teamwork, leadership) - these are subjective and acceptable
-- Transferable experience from different but related roles
-- Statements of willingness to learn or grow
-- General industry knowledge without specific metrics
-- Experience in related fields that could transfer to the target role
+**THINGS THAT ARE NOT FABRICATION (DO NOT REJECT FOR THESE):**
+- Soft skills (leadership, communication, teamwork)
+- Transferable experience from related roles
+- "Willingness to learn" statements
+- General industry knowledge
+- Using different words to describe real experience
 
-**FORMAT & QUALITY:**
-3. LANGUAGE: Is it in the same language as the job description?
-4. HUMAN-LIKE: Does it avoid AI clichés (thrilled, passionate, fast-paced world)?
-5. NO LONG HYPHENS: Are there any — or – characters? (Should use - instead)
-6. PROPER GREETING: Does it start with "Dear Hiring Manager," or similar?
-7. PROPER SIGN-OFF: Does it end with "Kind regards," followed by the applicant's name?
-8. ATS FRIENDLY: Is the structure clear and professional?
-9. TAILORED: Does it specifically reference the company or role?
-10. NO PLACEHOLDERS: Are there any "[Insert...]", "XYZ", or "N/A" in critical fields?
-11. LENGTH: Is it appropriate? (Motivation letter: 400-500 words, Cover letter: 250-300 words)
-12. NO JSON/META: Does it start cleanly without JSON formatting or meta-text like "Here is..."?
-13. NO APOLOGIES: Does it avoid phrases like "I could not find", "research unavailable"?
+**FORMAT CHECKS (only reject for severe issues):**
+- Language matches job description? (OK if close)
+- Has proper greeting? (OK if professional)
+- Has proper sign-off? (OK if includes name)
+- No obvious placeholders like "[Insert...]"?
 
-RESPONSE FORMAT:
-If it passes ALL criteria, respond with exactly: "APPROVED"
-If it fails any criteria (especially FABRICATED facts), respond with: "REJECTED: " followed by specific feedback on what to fix.
+**RESPONSE FORMAT:**
+If acceptable: respond with exactly "APPROVED"
+If has fabrication: respond with "REJECTED: " followed by the specific fabrication found
 
-REMEMBER: Only reject for FABRICATED information or format issues, NOT for skill gaps or experience differences.`;
+REMEMBER: You are NOT a gatekeeper. The user chose this job. Help them apply.`;
 }
 
 // Export individual document generator for direct calls

@@ -508,6 +508,7 @@ export async function startHunterSearch(userId: number, callAI: Function) {
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
+      } // End of job titles loop
     }
     
     await logAction(userId, 'ai_hunter', `✅ Done! Processed ${totalJobsFound} jobs.`, 'completed', true);

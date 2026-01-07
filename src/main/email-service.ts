@@ -22,7 +22,8 @@ export function getGmailAuthUrl(clientId: string): string {
   params.append('response_type', 'code');
   params.append('scope', 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send');
   params.append('access_type', 'offline');
-  params.append('prompt', 'consent');
+  // Force account selection every time to avoid wrong account issues
+  params.append('prompt', 'select_account consent');
   return 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
 }
 

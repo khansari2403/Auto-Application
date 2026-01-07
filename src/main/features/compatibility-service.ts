@@ -88,6 +88,7 @@ async function getProfileBySource(userId: number): Promise<{ profile: any; sourc
  * 1. Soft skills should NEVER be exclusion factors
  * 2. Experience is transferable - 5+ years in one role indicates potential for transition
  * 3. Language proficiency from Search Profile bypasses language scoring
+ * 4. Learned criteria from user Q&A overrides uncertain requirements
  */
 export async function calculateCompatibility(userId: number, jobId: number): Promise<CompatibilityResult> {
   // Get user profile based on Auditor source setting
@@ -102,6 +103,10 @@ export async function calculateCompatibility(userId: number, jobId: number): Pro
       languageProficiencies = JSON.parse(activeProfile.language_proficiencies);
     }
   } catch (e) {}
+  
+  // Get learned criteria from Auditor Q&A
+  const db = getDatabase();
+  const learnedCriteria = (db.auditor_criteria || []).filter((c: any) => c.user_id === userId);
   
   // Get job listing
   const jobs = await getAllQuery('SELECT * FROM job_listings');

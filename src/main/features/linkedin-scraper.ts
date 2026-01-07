@@ -198,13 +198,33 @@ export async function openLinkedInForLogin(userId: number): Promise<{ success: b
 }
 
 /**
- * Expand all LinkedIn profile sections by clicking "See more", "Show all X experiences", etc.
- * This ensures we capture ALL profile data, not just what's visible initially
+ * Expand all LinkedIn profile sections by navigating to detail pages
+ * This ensures we capture ALL profile data including experiences, education, certifications, skills, and languages
  */
-async function expandAllLinkedInSections(page: Page): Promise<void> {
+async function expandAllLinkedInSections(page: Page): Promise<{
+  experiences: any[];
+  educations: any[];
+  skills: string[];
+  licenses: string[];
+  languages: string[];
+}> {
   console.log('Expanding LinkedIn profile sections...');
   
-  // Scroll through the entire page first to trigger lazy loading
+  const collectedData = {
+    experiences: [] as any[],
+    educations: [] as any[],
+    skills: [] as string[],
+    licenses: [] as string[],
+    languages: [] as string[]
+  };
+  
+  // Get the current profile URL for navigation
+  const currentUrl = page.url();
+  const profileUrlMatch = currentUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
+  const profileSlug = profileUrlMatch ? profileUrlMatch[1] : 'me';
+  const baseProfileUrl = `https://www.linkedin.com/in/${profileSlug}`;
+  
+  // First, scroll through the main page to trigger lazy loading
   await page.evaluate(async () => {
     const scrollStep = 500;
     const scrollDelay = 300;
@@ -219,71 +239,9 @@ async function expandAllLinkedInSections(page: Page): Promise<void> {
   
   await new Promise(r => setTimeout(r, 1000));
   
-  // List of selectors for "Show all" and "See more" buttons
-  const expandSelectors = [
-    // Show all experiences
-    'a[href*="details/experience"]',
-    '#experience ~ .pvs-list__footer-wrapper a',
-    'button[aria-label*="Show all"][aria-label*="experience"]',
-    
-    // Show all education
-    'a[href*="details/education"]',
-    '#education ~ .pvs-list__footer-wrapper a',
-    'button[aria-label*="Show all"][aria-label*="education"]',
-    
-    // Show all skills
-    'a[href*="details/skills"]',
-    '#skills ~ .pvs-list__footer-wrapper a',
-    'button[aria-label*="Show all"][aria-label*="skill"]',
-    
-    // Show all licenses/certifications
-    'a[href*="details/certifications"]',
-    '#licenses_and_certifications ~ .pvs-list__footer-wrapper a',
-    
-    // Show all languages
-    'a[href*="details/languages"]',
-    '#languages ~ .pvs-list__footer-wrapper a',
-    
-    // "See more" buttons for descriptions
-    'button.inline-show-more-text__button',
-    'button[aria-label*="see more"]',
-    'button[aria-label*="See more"]',
-    '.pvs-list__item--line-clamp button',
-    
-    // About section "see more"
-    '#about ~ .display-flex button.inline-show-more-text__button',
-    '.pv-about-section button.inline-show-more-text__button',
-  ];
-  
-  // Click each expand button with delays
-  for (const selector of expandSelectors) {
-    try {
-      const buttons = await page.$$(selector);
-      for (const button of buttons) {
-        try {
-          // Check if button is visible
-          const isVisible = await button.evaluate(el => {
-            const rect = el.getBoundingClientRect();
-            return rect.width > 0 && rect.height > 0;
-          });
-          
-          if (isVisible) {
-            await button.click();
-            console.log(`Clicked: ${selector}`);
-            await new Promise(r => setTimeout(r, 500 + Math.random() * 500));
-          }
-        } catch (clickError) {
-          // Button might have been removed, continue
-        }
-      }
-    } catch (e) {
-      // Selector not found, continue
-    }
-  }
-  
-  // Also try clicking using JavaScript for stubborn buttons
+  // Click all "See more" buttons on the main page first
   await page.evaluate(() => {
-    const clickTexts = ['see more', 'show all', 'mehr anzeigen', 'alle anzeigen'];
+    const clickTexts = ['see more', 'show all', 'mehr anzeigen', 'alle anzeigen', 'show more'];
     
     document.querySelectorAll('button, a').forEach(el => {
       const text = el.textContent?.toLowerCase() || '';
@@ -300,7 +258,182 @@ async function expandAllLinkedInSections(page: Page): Promise<void> {
   });
   
   await new Promise(r => setTimeout(r, 1000));
-  console.log('Finished expanding sections');
+  
+  // Define detail pages to scrape
+  const detailPages = [
+    { section: 'experience', path: 'details/experience' },
+    { section: 'education', path: 'details/education' },
+    { section: 'skills', path: 'details/skills' },
+    { section: 'certifications', path: 'details/certifications' },
+    { section: 'languages', path: 'details/languages' },
+    { section: 'courses', path: 'details/courses' },
+    { section: 'projects', path: 'details/projects' },
+    { section: 'honors', path: 'details/honors' },
+    { section: 'volunteering', path: 'details/volunteering-experiences' }
+  ];
+  
+  for (const { section, path } of detailPages) {
+    try {
+      const detailUrl = `${baseProfileUrl}/${path}/`;
+      console.log(`Navigating to ${section} detail page: ${detailUrl}`);
+      
+      await page.goto(detailUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await new Promise(r => setTimeout(r, 2000));
+      
+      // Check if page exists (not redirected to 404 or main profile)
+      const pageUrl = page.url();
+      if (!pageUrl.includes(path)) {
+        console.log(`${section} section not found, skipping...`);
+        continue;
+      }
+      
+      // Scroll to load all items
+      await page.evaluate(async () => {
+        const scrollStep = 500;
+        const scrollDelay = 300;
+        let lastHeight = 0;
+        let currentHeight = document.body.scrollHeight;
+        
+        while (currentHeight > lastHeight) {
+          lastHeight = currentHeight;
+          window.scrollTo(0, currentHeight);
+          await new Promise(r => setTimeout(r, scrollDelay));
+          currentHeight = document.body.scrollHeight;
+        }
+        window.scrollTo(0, 0);
+      });
+      
+      await new Promise(r => setTimeout(r, 1000));
+      
+      // Click all "See more" buttons on detail page
+      await page.evaluate(() => {
+        document.querySelectorAll('button.inline-show-more-text__button, button[aria-label*="see more"], button[aria-label*="See more"]').forEach(btn => {
+          try { (btn as HTMLElement).click(); } catch (e) {}
+        });
+      });
+      
+      await new Promise(r => setTimeout(r, 500));
+      
+      // Extract data based on section type
+      if (section === 'experience') {
+        const experiences = await page.evaluate(() => {
+          const items: any[] = [];
+          document.querySelectorAll('.pvs-list__paged-list-item, li.pvs-list__item--line-clamp, .artdeco-list__item').forEach(item => {
+            const titleEl = item.querySelector('.t-bold span[aria-hidden="true"], .mr1.t-bold span');
+            const companyEl = item.querySelector('.t-14.t-normal span[aria-hidden="true"], .t-14.t-normal');
+            const datesEl = item.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"], .pvs-entity__caption-wrapper');
+            const descEl = item.querySelector('.pvs-list__outer-container .t-14.t-normal.t-black span[aria-hidden="true"], .inline-show-more-text');
+            const locationEl = item.querySelector('.t-black--light span[aria-hidden="true"]:last-child');
+            
+            const title = titleEl?.textContent?.trim();
+            if (title) {
+              const companyText = companyEl?.textContent || '';
+              const [company, ...locationParts] = companyText.split('·').map((s: string) => s.trim());
+              const datesText = datesEl?.textContent || '';
+              const dateMatch = datesText.match(/(\w+\.?\s*\d{4})\s*[-–]\s*(\w+\.?\s*\d{4}|Present|Heute|Aktuell)/i);
+              
+              items.push({
+                title,
+                company: company || '',
+                location: locationParts.join(' ').trim() || locationEl?.textContent?.trim() || '',
+                startDate: dateMatch?.[1] || '',
+                endDate: dateMatch?.[2] || '',
+                description: descEl?.textContent?.trim() || ''
+              });
+            }
+          });
+          return items;
+        });
+        collectedData.experiences = experiences;
+        console.log(`Found ${experiences.length} experiences`);
+        
+      } else if (section === 'education') {
+        const educations = await page.evaluate(() => {
+          const items: any[] = [];
+          document.querySelectorAll('.pvs-list__paged-list-item, li.pvs-list__item--line-clamp, .artdeco-list__item').forEach(item => {
+            const schoolEl = item.querySelector('.t-bold span[aria-hidden="true"]');
+            const degreeEl = item.querySelector('.t-14.t-normal span[aria-hidden="true"]');
+            const datesEl = item.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]');
+            
+            const school = schoolEl?.textContent?.trim();
+            if (school) {
+              const degreeText = degreeEl?.textContent || '';
+              const [degree, field] = degreeText.split(',').map((s: string) => s.trim());
+              const datesText = datesEl?.textContent || '';
+              const yearMatch = datesText.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+              
+              items.push({
+                school,
+                degree: degree || '',
+                field: field || '',
+                startYear: yearMatch?.[1] || '',
+                endYear: yearMatch?.[2] || ''
+              });
+            }
+          });
+          return items;
+        });
+        collectedData.educations = educations;
+        console.log(`Found ${educations.length} education entries`);
+        
+      } else if (section === 'skills') {
+        const skills = await page.evaluate(() => {
+          const items: string[] = [];
+          document.querySelectorAll('.t-bold span[aria-hidden="true"]').forEach(el => {
+            const skill = el.textContent?.trim();
+            if (skill && skill.length > 1 && skill.length < 100) {
+              items.push(skill);
+            }
+          });
+          return [...new Set(items)];
+        });
+        collectedData.skills = skills;
+        console.log(`Found ${skills.length} skills`);
+        
+      } else if (section === 'certifications') {
+        const licenses = await page.evaluate(() => {
+          const items: string[] = [];
+          document.querySelectorAll('.t-bold span[aria-hidden="true"]').forEach(el => {
+            const cert = el.textContent?.trim();
+            if (cert && cert.length > 1 && cert.length < 200) {
+              items.push(cert);
+            }
+          });
+          return [...new Set(items)];
+        });
+        collectedData.licenses = licenses;
+        console.log(`Found ${licenses.length} certifications/licenses`);
+        
+      } else if (section === 'languages') {
+        const languages = await page.evaluate(() => {
+          const items: string[] = [];
+          document.querySelectorAll('.t-bold span[aria-hidden="true"]').forEach(el => {
+            const lang = el.textContent?.trim();
+            if (lang && lang.length > 1 && lang.length < 50) {
+              items.push(lang);
+            }
+          });
+          return [...new Set(items)];
+        });
+        collectedData.languages = languages;
+        console.log(`Found ${languages.length} languages`);
+      }
+      
+    } catch (e: any) {
+      console.log(`Error scraping ${section} section:`, e.message);
+    }
+  }
+  
+  // Navigate back to main profile
+  try {
+    await page.goto(baseProfileUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await new Promise(r => setTimeout(r, 1000));
+  } catch (e) {
+    console.log('Error navigating back to main profile');
+  }
+  
+  console.log('Finished expanding and collecting all sections');
+  return collectedData;
 }
 
 /**

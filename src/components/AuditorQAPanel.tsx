@@ -113,10 +113,7 @@ export function AuditorQAPanel({ userId, onCriteriaUpdate }: Props) {
     return acc;
   }, {} as Record<string, AuditorCriteria[]>);
 
-  if (pendingQuestions.length === 0 && learnedCriteria.length === 0) {
-    return null; // Don't show panel if nothing to display
-  }
-
+  // Always show the panel so users know the feature exists
   return (
     <div style={{
       background: 'var(--bg-secondary)',

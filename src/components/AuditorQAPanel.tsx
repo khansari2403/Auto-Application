@@ -323,22 +323,22 @@ export function AuditorQAPanel({ userId, onCriteriaUpdate }: Props) {
 function getCriteriaCategory(criteria: string): string {
   const lower = criteria.toLowerCase();
   
-  if (lower.includes('language') || lower.includes('speak') || lower.includes('sprache')) {
+  if (lower.includes('speak_') || lower.includes('language') || lower.includes('sprache')) {
     return 'Languages';
   }
-  if (lower.includes('certification') || lower.includes('license') || lower.includes('zertifikat')) {
+  if (lower.includes('cert_') || lower.includes('certification') || lower.includes('license') || lower.includes('zertifikat')) {
     return 'Certifications';
   }
-  if (lower.includes('skill') || lower.includes('experience') || lower.includes('erfahrung')) {
-    return 'Skills & Experience';
+  if (lower.includes('tool_') || lower.includes('experience') || lower.includes('erfahrung')) {
+    return 'Tools & Experience';
   }
   if (lower.includes('degree') || lower.includes('education') || lower.includes('studium')) {
     return 'Education';
   }
-  if (lower.includes('visa') || lower.includes('work permit') || lower.includes('arbeitserlaubnis')) {
+  if (lower.includes('work_permit') || lower.includes('eu_citizen') || lower.includes('security_clearance') || lower.includes('drivers_license') || lower.includes('visa') || lower.includes('arbeitserlaubnis')) {
     return 'Work Authorization';
   }
-  if (lower.includes('travel') || lower.includes('relocate') || lower.includes('remote')) {
+  if (lower.includes('willing_travel') || lower.includes('willing_relocate') || lower.includes('onsite_ok') || lower.includes('travel') || lower.includes('relocate') || lower.includes('remote')) {
     return 'Location & Travel';
   }
   

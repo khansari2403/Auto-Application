@@ -1,0 +1,48 @@
+{
+  "user_profile": [],
+  "email_config": [],
+  "job_preferences": [],
+  "ai_models": [],
+  "job_websites": [],
+  "company_monitoring": [],
+  "job_listings": [
+    {
+      "id": 1767779768,
+      "job_title": "Senior Developer",
+      "company_name": "Test Company",
+      "compatibility_score": 80,
+      "description": "Senior developer position requiring Python and JavaScript",
+      "required_skills": "Python, JavaScript, React",
+      "url": "https://example.com/job/123",
+      "timestamp": 1767779768157
+    }
+  ],
+  "applications": [],
+  "action_logs": [],
+  "email_alerts": [],
+  "documents": [],
+  "search_profiles": [],
+  "settings": [],
+  "questions": [],
+  "auditor_questions": [
+    {
+      "id": "test_q_1767779768",
+      "user_id": 1,
+      "job_id": 123,
+      "question": "Do you have experience with Turkish language?",
+      "criteria": "Turkish language proficiency",
+      "answered": true,
+      "timestamp": 1767779768157
+    }
+  ],
+  "auditor_criteria": [
+    {
+      "id": "test_crit_1767779768",
+      "user_id": 1,
+      "criteria": "Turkish language proficiency",
+      "userAnswer": "Yes, I am fluent in Turkish",
+      "job_id": 123,
+      "timestamp": 1767779768157
+    }
+  ]
+}

@@ -16,7 +16,12 @@ export function registerAIHandlers(): string[] {
     'ai:ask-about-cv',
     'ai:smart-apply',
     'ai:continue-application',
-    'ai:cancel-application'
+    'ai:cancel-application',
+    'auditor:get-pending-questions',
+    'auditor:get-learned-criteria',
+    'auditor:save-criteria',
+    'auditor:delete-criteria',
+    'auditor:add-question'
   ];
 
   // --- AI MODEL TEST ---

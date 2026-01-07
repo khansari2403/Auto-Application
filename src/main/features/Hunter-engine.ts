@@ -238,11 +238,19 @@ async function generateAuditorQuestions(
     const existingQuestions = db.auditor_questions || [];
     const learnedCriteria = (db.auditor_criteria || []).filter((c: any) => c.user_id === userId);
     
-    // Get user's profile languages
+    // Get user's profile
     const profiles = await getAllQuery('SELECT * FROM user_profile');
     const profile = profiles[0];
-    const userLanguages = profile?.languages ? JSON.parse(profile.languages) : [];
+    
+    // Parse user data
+    const userLanguages = profile?.languages ? (typeof profile.languages === 'string' ? JSON.parse(profile.languages) : profile.languages) : [];
     const userLanguagesLower = userLanguages.map((l: string) => l.toLowerCase());
+    
+    const userSkills = profile?.skills ? (typeof profile.skills === 'string' ? JSON.parse(profile.skills) : profile.skills) : [];
+    const userSkillsLower = userSkills.map((s: string) => s.toLowerCase());
+    
+    const userLicenses = profile?.licenses ? (typeof profile.licenses === 'string' ? JSON.parse(profile.licenses) : profile.licenses) : [];
+    const userLicensesLower = userLicenses.map((l: string) => l.toLowerCase());
     
     // Search profiles for language proficiencies
     const searchProfiles = await getAllQuery('SELECT * FROM search_profiles');
@@ -257,55 +265,164 @@ async function generateAuditorQuestions(
     // Extract potential question-worthy requirements from job
     const jobDesc = (jobData.description || '').toLowerCase();
     const languages = (jobData.languages || '').toLowerCase();
+    const requiredSkills = (jobData.required_skills || '').toLowerCase();
     
-    // Languages we don't know about
-    const commonLanguages = ['english', 'german', 'french', 'spanish', 'italian', 'dutch', 'portuguese', 'chinese', 'japanese', 'korean', 'russian', 'arabic', 'turkish', 'polish', 'czech', 'hungarian', 'greek', 'hebrew', 'hindi', 'vietnamese'];
+    const questionsToAdd: Array<{ question: string; criteria: string; category: string }> = [];
     
-    const unknownLanguages: string[] = [];
+    // Helper to check if criteria already exists
+    const criteriaExists = (criteria: string) => {
+      const criteriaLower = criteria.toLowerCase();
+      return learnedCriteria.some((c: any) => c.criteria.toLowerCase() === criteriaLower) ||
+             existingQuestions.some((q: any) => 
+               q.user_id === userId && q.criteria.toLowerCase() === criteriaLower && !q.answered
+             );
+    };
+    
+    // ========== 1. LANGUAGE QUESTIONS ==========
+    const commonLanguages = ['english', 'german', 'french', 'spanish', 'italian', 'dutch', 'portuguese', 'chinese', 'japanese', 'korean', 'russian', 'arabic', 'turkish', 'polish', 'czech', 'hungarian', 'greek', 'hebrew', 'hindi', 'vietnamese', 'swedish', 'norwegian', 'danish', 'finnish'];
+    
     for (const lang of commonLanguages) {
       if ((jobDesc.includes(lang) || languages.includes(lang)) &&
           !userLanguagesLower.some(l => l.includes(lang)) &&
           !languageProficiencies.some(l => l.includes(lang))) {
         
-        // Check if we already have a learned criteria for this
-        const alreadyLearned = learnedCriteria.some((c: any) => 
-          c.criteria.toLowerCase().includes(lang)
-        );
-        
-        // Check if question already exists
-        const questionExists = existingQuestions.some((q: any) =>
-          q.user_id === userId && q.criteria.toLowerCase().includes(lang) && !q.answered
-        );
-        
-        if (!alreadyLearned && !questionExists) {
-          unknownLanguages.push(lang);
+        const criteria = `speak_${lang}`;
+        if (!criteriaExists(criteria)) {
+          const langCapitalized = lang.charAt(0).toUpperCase() + lang.slice(1);
+          questionsToAdd.push({
+            question: `Do you speak ${langCapitalized}?`,
+            criteria,
+            category: 'language'
+          });
         }
       }
     }
     
-    // Generate questions for unknown languages
-    for (const lang of unknownLanguages.slice(0, 3)) { // Max 3 questions at a time
-      const langCapitalized = lang.charAt(0).toUpperCase() + lang.slice(1);
+    // ========== 2. CERTIFICATION QUESTIONS ==========
+    const certPatterns = [
+      { pattern: /\b(pmp|project management professional)\b/i, name: 'PMP certification' },
+      { pattern: /\b(scrum master|csm|psm)\b/i, name: 'Scrum Master certification' },
+      { pattern: /\b(aws certified|aws certification)\b/i, name: 'AWS certification' },
+      { pattern: /\b(azure certified|microsoft certified)\b/i, name: 'Azure/Microsoft certification' },
+      { pattern: /\b(gcp certified|google cloud)\b/i, name: 'Google Cloud certification' },
+      { pattern: /\b(cissp|security+|comptia security)\b/i, name: 'Security certification (CISSP/Security+)' },
+      { pattern: /\b(cpa|certified public accountant)\b/i, name: 'CPA certification' },
+      { pattern: /\b(six sigma|lean)\b/i, name: 'Six Sigma/Lean certification' },
+      { pattern: /\b(itil)\b/i, name: 'ITIL certification' },
+      { pattern: /\b(prince2)\b/i, name: 'PRINCE2 certification' },
+      { pattern: /\b(cfa|chartered financial analyst)\b/i, name: 'CFA certification' },
+      { pattern: /\b(ccna|ccnp|cisco certified)\b/i, name: 'Cisco certification (CCNA/CCNP)' },
+      { pattern: /\b(oracle certified)\b/i, name: 'Oracle certification' },
+      { pattern: /\b(salesforce certified)\b/i, name: 'Salesforce certification' },
+      { pattern: /\b(kubernetes certified|cka|ckad)\b/i, name: 'Kubernetes certification' },
+    ];
+    
+    for (const { pattern, name } of certPatterns) {
+      if (pattern.test(jobDesc)) {
+        const hasIt = userLicensesLower.some(l => pattern.test(l)) || userSkillsLower.some(s => pattern.test(s));
+        if (!hasIt) {
+          const criteria = `cert_${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+          if (!criteriaExists(criteria)) {
+            questionsToAdd.push({
+              question: `Do you have ${name}?`,
+              criteria,
+              category: 'certification'
+            });
+          }
+        }
+      }
+    }
+    
+    // ========== 3. SPECIFIC TOOL/TECHNOLOGY QUESTIONS ==========
+    const techPatterns = [
+      { pattern: /\b(sap)\b/i, name: 'SAP', question: 'Do you have experience working with SAP?' },
+      { pattern: /\b(salesforce)\b/i, name: 'Salesforce', question: 'Do you have experience with Salesforce?' },
+      { pattern: /\b(jira|confluence)\b/i, name: 'Jira/Confluence', question: 'Are you experienced with Jira and Confluence?' },
+      { pattern: /\b(tableau|power bi)\b/i, name: 'BI Tools', question: 'Do you have experience with Tableau or Power BI?' },
+      { pattern: /\b(autocad|solidworks|catia)\b/i, name: 'CAD Software', question: 'Do you have experience with CAD software (AutoCAD, SolidWorks, etc.)?' },
+      { pattern: /\b(matlab|simulink)\b/i, name: 'MATLAB', question: 'Do you have experience with MATLAB/Simulink?' },
+      { pattern: /\b(blockchain|web3|smart contract)\b/i, name: 'Blockchain', question: 'Do you have experience with blockchain/Web3 development?' },
+    ];
+    
+    for (const { pattern, name, question } of techPatterns) {
+      if (pattern.test(jobDesc) || pattern.test(requiredSkills)) {
+        const hasIt = userSkillsLower.some(s => pattern.test(s));
+        if (!hasIt) {
+          const criteria = `tool_${name.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+          if (!criteriaExists(criteria)) {
+            questionsToAdd.push({
+              question,
+              criteria,
+              category: 'tool'
+            });
+          }
+        }
+      }
+    }
+    
+    // ========== 4. WORK AUTHORIZATION QUESTIONS ==========
+    const workAuthPatterns = [
+      { pattern: /\b(work permit|arbeitserlaubnis|visa sponsorship)\b/i, criteria: 'work_permit', question: 'Do you have a valid work permit for this location?' },
+      { pattern: /\b(eu citizen|eu passport|european union citizen)\b/i, criteria: 'eu_citizen', question: 'Are you an EU citizen?' },
+      { pattern: /\b(security clearance)\b/i, criteria: 'security_clearance', question: 'Do you have or can you obtain security clearance?' },
+      { pattern: /\b(driver.?s? license|führerschein)\b/i, criteria: 'drivers_license', question: "Do you have a driver's license?" },
+    ];
+    
+    for (const { pattern, criteria, question } of workAuthPatterns) {
+      if (pattern.test(jobDesc)) {
+        if (!criteriaExists(criteria)) {
+          questionsToAdd.push({
+            question,
+            criteria,
+            category: 'work_authorization'
+          });
+        }
+      }
+    }
+    
+    // ========== 5. TRAVEL/RELOCATION QUESTIONS ==========
+    const travelPatterns = [
+      { pattern: /\b(travel required|willingness to travel|reisebereitschaft)\b/i, criteria: 'willing_travel', question: 'Are you willing to travel for work?' },
+      { pattern: /\b(relocat|umzugsbereitschaft)\b/i, criteria: 'willing_relocate', question: 'Are you willing to relocate for this position?' },
+      { pattern: /\b(on.?site|onsite only|no remote)\b/i, criteria: 'onsite_ok', question: 'Are you able to work on-site at the office location?' },
+    ];
+    
+    for (const { pattern, criteria, question } of travelPatterns) {
+      if (pattern.test(jobDesc)) {
+        if (!criteriaExists(criteria)) {
+          questionsToAdd.push({
+            question,
+            criteria,
+            category: 'work_preference'
+          });
+        }
+      }
+    }
+    
+    // Limit to max 5 new questions at a time to avoid overwhelming the user
+    const questionsToInsert = questionsToAdd.slice(0, 5);
+    
+    // Insert questions into database
+    for (const { question, criteria, category } of questionsToInsert) {
       const questionId = `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
       await runQuery('INSERT INTO auditor_questions', {
         id: questionId,
         user_id: userId,
         job_id: jobId,
-        question: `Do you speak ${langCapitalized}?`,
-        criteria: `speak ${lang}`,
+        question,
+        criteria,
+        category,
         answered: false,
         timestamp: Date.now()
       });
       
-      console.log(`Generated Auditor question: Do you speak ${langCapitalized}?`);
+      console.log(`Generated Auditor question (${category}): ${question}`);
     }
     
-    // Could add more question types here:
-    // - Certifications
-    // - Specific tool experience
-    // - Education requirements
-    // - Visa/work permit
+    if (questionsToInsert.length > 0) {
+      console.log(`Generated ${questionsToInsert.length} Auditor questions for job ${jobId}`);
+    }
     
   } catch (e: any) {
     console.log('Error generating Auditor questions:', e.message);

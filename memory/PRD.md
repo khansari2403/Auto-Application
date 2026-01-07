@@ -236,18 +236,27 @@ Settings are stored in `settings.secretary_settings` as JSON:
   - Explains the feature to users so they know what to expect
 - [x] **Auditor Q&A Question Generation Enhanced** - Now generates questions for:
   - Languages (30+ common languages supported)
-  - Certifications (PMP, AWS, Azure, Scrum, CISSP, etc.)
-  - Specific tools (SAP, Salesforce, Jira, Tableau, AutoCAD, etc.)
-  - Work authorization (work permit, EU citizen, security clearance, driver's license)
-  - Work preferences (willingness to travel, relocate, on-site work)
+  - Certifications (PMP, AWS, Scrum Master, CISSP, etc.)
+  - Tools (SAP, Salesforce, Jira, Tableau, etc.)
+  - Work authorization (work permit, EU citizen, driver's license)
+  - Work preferences (travel, relocation, on-site)
 - [x] **Interview Insider Clone Error Fix** - Enhanced serialization:
   - All data explicitly converted to primitive strings before IPC return
+  - Added explicit `String()` casting in scraper-service.ts `getJobPageContent()`
   - Better error handling for scraper failures
   - Handles empty/invalid job URLs gracefully
 - [x] **Tab State Persistence Fixed** - Hunting status now persists across tab switches:
   - JobHuntingControls syncs status on mount and every 2 seconds
   - JobSearch also syncs immediately on mount
-  - Removed duplicate state management issues
+- [x] **DATABASE FIX: Auditor Q&A tables added** - Critical bug fix:
+  - Added `auditor_questions` and `auditor_criteria` tables to database initialization
+  - Questions were failing to save because tables didn't exist
+- [x] **Auditor Prompt Completely Rewritten** - Much more lenient for Green/Gold jobs:
+  - Gold jobs (76%+): Almost guaranteed approval, only rejects for obvious fabrication
+  - Green jobs (51-75%): Highly likely approval, allows transferable skills
+  - Yellow jobs (26-50%): Reasonable approval, allows learning statements
+  - Removed excessive format checks that caused unnecessary rejections
+  - Now focuses ONLY on fabrication detection, not quality judgment
 
 ### P1 - High Priority (Testing Needed)
 - [ ] **Google OAuth Flow** - Test with user's Google Cloud credentials

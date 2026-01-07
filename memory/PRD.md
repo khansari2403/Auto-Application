@@ -225,6 +225,30 @@ Settings are stored in `settings.secretary_settings` as JSON:
   - Location: 10%
   - Language: 10% (new - respects user proficiency)
 
+### Session 10 - LinkedIn Scraper & Auditor Q&A Fixes (January 2025)
+- [x] **LinkedIn Profile Scraping Enhanced** - Now captures ALL sections:
+  - Navigates to detail pages for each section (experience, education, skills, certifications, languages, courses, projects, honors, volunteering)
+  - Collects complete data from each detail page with scroll and expand
+  - Falls back to main page extraction if detail pages fail
+  - Properly parses German date formats (e.g., "Jan. 2024 - Heute")
+- [x] **Auditor Q&A Panel Always Visible** - Panel now shows even when empty with helpful info
+  - Shows explanation when no questions are pending
+  - Explains the feature to users so they know what to expect
+- [x] **Auditor Q&A Question Generation Enhanced** - Now generates questions for:
+  - Languages (30+ common languages supported)
+  - Certifications (PMP, AWS, Azure, Scrum, CISSP, etc.)
+  - Specific tools (SAP, Salesforce, Jira, Tableau, AutoCAD, etc.)
+  - Work authorization (work permit, EU citizen, security clearance, driver's license)
+  - Work preferences (willingness to travel, relocate, on-site work)
+- [x] **Interview Insider Clone Error Fix** - Enhanced serialization:
+  - All data explicitly converted to primitive strings before IPC return
+  - Better error handling for scraper failures
+  - Handles empty/invalid job URLs gracefully
+- [x] **Tab State Persistence Fixed** - Hunting status now persists across tab switches:
+  - JobHuntingControls syncs status on mount and every 2 seconds
+  - JobSearch also syncs immediately on mount
+  - Removed duplicate state management issues
+
 ### P1 - High Priority (Testing Needed)
 - [ ] **Google OAuth Flow** - Test with user's Google Cloud credentials
 - [ ] **LinkedIn Profile Import** - Test complete flow: sign in -> fetch profile -> save

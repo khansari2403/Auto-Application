@@ -297,14 +297,30 @@ export async function scrapeJobs(baseUrl: string, query: string, location: strin
       searchUrl = `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`;
     } else if (baseUrl.includes('indeed')) {
       searchUrl = `https://de.indeed.com/jobs?q=${encodeURIComponent(query)}&l=${encodeURIComponent(location)}`;
+    } else if (baseUrl.includes('glassdoor.de')) {
+      // German Glassdoor
+      searchUrl = `https://www.glassdoor.de/Job/jobs.htm?sc.keyword=${encodeURIComponent(query)}&locT=C&locKeyword=${encodeURIComponent(location)}`;
     } else if (baseUrl.includes('glassdoor')) {
+      // International Glassdoor
       searchUrl = `https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${encodeURIComponent(query)}&locT=C&locKeyword=${encodeURIComponent(location)}`;
     } else if (baseUrl.includes('xing')) {
       searchUrl = `https://www.xing.com/jobs/search?keywords=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`;
     } else if (baseUrl.includes('stepstone')) {
       searchUrl = `https://www.stepstone.de/jobs/${encodeURIComponent(query)}/in-${encodeURIComponent(location)}`;
+    } else if (baseUrl.includes('arbeitsagentur.de')) {
+      // Bundesagentur für Arbeit - German job portal
+      searchUrl = `https://www.arbeitsagentur.de/jobsuche/suche?angebotsart=1&was=${encodeURIComponent(query)}&wo=${encodeURIComponent(location)}`;
+    } else if (baseUrl.includes('monster.com') || baseUrl.includes('monster.de')) {
+      // Monster - uses q parameter for keyword search
+      const monsterDomain = baseUrl.includes('monster.de') ? 'www.monster.de' : 'www.monster.com';
+      searchUrl = `https://${monsterDomain}/jobs/search?q=${encodeURIComponent(query)}&where=${encodeURIComponent(location)}`;
     } else {
-      searchUrl = baseUrl;
+      // For unknown sites, try to append query parameters
+      if (baseUrl.includes('?')) {
+        searchUrl = `${baseUrl}&q=${encodeURIComponent(query)}&location=${encodeURIComponent(location)}`;
+      } else {
+        searchUrl = baseUrl;
+      }
     }
     
     console.log(`Scraper: Navigating to ${searchUrl}`);

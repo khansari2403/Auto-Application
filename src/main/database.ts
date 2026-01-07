@@ -19,7 +19,7 @@ export function getDatabase(): any {
     } else { dbData = getDefaultData(); }
     (global as any).dbData = dbData;
   }
-  const tables = ['user_profile', 'email_config', 'job_preferences', 'ai_models', 'job_websites', 'company_monitoring', 'job_listings', 'applications', 'action_logs', 'email_alerts', 'documents', 'search_profiles', 'settings', 'questions'];
+  const tables = ['user_profile', 'email_config', 'job_preferences', 'ai_models', 'job_websites', 'company_monitoring', 'job_listings', 'applications', 'action_logs', 'email_alerts', 'documents', 'search_profiles', 'settings', 'questions', 'auditor_questions', 'auditor_criteria'];
   tables.forEach(t => { if (!dbData[t]) dbData[t] = []; });
   return dbData;
 }
@@ -28,7 +28,8 @@ const getDefaultData = () => ({
   user_profile: [], email_config: [], job_preferences: [], ai_models: [],
   job_websites: [], company_monitoring: [], job_listings: [],
   applications: [], action_logs: [], email_alerts: [],
-  documents: [], search_profiles: [], settings: [], questions: []
+  documents: [], search_profiles: [], settings: [], questions: [],
+  auditor_questions: [], auditor_criteria: []
 });
 
 const saveDb = () => {

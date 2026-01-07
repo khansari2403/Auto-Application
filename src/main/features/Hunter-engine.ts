@@ -192,6 +192,10 @@ ${pageData.content.substring(0, 6000)}`;
       const compatResult = await CompatibilityService.calculateCompatibility(userId, jobId);
       console.log(`Compatibility: ${compatResult.score}% (${compatResult.level})`);
       await logAction(userId, 'ai_auditor', `📊 Match: ${compatResult.level.toUpperCase()} (${compatResult.score}%)`, 'completed', true);
+      
+      // Step 7b: Generate Auditor questions for uncertain requirements
+      await generateAuditorQuestions(userId, jobId, updateData, compatResult);
+      
     } catch (compatError: any) {
       console.log('Compatibility calculation error:', compatError.message);
     }

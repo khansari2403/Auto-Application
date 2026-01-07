@@ -394,39 +394,57 @@ export async function startHunterSearch(userId: number, callAI: Function) {
         return { success: true, jobsFound: totalJobsFound, cancelled: true };
       }
       
-      console.log(`\nProfile: ${profile.job_title} in ${profile.location}`);
+      // Get all job titles from the profile (can be comma-separated)
+      const jobTitles = (profile.job_titles || profile.job_title || '')
+        .split(',')
+        .map((t: string) => t.trim())
+        .filter(Boolean);
       
-      for (const website of websites) {
-        // Check for cancellation
-        if (hunterCancelled) {
-          console.log('Hunter search cancelled by user');
-          await logAction(userId, 'ai_hunter', `⏹️ Search cancelled. Found ${totalJobsFound} jobs before stopping.`, 'completed', true);
-          isSearching = false;
-          return { success: true, jobsFound: totalJobsFound, cancelled: true };
-        }
+      if (jobTitles.length === 0) {
+        console.log('No job titles found in profile, skipping');
+        continue;
+      }
+      
+      console.log(`\nProfile: ${jobTitles.join(', ')} in ${profile.location}`);
+      
+      // Search for EACH job title
+      for (const jobTitle of jobTitles) {
+        if (hunterCancelled) break;
         
-        console.log(`Website: ${website.website_name} (${website.website_url})`);
+        console.log(`\nSearching for job title: "${jobTitle}"`);
+        await logAction(userId, 'ai_hunter', `🔍 Searching for: ${jobTitle}`, 'in_progress');
         
-        await logAction(userId, 'ai_hunter', `🌐 Searching ${website.website_name}...`, 'in_progress');
-        
-        // Simple search query (don't waste AI tokens on this)
-        const query = profile.job_title;
-        console.log(`Search query: "${query}"`);
-        
-        // Scrape job URLs - Use AI-assisted scraping for LinkedIn
-        let jobUrls: string[] = [];
-        const ScraperService = require('../scraper-service');
-        
-        if (website.website_url.includes('linkedin.com')) {
-          // Try standard scraping first
-          jobUrls = await scrapeJobs(
-            website.website_url, 
-            query, 
-            profile.location || '', 
-            { email: website.email, password: website.password }, 
-            userId, 
-            callAI
-          );
+        for (const website of websites) {
+          // Check for cancellation
+          if (hunterCancelled) {
+            console.log('Hunter search cancelled by user');
+            await logAction(userId, 'ai_hunter', `⏹️ Search cancelled. Found ${totalJobsFound} jobs before stopping.`, 'completed', true);
+            isSearching = false;
+            return { success: true, jobsFound: totalJobsFound, cancelled: true };
+          }
+          
+          console.log(`Website: ${website.website_name} (${website.website_url})`);
+          
+          await logAction(userId, 'ai_hunter', `🌐 Searching ${website.website_name} for "${jobTitle}"...`, 'in_progress');
+          
+          // Use the current job title for the search query
+          const query = jobTitle;
+          console.log(`Search query: "${query}"`);
+          
+          // Scrape job URLs - Use AI-assisted scraping for LinkedIn
+          let jobUrls: string[] = [];
+          const ScraperService = require('../scraper-service');
+          
+          if (website.website_url.includes('linkedin.com')) {
+            // Try standard scraping first
+            jobUrls = await scrapeJobs(
+              website.website_url, 
+              query, 
+              profile.location || '', 
+              { email: website.email, password: website.password }, 
+              userId, 
+              callAI
+            );
           
           // If standard scraping fails, use AI-assisted approach
           if (jobUrls.length === 0 && hunter) {

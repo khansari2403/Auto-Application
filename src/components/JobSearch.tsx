@@ -115,7 +115,27 @@ export function JobSearch({ userId }: { userId: number }) {
     }
   };
 
-  useEffect(() => { loadData(); const i = setInterval(loadData, 3000); return () => clearInterval(i); }, [userId, sortBy, showArchived]);
+  useEffect(() => { 
+    // Immediate sync when component mounts (tab becomes active)
+    const syncHuntingStatus = async () => {
+      try {
+        const huntingState = await (window as any).electron.invoke('hunter:get-status');
+        if (huntingState?.success) {
+          setIsSearching(huntingState.isSearching || false);
+        }
+      } catch (e) {
+        console.error('Error syncing hunting status:', e);
+      }
+    };
+    
+    syncHuntingStatus();
+    loadData(); 
+    
+    // Poll for updates every 3 seconds
+    const i = setInterval(loadData, 3000); 
+    
+    return () => clearInterval(i); 
+  }, [userId, sortBy, showArchived]);
 
   // Smart Apply - uses AI to fill forms and handle questions
   const handleSmartApply = async (jobId: number) => {

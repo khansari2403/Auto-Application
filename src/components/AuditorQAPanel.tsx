@@ -159,6 +159,26 @@ export function AuditorQAPanel({ userId, onCriteriaUpdate }: Props) {
 
       {isExpanded && (
         <div style={{ marginTop: '16px' }}>
+          {/* Empty State - Show helpful info when no questions/criteria yet */}
+          {pendingQuestions.length === 0 && learnedCriteria.length === 0 && (
+            <div style={{ 
+              background: 'var(--bg-primary)', 
+              borderRadius: '8px', 
+              padding: '16px',
+              textAlign: 'center',
+              border: '1px dashed var(--border)'
+            }}>
+              <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: 'var(--text-secondary)' }}>
+                🧠 The Auditor will ask you questions when analyzing jobs
+              </p>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-tertiary)' }}>
+                Example: "Do you speak Turkish?" or "Do you have AWS certification?"
+                <br />
+                Your answers will train the Auditor to make better job matching decisions.
+              </p>
+            </div>
+          )}
+          
           {/* Pending Questions - Need User Input */}
           {pendingQuestions.length > 0 && (
             <div style={{ marginBottom: '20px' }}>

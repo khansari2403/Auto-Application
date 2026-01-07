@@ -136,12 +136,17 @@ def test_code_integration(content: str) -> Dict[str, Any]:
         results['status'] = 'FAIL'
         results['issues'].append("❌ Could not locate expansion logic or content extraction")
     
-    # Check for error handling
-    try_catch_pattern = re.search(r'try\s*\{[\s\S]*?console\.log\([\'"]Scraper:.*expanded[\'"]\)[\s\S]*?\}\s*catch', content)
-    if try_catch_pattern:
-        results['details'].append("✅ Error handling for expansion found")
+    # Check for error handling in LinkedIn expansion
+    linkedin_try_catch = re.search(r'if \(url\.includes\([\'"]linkedin\.com[\'"]\)\) \{\s*try \{[\s\S]*?\} catch \(e\) \{[\s\S]*?\}', content)
+    if linkedin_try_catch:
+        results['details'].append("✅ Error handling for LinkedIn expansion found")
     else:
-        results['issues'].append("⚠️ Error handling for expansion not clearly implemented")
+        # Check for simpler try-catch pattern
+        simple_try_catch = re.search(r'try \{[\s\S]*?console\.log\([\'"]Scraper:.*expand[\'"]\)[\s\S]*?\} catch', content)
+        if simple_try_catch:
+            results['details'].append("✅ Error handling for expansion found")
+        else:
+            results['issues'].append("⚠️ Error handling for expansion not clearly implemented")
     
     return results
 

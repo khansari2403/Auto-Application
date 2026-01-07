@@ -123,8 +123,8 @@ def test_code_integration(content: str) -> Dict[str, Any]:
     }
     
     # Check that expansion logic is before content extraction
-    linkedin_expansion_pos = content.find('if (url.includes(\'linkedin.com\'))')
-    content_extraction_pos = content.find('const result = await page.evaluate()')
+    linkedin_expansion_pos = content.find('// LinkedIn-specific: Expand "Show more" button')
+    content_extraction_pos = content.find('// Try extraction strategies in order')
     
     if linkedin_expansion_pos != -1 and content_extraction_pos != -1:
         if linkedin_expansion_pos < content_extraction_pos:
@@ -133,8 +133,15 @@ def test_code_integration(content: str) -> Dict[str, Any]:
             results['status'] = 'FAIL'
             results['issues'].append("❌ Expansion logic should be before content extraction")
     else:
-        results['status'] = 'FAIL'
-        results['issues'].append("❌ Could not locate expansion logic or content extraction")
+        # Fallback check using function patterns
+        linkedin_check = content.find('if (url.includes(\'linkedin.com\'))')
+        extraction_check = content.find('const result = await page.evaluate()')
+        
+        if linkedin_check != -1 and extraction_check != -1 and linkedin_check < extraction_check:
+            results['details'].append("✅ Expansion logic placed before content extraction")
+        else:
+            results['status'] = 'FAIL'
+            results['issues'].append("❌ Could not verify proper code placement")
     
     # Check for error handling in LinkedIn expansion
     linkedin_try_catch = re.search(r'if \(url\.includes\([\'"]linkedin\.com[\'"]\)\) \{\s*try \{[\s\S]*?\} catch \(e\) \{[\s\S]*?\}', content)

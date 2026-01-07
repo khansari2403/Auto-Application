@@ -121,7 +121,7 @@ export async function calculateCompatibility(userId: number, jobId: number): Pro
   const experienceScore = calculateExperienceMatch(profile, job);
   const educationScore = calculateEducationMatch(profile, job);
   const locationScore = calculateLocationMatch(profile, job);
-  const languageScore = calculateLanguageMatch(profile, job, languageProficiencies);
+  const languageScore = calculateLanguageMatch(profile, job, languageProficiencies, learnedCriteria);
   
   // Weighted average:
   // - Hard skills: 35% (reduced from 40%)

@@ -224,6 +224,95 @@ ${pageData.content.substring(0, 6000)}`;
 }
 
 /**
+ * Generate Auditor Questions for uncertain job requirements
+ * Creates yes/no questions for requirements the Auditor can't verify
+ */
+async function generateAuditorQuestions(
+  userId: number, 
+  jobId: number, 
+  jobData: any, 
+  compatResult: any
+): Promise<void> {
+  try {
+    const db = getDatabase();
+    const existingQuestions = db.auditor_questions || [];
+    const learnedCriteria = (db.auditor_criteria || []).filter((c: any) => c.user_id === userId);
+    
+    // Get user's profile languages
+    const profiles = await getAllQuery('SELECT * FROM user_profile');
+    const profile = profiles[0];
+    const userLanguages = profile?.languages ? JSON.parse(profile.languages) : [];
+    const userLanguagesLower = userLanguages.map((l: string) => l.toLowerCase());
+    
+    // Search profiles for language proficiencies
+    const searchProfiles = await getAllQuery('SELECT * FROM search_profiles');
+    const activeProfile = searchProfiles.find((p: any) => p.is_active === 1) || searchProfiles[0];
+    let languageProficiencies: string[] = [];
+    try {
+      if (activeProfile?.language_proficiencies) {
+        languageProficiencies = Object.keys(JSON.parse(activeProfile.language_proficiencies)).map(l => l.toLowerCase());
+      }
+    } catch (e) {}
+    
+    // Extract potential question-worthy requirements from job
+    const jobDesc = (jobData.description || '').toLowerCase();
+    const languages = (jobData.languages || '').toLowerCase();
+    
+    // Languages we don't know about
+    const commonLanguages = ['english', 'german', 'french', 'spanish', 'italian', 'dutch', 'portuguese', 'chinese', 'japanese', 'korean', 'russian', 'arabic', 'turkish', 'polish', 'czech', 'hungarian', 'greek', 'hebrew', 'hindi', 'vietnamese'];
+    
+    const unknownLanguages: string[] = [];
+    for (const lang of commonLanguages) {
+      if ((jobDesc.includes(lang) || languages.includes(lang)) &&
+          !userLanguagesLower.some(l => l.includes(lang)) &&
+          !languageProficiencies.some(l => l.includes(lang))) {
+        
+        // Check if we already have a learned criteria for this
+        const alreadyLearned = learnedCriteria.some((c: any) => 
+          c.criteria.toLowerCase().includes(lang)
+        );
+        
+        // Check if question already exists
+        const questionExists = existingQuestions.some((q: any) =>
+          q.user_id === userId && q.criteria.toLowerCase().includes(lang) && !q.answered
+        );
+        
+        if (!alreadyLearned && !questionExists) {
+          unknownLanguages.push(lang);
+        }
+      }
+    }
+    
+    // Generate questions for unknown languages
+    for (const lang of unknownLanguages.slice(0, 3)) { // Max 3 questions at a time
+      const langCapitalized = lang.charAt(0).toUpperCase() + lang.slice(1);
+      const questionId = `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      
+      await runQuery('INSERT INTO auditor_questions', {
+        id: questionId,
+        user_id: userId,
+        job_id: jobId,
+        question: `Do you speak ${langCapitalized}?`,
+        criteria: `speak ${lang}`,
+        answered: false,
+        timestamp: Date.now()
+      });
+      
+      console.log(`Generated Auditor question: Do you speak ${langCapitalized}?`);
+    }
+    
+    // Could add more question types here:
+    // - Certifications
+    // - Specific tool experience
+    // - Education requirements
+    // - Visa/work permit
+    
+  } catch (e: any) {
+    console.log('Error generating Auditor questions:', e.message);
+  }
+}
+
+/**
  * CHECK IF JOB IS A GHOST JOB
  * Uses heuristics: age, company reputation, and description patterns.
  */

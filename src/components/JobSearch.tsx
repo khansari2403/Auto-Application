@@ -525,6 +525,9 @@ Note: Forced documents will be checked for accuracy.`);
 
   return (
     <div style={{ padding: '20px', fontFamily: 'sans-serif', background: 'var(--bg-primary)', minHeight: '100%' }}>
+      {/* Auditor Q&A Panel - For learning user preferences */}
+      <AuditorQAPanel userId={userId} onCriteriaUpdate={loadData} />
+      
       {/* Job Hunting Control Center */}
       <JobHuntingControls userId={userId} onSettingsChange={loadData} />
 

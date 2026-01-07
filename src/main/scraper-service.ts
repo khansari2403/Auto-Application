@@ -371,9 +371,11 @@ export async function scrapeJobs(baseUrl: string, query: string, location: strin
           'h2.jobTitle a',
           '.job_seen_beacon a[data-jk]',
           '.jobsearch-ResultsList a.tapItem',
-          // Glassdoor
+          // Glassdoor (both .com and .de)
           'a.job-title',
           '.react-job-listing a',
+          'a[data-test="job-link"]',
+          '.JobCard_jobTitle__GLyJ1 a',
           // Xing
           'a[data-testid="job-posting-link"]',
           '.jobs-list a',
@@ -382,11 +384,24 @@ export async function scrapeJobs(baseUrl: string, query: string, location: strin
           'article a[href*="/stellenangebote"]',
           '.job-element a',
           '[data-testid="job-item"] a',
+          // Arbeitsagentur (Bundesagentur für Arbeit)
+          'a[data-testid="ergebnisliste-job-link"]',
+          '.ergebnisliste-item a',
+          'a[href*="jobboerse.arbeitsagentur.de"]',
+          '[data-automation-id="job-item"] a',
+          '.result-list-item a',
+          // Monster
+          'a[data-testid="svx-job-title"]',
+          'a.job-cardstyle__JobCardTitle',
+          '.job-search-resultsstyle__JobSearchResultsContainer a[href*="/job-openings/"]',
+          'a[href*="/job-openings/"]',
+          '.card-content a',
           // Generic
           'a[href*="/job/"]',
           'a[href*="/jobs/"]',
           'a[href*="jobPosting"]',
-          'a[href*="/stellenangebot"]'
+          'a[href*="/stellenangebot"]',
+          'a[href*="/stelle/"]'
         ];
         
         const foundLinks: string[] = [];

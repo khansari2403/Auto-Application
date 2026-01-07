@@ -511,101 +511,131 @@ export async function scrapeLinkedInProfile(userId: number, profileUrl?: string)
     // Random delay to appear human
     await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
     
-    // IMPORTANT: Click all "See more" and "Show all X" buttons to expand sections
-    await expandAllLinkedInSections(page);
-    
-    // Scroll to load lazy content
-    await page.evaluate(() => window.scrollBy(0, 500));
-    await new Promise(r => setTimeout(r, 1000));
-    await page.evaluate(() => window.scrollBy(0, 500));
-    await new Promise(r => setTimeout(r, 1000));
-    await page.evaluate(() => window.scrollTo(0, 0));
-    await new Promise(r => setTimeout(r, 500));
-    
-    // Extract profile data
-    const profileData = await page.evaluate(() => {
+    // First, extract basic info from main profile page
+    const basicInfo = await page.evaluate(() => {
       const getText = (selector: string) => document.querySelector(selector)?.textContent?.trim() || '';
       const getAttr = (selector: string, attr: string) => document.querySelector(selector)?.getAttribute(attr) || '';
       
-      // Basic Info
       const name = getText('.pv-top-card--list li:first-child') || getText('h1.text-heading-xlarge') || getText('.pv-text-details__left-panel h1');
       const title = getText('.pv-top-card--list-bullet li:first-child') || getText('.text-body-medium.break-words') || '';
       const location = getText('.pv-top-card--list-bullet li:last-child') || getText('.text-body-small.inline.t-black--light.break-words') || '';
       const photo = getAttr('.pv-top-card-profile-picture__image', 'src') || getAttr('img.pv-top-card-profile-picture__image--show', 'src') || '';
-      const summary = getText('.pv-about-section .pv-about__summary-text') || getText('#about ~ .display-flex .full-width') || '';
+      const summary = getText('.pv-about-section .pv-about__summary-text') || getText('#about ~ .display-flex .full-width') || getText('.pv-shared-text-with-see-more span[aria-hidden="true"]') || '';
       
-      // Experiences
-      const experiences: any[] = [];
-      document.querySelectorAll('#experience ~ .pvs-list__outer-container > ul > li').forEach(li => {
-        const titleEl = li.querySelector('.t-bold span[aria-hidden="true"]') || li.querySelector('.mr1.t-bold span');
-        const companyEl = li.querySelector('.t-14.t-normal span[aria-hidden="true"]') || li.querySelector('.t-14.t-normal');
-        const datesEl = li.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]');
-        const descEl = li.querySelector('.pvs-list__outer-container .t-14.t-normal.t-black span[aria-hidden="true"]');
-        
-        if (titleEl) {
-          const fullText = companyEl?.textContent || '';
-          const [company, ...locationParts] = fullText.split('·').map(s => s.trim());
-          
-          const datesText = datesEl?.textContent || '';
-          const dateMatch = datesText.match(/(\w+ \d{4})\s*[-–]\s*(\w+ \d{4}|Present)/i);
-          
-          experiences.push({
-            title: titleEl.textContent?.trim() || '',
-            company: company || '',
-            location: locationParts.join(' ').trim(),
-            startDate: dateMatch?.[1] || '',
-            endDate: dateMatch?.[2] || '',
-            description: descEl?.textContent?.trim() || ''
-          });
-        }
-      });
-      
-      // Education
-      const educations: any[] = [];
-      document.querySelectorAll('#education ~ .pvs-list__outer-container > ul > li').forEach(li => {
-        const schoolEl = li.querySelector('.t-bold span[aria-hidden="true"]');
-        const degreeEl = li.querySelector('.t-14.t-normal span[aria-hidden="true"]');
-        const datesEl = li.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]');
-        
-        if (schoolEl) {
-          const degreeText = degreeEl?.textContent || '';
-          const [degree, field] = degreeText.split(',').map(s => s.trim());
-          const datesText = datesEl?.textContent || '';
-          const yearMatch = datesText.match(/(\d{4})\s*[-–]\s*(\d{4})/);
-          
-          educations.push({
-            school: schoolEl.textContent?.trim() || '',
-            degree: degree || '',
-            field: field || '',
-            startYear: yearMatch?.[1] || '',
-            endYear: yearMatch?.[2] || ''
-          });
-        }
-      });
-      
-      // Skills
-      const skills: string[] = [];
-      document.querySelectorAll('#skills ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach(el => {
-        const skill = el.textContent?.trim();
-        if (skill && !skills.includes(skill)) skills.push(skill);
-      });
-      
-      // Licenses & Certifications
-      const licenses: string[] = [];
-      document.querySelectorAll('#licenses_and_certifications ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach(el => {
-        const license = el.textContent?.trim();
-        if (license && !licenses.includes(license)) licenses.push(license);
-      });
-      
-      // Languages
-      const languages: string[] = [];
-      document.querySelectorAll('#languages ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach(el => {
-        const lang = el.textContent?.trim();
-        if (lang && !languages.includes(lang)) languages.push(lang);
-      });
-      
-      return { name, title, location, photo, summary, experiences, educations, skills, licenses, languages };
+      return { name, title, location, photo, summary };
     });
+    
+    console.log(`Basic info extracted: ${basicInfo.name}, ${basicInfo.title}`);
+    await logAction(userId, 'linkedin', `📋 Found profile: ${basicInfo.name}. Collecting all sections...`, 'in_progress');
+    
+    // IMPORTANT: Navigate to detail pages and collect ALL data from each section
+    const detailData = await expandAllLinkedInSections(page);
+    
+    // Combine basic info with detailed section data
+    const profileData = {
+      ...basicInfo,
+      experiences: detailData.experiences.length > 0 ? detailData.experiences : [],
+      educations: detailData.educations.length > 0 ? detailData.educations : [],
+      skills: detailData.skills.length > 0 ? detailData.skills : [],
+      licenses: detailData.licenses.length > 0 ? detailData.licenses : [],
+      languages: detailData.languages.length > 0 ? detailData.languages : []
+    };
+    
+    // If detail pages didn't return data, fall back to main page extraction
+    if (profileData.experiences.length === 0 || profileData.educations.length === 0) {
+      console.log('Detail pages incomplete, falling back to main page extraction...');
+      
+      // Navigate back to profile and extract from main page
+      const targetUrl = profileUrl || 'https://www.linkedin.com/in/me/';
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await new Promise(r => setTimeout(r, 2000));
+      
+      // Scroll and click see more buttons
+      await page.evaluate(async () => {
+        for (let i = 0; i < 5; i++) {
+          window.scrollBy(0, 500);
+          await new Promise(r => setTimeout(r, 300));
+        }
+        window.scrollTo(0, 0);
+      });
+      
+      const fallbackData = await page.evaluate(() => {
+        const experiences: any[] = [];
+        document.querySelectorAll('#experience ~ .pvs-list__outer-container > ul > li, [data-field="experience_grouping"] li').forEach(li => {
+          const titleEl = li.querySelector('.t-bold span[aria-hidden="true"]');
+          const companyEl = li.querySelector('.t-14.t-normal span[aria-hidden="true"]');
+          const datesEl = li.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]');
+          const descEl = li.querySelector('.pvs-list__outer-container .t-14.t-normal.t-black span[aria-hidden="true"]');
+          
+          if (titleEl?.textContent) {
+            const fullText = companyEl?.textContent || '';
+            const [company, ...locationParts] = fullText.split('·').map((s: string) => s.trim());
+            const datesText = datesEl?.textContent || '';
+            const dateMatch = datesText.match(/(\w+\.?\s*\d{4})\s*[-–]\s*(\w+\.?\s*\d{4}|Present|Heute|Aktuell)/i);
+            
+            experiences.push({
+              title: titleEl.textContent.trim(),
+              company: company || '',
+              location: locationParts.join(' ').trim(),
+              startDate: dateMatch?.[1] || '',
+              endDate: dateMatch?.[2] || '',
+              description: descEl?.textContent?.trim() || ''
+            });
+          }
+        });
+        
+        const educations: any[] = [];
+        document.querySelectorAll('#education ~ .pvs-list__outer-container > ul > li, [data-field="education_grouping"] li').forEach(li => {
+          const schoolEl = li.querySelector('.t-bold span[aria-hidden="true"]');
+          const degreeEl = li.querySelector('.t-14.t-normal span[aria-hidden="true"]');
+          const datesEl = li.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]');
+          
+          if (schoolEl?.textContent) {
+            const degreeText = degreeEl?.textContent || '';
+            const [degree, field] = degreeText.split(',').map((s: string) => s.trim());
+            const datesText = datesEl?.textContent || '';
+            const yearMatch = datesText.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+            
+            educations.push({
+              school: schoolEl.textContent.trim(),
+              degree: degree || '',
+              field: field || '',
+              startYear: yearMatch?.[1] || '',
+              endYear: yearMatch?.[2] || ''
+            });
+          }
+        });
+        
+        const skills: string[] = [];
+        document.querySelectorAll('#skills ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach(el => {
+          const skill = el.textContent?.trim();
+          if (skill && skill.length > 1 && !skills.includes(skill)) skills.push(skill);
+        });
+        
+        const licenses: string[] = [];
+        document.querySelectorAll('#licenses_and_certifications ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach(el => {
+          const license = el.textContent?.trim();
+          if (license && license.length > 1 && !licenses.includes(license)) licenses.push(license);
+        });
+        
+        const languages: string[] = [];
+        document.querySelectorAll('#languages ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach(el => {
+          const lang = el.textContent?.trim();
+          if (lang && lang.length > 1 && !languages.includes(lang)) languages.push(lang);
+        });
+        
+        return { experiences, educations, skills, licenses, languages };
+      });
+      
+      // Merge fallback with existing (prefer detail page data if available)
+      if (profileData.experiences.length === 0) profileData.experiences = fallbackData.experiences;
+      if (profileData.educations.length === 0) profileData.educations = fallbackData.educations;
+      if (profileData.skills.length === 0) profileData.skills = fallbackData.skills;
+      if (profileData.licenses.length === 0) profileData.licenses = fallbackData.licenses;
+      if (profileData.languages.length === 0) profileData.languages = fallbackData.languages;
+    }
+    
+    console.log(`Profile data collected: ${profileData.experiences.length} experiences, ${profileData.educations.length} education, ${profileData.skills.length} skills, ${profileData.licenses.length} licenses, ${profileData.languages.length} languages`);
     
     await logAction(userId, 'linkedin', `✅ Profile captured: ${profileData.name}`, 'completed', true);
     

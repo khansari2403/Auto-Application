@@ -880,21 +880,24 @@ function buildAuditorPrompt(docKey: string, docLabel: string, content: string, j
   const missingSkills = job.compatibility_missing_skills ? 
     JSON.parse(job.compatibility_missing_skills) : [];
   
-  // Determine if this is a "reach" job (Yellow or higher) where user wants to apply despite gaps
-  const isReachJob = compatScore >= 26 && compatScore < 76; // Yellow or Green range
+  // Allow document generation for Yellow (26-50%), Green (51-75%), and Gold (76-100%) jobs
+  // Only Red jobs (0-25%) should potentially be blocked, but even then we're lenient
+  const isAcceptableJob = compatScore >= 26; // Yellow, Green, or Gold
   
   let flexibilityNote = '';
-  if (isReachJob && missingSkills.length > 0) {
+  if (isAcceptableJob) {
     flexibilityNote = `
-**SPECIAL NOTE - REACH APPLICATION:**
-This is a "reach" job where the applicant is applying despite some skill gaps. The following skills are listed as requirements but the applicant may not have direct experience:
+**IMPORTANT - THIS IS A COMPATIBLE JOB (Score: ${compatScore}%):**
+The user has chosen to apply for this job. Your job is to ensure the document is well-written and factually accurate, NOT to judge if the user should apply.
+
+${missingSkills.length > 0 ? `Some skills may be missing, but the applicant wants to highlight transferable experience:
 - ${missingSkills.slice(0, 5).join('\n- ')}
 
 FOR THESE CASES:
 - Allow the applicant to highlight TRANSFERABLE skills and RELATED experience
 - Allow honest statements about willingness to learn
 - Do NOT reject simply because the applicant can't claim direct experience with missing skills
-- DO reject if the document FABRICATES experience the applicant doesn't have
+- DO reject ONLY if the document FABRICATES experience the applicant doesn't have` : ''}
 `;
   }
   

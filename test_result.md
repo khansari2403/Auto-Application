@@ -80,3 +80,46 @@ This file tracks all testing activities for the Job Hunting AI application.
 4. ✅ **Tab State Persistence**: Hunter status handler exists and frontend can sync state
 
 **No critical issues found. All fixes are production-ready.**
+
+---
+
+## LinkedIn Job Content Scraping Fix (Current Session)
+
+### Issue Background
+The previous agent fixed LinkedIn *profile* scraping but completely overlooked LinkedIn *job page* scraping. The user reported that scraping individual LinkedIn job pages was failing to extract job description content.
+
+### Fix Implementation
+**Date**: Current Session (Post Priority 0 Testing)
+**File Modified**: `/app/src/main/scraper-service.ts`
+**Status**: 🔨 IMPLEMENTED - PENDING VERIFICATION
+
+**Changes Made**:
+1. **Updated Job Page Selectors** (Lines 211-245):
+   - Added latest LinkedIn 2025 selectors:
+     - `.jobs-description__content`
+     - `.jobs-description-content__text`
+     - `.jobs-box__html-content`
+     - `.show-more-less-html__markup`
+   - Maintained backward compatibility with older selectors
+   - Added generic job board selectors for non-LinkedIn sites
+
+2. **Added LinkedIn "Show More" Button Expansion** (After Line 178):
+   - Detects if URL is from linkedin.com
+   - Attempts to click "Show more" button before content extraction
+   - Uses multiple selector patterns to handle different LinkedIn layouts:
+     - `button.show-more-less-html__button--more`
+     - `button[aria-label*="Show more"]`
+     - `button[data-tracking-control-name="public_jobs_show-more-html-btn"]`
+   - Includes visibility check to ensure button is clickable
+   - Waits 1-2 seconds after expansion for content to load
+
+### Testing Status
+- **Unit Testing**: NOT YET PERFORMED
+- **Integration Testing**: NOT YET PERFORMED
+- **User Testing**: NOT YET PERFORMED
+
+### Next Steps
+1. Test with real LinkedIn job URLs to verify content extraction
+2. Verify "Show more" button expansion works correctly
+3. Confirm extracted content meets minimum length requirements (300+ chars)
+4. Test with manually entered URLs via Interview Insider feature

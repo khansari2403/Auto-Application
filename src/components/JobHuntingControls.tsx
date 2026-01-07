@@ -56,6 +56,28 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
   const [isSearching, setIsSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<{ success: boolean; message?: string; jobsFound?: number } | null>(null);
 
+  // Sync hunting status on mount and periodically
+  useEffect(() => {
+    const syncStatus = async () => {
+      try {
+        const huntingState = await (window as any).electron.invoke('hunter:get-status');
+        if (huntingState?.success) {
+          setIsSearching(huntingState.isSearching || false);
+        }
+      } catch (e) {
+        console.error('Error syncing hunting status:', e);
+      }
+    };
+    
+    // Initial sync
+    syncStatus();
+    
+    // Poll every 2 seconds to keep UI in sync
+    const interval = setInterval(syncStatus, 2000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
   // Start Hunter search immediately (direct trigger)
   const startHunterSearch = async () => {
     setIsSearching(true);

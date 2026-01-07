@@ -610,7 +610,7 @@ function createEmptyResult(): CompatibilityResult {
  * Calculate language match score
  * IMPORTANT: If user has set language proficiency in Search Profile, this bypasses job language requirements
  */
-function calculateLanguageMatch(profile: any, job: any, languageProficiencies: Record<string, string>): number {
+function calculateLanguageMatch(profile: any, job: any, languageProficiencies: Record<string, string>, learnedCriteria?: any[]): number {
   const jobDescription = (job.description || '').toLowerCase();
   const jobLanguages = (job.languages || '').toLowerCase();
   
@@ -644,9 +644,32 @@ function calculateLanguageMatch(profile: any, job: any, languageProficiencies: R
     userProficienciesLower[lang.toLowerCase()] = level;
   }
   
+  // Check learned criteria for language answers
+  const learnedLanguages: Record<string, boolean> = {};
+  if (learnedCriteria) {
+    for (const c of learnedCriteria) {
+      const criteriaLower = c.criteria.toLowerCase();
+      for (const lang of commonLanguages) {
+        if (criteriaLower.includes(lang) || criteriaLower.includes('speak ' + lang)) {
+          learnedLanguages[lang] = c.userAnswer === 'yes';
+        }
+      }
+    }
+  }
+  
   let matchedCount = 0;
   
   for (const required of requiredLanguages) {
+    // First check learned criteria (highest priority - user explicitly answered)
+    if (learnedLanguages[required] === true) {
+      matchedCount++;
+      continue;
+    }
+    if (learnedLanguages[required] === false) {
+      // User explicitly said they don't speak this language
+      continue;
+    }
+    
     // Check if user has this language
     const hasLanguage = userLanguagesLower.some(l => l.includes(required) || required.includes(l));
     

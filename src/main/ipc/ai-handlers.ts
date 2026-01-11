@@ -685,6 +685,10 @@ Respond ONLY with a valid JSON array in this exact format:
       const userId = Number(data?.userId) || 1;
       const difficultyLevel = Number(data?.difficultyLevel) || 5;
       
+      console.log('\n🔥 === INTERVIEW INSIDER DEBUG ===');
+      console.log('Job URL:', jobUrl);
+      console.log('Difficulty:', difficultyLevel);
+      
       const models = await getAllQuery('SELECT * FROM ai_models');
       const hrAI = models.find((m: any) => m.role === 'HR AI' && m.status === 'active') ||
                    models.find((m: any) => m.role === 'Thinker' && m.status === 'active');
@@ -692,6 +696,8 @@ Respond ONLY with a valid JSON array in this exact format:
       if (!hrAI) {
         return { success: false, error: 'No HR AI model configured. Please add an AI model with role "HR AI" in Settings > AI Models.' };
       }
+      
+      console.log('HR AI Model:', hrAI.model_name);
       
       // Get user profile (CV data)
       const profiles = await getAllQuery('SELECT * FROM user_profile');
@@ -701,182 +707,210 @@ Respond ONLY with a valid JSON array in this exact format:
         return { success: false, error: 'No profile found. Please set up your LinkedIn Profile or Manual Profile in Settings first.' };
       }
       
-      // Get job info
+      console.log('User Profile Found:', userProfile.name);
+      
+      // 🔥 CRITICAL: GET JOB INFO - THIS IS THE KEY TO SPECIFIC QUESTIONS
+      let jobContext = '';
+      let jobTitle = '';
+      let jobCompany = '';
+      let jobRequirements = '';
+      
+      // Try to find job in database first
       const db = getDatabase();
       const jobs = db.job_listings || [];
       let job = jobs.find((j: any) => j.url === jobUrl);
       
-      let jobContext = '';
       if (job) {
-        // Ensure all values are clean strings
-        jobContext = `
-Job Title: ${String(job.job_title || 'Unknown')}
-Company: ${String(job.company_name || 'Unknown')}
-Requirements: ${String(job.required_skills || 'Not specified')}
-Experience Level: ${String(job.experience_level || 'Not specified')}
-Description: ${String(job.description || 'Not available').substring(0, 1500)}`;
+        console.log('✅ Job found in database:', job.job_title);
+        jobTitle = String(job.job_title || 'Unknown Position');
+        jobCompany = String(job.company_name || 'Unknown Company');
+        jobRequirements = String(job.required_skills || job.description || '').substring(0, 2000);
+        
+        jobContext = `JOB TITLE: ${jobTitle}
+COMPANY: ${jobCompany}
+REQUIRED SKILLS/QUALIFICATIONS: ${jobRequirements}
+EXPERIENCE LEVEL: ${job.experience_level || 'Not specified'}`;
+        
       } else if (jobUrl && jobUrl.startsWith('http')) {
-        // Try to scrape job info - wrap in try-catch to prevent clone errors
+        console.log('⚠️ Job not in database, scraping from URL...');
+        
+        // Scrape job info
         try {
           const ScraperService = require('../scraper-service');
           const pageData = await ScraperService.getJobPageContent(jobUrl, userId, aiService.callAI);
-          if (pageData && typeof pageData === 'object' && pageData.content) {
-            // CRITICAL: Extract only primitive string values
-            const cleanContent = String(pageData.content || '').substring(0, 2000);
-            jobContext = `Job posting from ${jobUrl}:\n${cleanContent}`;
+          
+          console.log('Scraper result:', pageData.strategyUsed, 'Length:', pageData.content?.length || 0);
+          
+          if (pageData && pageData.content && pageData.content.length > 200) {
+            const cleanContent = String(pageData.content).substring(0, 3000);
+            jobContext = `JOB POSTING (scraped from ${jobUrl}):\n${cleanContent}`;
+            console.log('✅ Scraped job content successfully');
           } else {
-            jobContext = `Job URL: ${jobUrl} (Could not fetch details - page may require login)`;
+            console.error('❌ Scraping failed or content too short:', pageData.content?.length);
+            return { 
+              success: false, 
+              error: 'Could not fetch job details from URL. The page may require login or the URL is invalid. Please add the job to your Job Search first.' 
+            };
           }
         } catch (scrapeError: any) {
-          console.error('Error scraping job for CV questions:', scrapeError);
-          jobContext = `Job URL: ${jobUrl} (Scraping failed: ${String(scrapeError.message || 'Unknown error')})`;
+          console.error('❌ Scraping error:', scrapeError.message);
+          return { 
+            success: false, 
+            error: `Failed to fetch job details: ${scrapeError.message}. Please add the job to your Job Search first.` 
+          };
         }
       } else {
-        jobContext = 'No job URL provided - generating general interview questions';
+        console.error('❌ No valid job URL provided');
+        return { 
+          success: false, 
+          error: 'No job URL provided. Please enter a job URL or select a job from your Job Search list.' 
+        };
       }
       
-      // Build CV context - ensure all values are serializable strings
-      let cvContext = `
-Candidate Name: ${String(userProfile.name || 'Not provided')}
-Professional Title: ${String(userProfile.title || 'Not provided')}
-Location: ${String(userProfile.location || 'Not provided')}
-Summary: ${String(userProfile.summary || 'Not provided')}`;
+      // 🔥 CRITICAL CHECK: Ensure we have substantial job context
+      if (!jobContext || jobContext.length < 100) {
+        console.error('❌ Job context too short or empty:', jobContext.length);
+        return { 
+          success: false, 
+          error: 'Could not extract enough information from the job posting. Please ensure the URL is correct and the page is accessible.' 
+        };
+      }
       
-      // Parse experiences - wrap in try-catch
+      console.log('✅ Job context length:', jobContext.length);
+      console.log('First 200 chars of job context:', jobContext.substring(0, 200));
+      
+      // Build CV context
+      let cvContext = `CANDIDATE NAME: ${userProfile.name || 'Not provided'}
+CURRENT TITLE: ${userProfile.title || 'Not provided'}
+LOCATION: ${userProfile.location || 'Not provided'}
+PROFESSIONAL SUMMARY: ${userProfile.summary || 'Not provided'}`;
+      
+      // Add experiences
       try {
-        const experiencesRaw = userProfile.experiences;
-        let experiences: any[] = [];
-        if (typeof experiencesRaw === 'string' && experiencesRaw.length > 2) {
-          experiences = JSON.parse(experiencesRaw);
-        } else if (Array.isArray(experiencesRaw)) {
-          experiences = experiencesRaw;
-        }
-        if (Array.isArray(experiences) && experiences.length > 0) {
-          cvContext += '\n\nWork Experience:';
+        const experiences = Array.isArray(userProfile.experiences) ? userProfile.experiences : JSON.parse(userProfile.experiences || '[]');
+        if (experiences.length > 0) {
+          cvContext += '\n\nWORK EXPERIENCE:';
           experiences.slice(0, 5).forEach((exp: any, i: number) => {
-            cvContext += `\n${i + 1}. ${String(exp.title || 'Role')} at ${String(exp.company || 'Company')} (${String(exp.startDate || '?')} - ${String(exp.endDate || 'Present')}): ${String(exp.description || 'No description').substring(0, 200)}`;
+            cvContext += `\n${i + 1}. ${exp.title} at ${exp.company} (${exp.startDate} - ${exp.endDate || 'Present'})`;
+            if (exp.description) cvContext += `: ${exp.description.substring(0, 200)}`;
           });
         }
       } catch (e) {
         console.log('Could not parse experiences:', e);
       }
       
-      // Parse skills - wrap in try-catch
+      // Add skills
       try {
-        const skillsRaw = userProfile.skills;
-        let skills: any[] = [];
-        if (typeof skillsRaw === 'string' && skillsRaw.length > 2) {
-          skills = JSON.parse(skillsRaw);
-        } else if (Array.isArray(skillsRaw)) {
-          skills = skillsRaw;
-        }
-        if (Array.isArray(skills) && skills.length > 0) {
-          cvContext += `\n\nSkills: ${skills.map((s: any) => String(s)).join(', ')}`;
+        const skills = Array.isArray(userProfile.skills) ? userProfile.skills : JSON.parse(userProfile.skills || '[]');
+        if (skills.length > 0) {
+          cvContext += `\n\nSKILLS: ${skills.join(', ')}`;
         }
       } catch (e) {
         console.log('Could not parse skills:', e);
       }
       
-      // Parse education - wrap in try-catch
-      try {
-        const educationsRaw = userProfile.educations;
-        let educations: any[] = [];
-        if (typeof educationsRaw === 'string' && educationsRaw.length > 2) {
-          educations = JSON.parse(educationsRaw);
-        } else if (Array.isArray(educationsRaw)) {
-          educations = educationsRaw;
-        }
-        if (Array.isArray(educations) && educations.length > 0) {
-          cvContext += '\n\nEducation:';
-          educations.slice(0, 3).forEach((edu: any, i: number) => {
-            cvContext += `\n${i + 1}. ${String(edu.degree || 'Degree')} in ${String(edu.field || 'Field')} from ${String(edu.school || 'School')}`;
-          });
-        }
-      } catch (e) {
-        console.log('Could not parse educations:', e);
-      }
+      console.log('✅ CV context length:', cvContext.length);
       
-      // Determine question style based on difficulty
+      // Determine difficulty instruction
       let difficultyInstruction = '';
       if (difficultyLevel <= 3) {
-        difficultyInstruction = 'Ask EASY questions - basic background, motivation, and simple experience verification. Be friendly and encouraging.';
+        difficultyInstruction = 'Ask EASY questions focused on motivation and basic fit.';
       } else if (difficultyLevel <= 6) {
-        difficultyInstruction = 'Ask MEDIUM difficulty questions - probe into specific experiences, ask for examples, test technical knowledge at a moderate level.';
+        difficultyInstruction = 'Ask MEDIUM difficulty questions with scenario-based examples.';
       } else if (difficultyLevel <= 8) {
-        difficultyInstruction = 'Ask HARD questions - challenge gaps in experience, ask tough behavioral questions, probe for weaknesses, test deep technical knowledge.';
+        difficultyInstruction = 'Ask HARD questions that probe gaps and challenge assumptions.';
       } else {
-        difficultyInstruction = 'Ask EXTREME questions - be a tough interviewer, find inconsistencies, ask stress-test questions, challenge every claim, probe for failures and how they handled them.';
+        difficultyInstruction = 'Ask EXTREME difficulty questions - stress-test the candidate.';
       }
       
-      const prompt = `You are an expert HR interviewer conducting a focused interview for a specific job position. Your job is to ask questions that directly compare the candidate's CV against the job requirements.
+      // 🔥 ULTRA-SPECIFIC PROMPT
+      const prompt = `You are an expert HR interviewer. Your ONLY job is to compare the CANDIDATE'S CV against THIS SPECIFIC JOB'S REQUIREMENTS.
 
 ${difficultyInstruction}
 
-🎯 JOB REQUIREMENTS & DESCRIPTION:
-${jobContext || 'No specific job context provided - focus on general career discussion'}
+🎯 === THE SPECIFIC JOB REQUIREMENTS ===
+${jobContext}
 
-📄 CANDIDATE'S CV:
+📄 === THE CANDIDATE'S CV ===
 ${cvContext}
 
-**YOUR TASK:**
-Generate exactly 5 interview questions that SPECIFICALLY:
-1. **Compare job requirements vs CV**: Ask about skills or experiences the job requires that may NOT be obvious in their CV
-2. **Challenge gaps**: If the job needs Python but CV shows Java, ask "How would you approach learning Python for this role?"
-3. **Test relevance**: Ask how their SPECIFIC past projects relate to THIS job's challenges
-4. **Probe depth**: For skills they claim, ask scenario-based questions testing real knowledge for THIS position
-5. **Behavioral fit**: Ask how they've handled situations THIS job will involve
+🔍 === YOUR TASK ===
+Generate exactly 5 interview questions that DIRECTLY address the GAP between what THIS JOB NEEDS and what the CANDIDATE'S CV SHOWS.
 
-**IMPORTANT:**
-- DO NOT ask generic "tell me about yourself" questions
-- DO NOT just list their CV achievements - CHALLENGE how they fit THIS job
-- FOCUS on what the JOB NEEDS, not just what they've done
-- Ask about transferable skills if there are gaps
-- Match the difficulty level requested
+**CRITICAL RULES:**
+1. **EVERY question MUST mention BOTH the job requirement AND the candidate's background**
+2. **FOCUS on mismatches**: If job needs X but CV shows Y, ask about it
+3. **NO GENERIC questions**: Do NOT ask "tell me about yourself" or "why this role?"
+4. **BE SPECIFIC**: Use actual skills/requirements from the job description
+5. **FORMAT**: "This job requires [SPECIFIC REQUIREMENT FROM JOB]. Your CV shows [WHAT CV HAS]. How would you..."
 
-For each question, provide a brief suggested answer approach.
+**EXAMPLE OF GOOD QUESTION:**
+"This job requires 3+ years of Python experience. Your CV shows primarily Java development. How would you handle the transition to Python-heavy work, and what Python projects have you worked on?"
 
-Respond ONLY with a valid JSON array in this exact format:
+**EXAMPLE OF BAD QUESTION (DO NOT DO THIS):**
+"Tell me about your experience with programming."
+
+Respond ONLY with a valid JSON array:
 [
   {
-    "question": "This job requires [X skill from job description]. Your CV shows [Y]. How would you...",
-    "answer": "A strong answer would address the gap by...",
+    "question": "This job requires [X from job]. Your CV shows [Y from CV]. How would you...",
+    "answer": "A strong answer would...",
     "difficulty": "easy|medium|hard"
   }
 ]`;
 
+      console.log('🚀 Calling AI with prompt length:', prompt.length);
+      
       const response = await aiService.callAI(hrAI, prompt);
+      
+      console.log('✅ AI Response received, length:', response?.length || 0);
       
       let questions: Array<{ question: string; answer: string; difficulty: string }> = [];
       try {
         const jsonMatch = response.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
-          // CRITICAL: Create new plain objects with only primitive string values
-          questions = parsed.map((q: any) => {
-            return {
-              question: String(q.question || ''),
-              answer: String(q.answer || ''),
-              difficulty: String(q.difficulty || 'medium')
-            };
-          });
+          questions = parsed.map((q: any) => ({
+            question: String(q.question || ''),
+            answer: String(q.answer || ''),
+            difficulty: String(q.difficulty || 'medium')
+          }));
+          console.log('✅ Parsed', questions.length, 'questions');
+        } else {
+          console.error('❌ No JSON array found in response');
         }
       } catch (parseError) {
-        console.error('Failed to parse CV questions:', parseError);
-        questions = [{
-          question: 'Tell me about your most relevant experience for this role.',
-          answer: 'Focus on specific achievements and how they relate to the job requirements.',
-          difficulty: 'medium'
-        }];
+        console.error('❌ Failed to parse questions:', parseError);
+        return {
+          success: false,
+          error: 'AI response could not be parsed. Please try again.'
+        };
       }
       
-      // Return only a plain object with primitive values - this prevents clone errors
+      // Validate questions are job-specific
+      const validQuestions = questions.filter(q => {
+        const isGeneric = q.question.toLowerCase().includes('tell me about yourself') ||
+                         q.question.toLowerCase().includes('why this role') ||
+                         q.question.length < 50;
+        return !isGeneric;
+      });
+      
+      if (validQuestions.length === 0) {
+        console.error('❌ All questions were too generic');
+        return {
+          success: false,
+          error: 'AI generated generic questions. Please ensure the job URL is valid and try again.'
+        };
+      }
+      
+      console.log('✅ Returning', validQuestions.length, 'valid questions');
+      
       return { 
         success: true, 
-        questions: questions 
+        questions: validQuestions 
       };
     } catch (e: any) {
-      console.error('Ask about CV error:', e);
-      // Return a plain object with the error as a string
+      console.error('❌ Interview Insider error:', e);
       return { success: false, error: String(e.message || 'Unknown error occurred') };
     }
   });

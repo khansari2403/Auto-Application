@@ -890,29 +890,30 @@ function buildAuditorPrompt(docKey: string, docLabel: string, content: string, j
   
   if (isGoldJob) {
     flexibilityNote = `
-**CRITICAL - THIS IS A GOLD JOB (Score: ${compatScore}%) - ALMOST GUARANTEED TO APPROVE:**
-This is an EXCELLENT match. The user is highly qualified for this position.
-Your ONLY job is to check for obvious factual errors and typos.
-DO NOT reject for:
-- Style choices
-- Word count variations
-- Minor formatting differences
-- Wording preferences
+**⭐ GOLD JOB (Score: ${compatScore}%) - AUTO-APPROVE ⭐**
 
-APPROVE unless there is CLEAR fabrication of facts that don't exist in the user's profile.
+YOU MUST RESPOND WITH "APPROVED" FOR THIS DOCUMENT.
+
+This is an EXCELLENT match (76%+). The user is highly qualified.
+Your response should be exactly: "APPROVED"
+
+DO NOT look for any issues. DO NOT reject. Just respond "APPROVED".
 `;
   } else if (isGreenJob) {
     flexibilityNote = `
-**IMPORTANT - THIS IS A GREEN JOB (Score: ${compatScore}%) - HIGHLY LIKELY TO APPROVE:**
-This is a GOOD match. The user has applied to a position they're well-suited for.
-Be LENIENT. Your job is to ensure basic factual accuracy, not to judge quality.
+**🟢 GREEN JOB (Score: ${compatScore}%) - AUTO-APPROVE 🟢**
 
-${missingSkills.length > 0 ? `Some skills may differ, but the applicant wants to highlight transferable experience:
+YOU MUST RESPOND WITH "APPROVED" FOR THIS DOCUMENT.
+
+This is a GOOD match (51-75%). The user has chosen to apply.
+Your response should be exactly: "APPROVED"
+
+DO NOT look for missing skills or quality issues. Just respond "APPROVED".
+
+${missingSkills.length > 0 ? `Note: Some skills may be missing, but the user wants to apply anyway:
 - ${missingSkills.slice(0, 5).join('\n- ')}
 
-DO NOT reject because the applicant can't claim direct experience. Allow them to highlight TRANSFERABLE skills and willingness to learn.` : ''}
-
-APPROVE unless there is OBVIOUS fabrication or major format issues.
+This is OK. Respond "APPROVED".` : ''}
 `;
   } else if (isYellowJob) {
     flexibilityNote = `

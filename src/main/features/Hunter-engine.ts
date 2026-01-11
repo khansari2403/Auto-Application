@@ -22,6 +22,86 @@ export function isHunterCancelled(): boolean {
   return hunterCancelled;
 }
 
+/**
+ * Translate location to website's language for better search results
+ * German job boards need "Deutschland" instead of "Germany", etc.
+ */
+function translateLocationForWebsite(location: string, websiteUrl: string): string {
+  const locationLower = location.toLowerCase();
+  
+  // Detect website language from URL
+  const isGermanSite = websiteUrl.includes('.de') || 
+                      websiteUrl.includes('arbeitsagentur') || 
+                      websiteUrl.includes('stepstone.de') ||
+                      websiteUrl.includes('xing.de');
+  
+  const isFrenchSite = websiteUrl.includes('.fr');
+  const isSpanishSite = websiteUrl.includes('.es');
+  const isItalianSite = websiteUrl.includes('.it');
+  
+  // Common country translations
+  const countryTranslations: Record<string, Record<string, string>> = {
+    'de': { // German
+      'germany': 'Deutschland',
+      'berlin': 'Berlin',
+      'munich': 'München',
+      'cologne': 'Köln',
+      'hamburg': 'Hamburg',
+      'frankfurt': 'Frankfurt',
+      'austria': 'Österreich',
+      'switzerland': 'Schweiz',
+      'europe': 'Europa'
+    },
+    'fr': { // French
+      'france': 'France',
+      'paris': 'Paris',
+      'germany': 'Allemagne',
+      'spain': 'Espagne',
+      'italy': 'Italie',
+      'europe': 'Europe'
+    },
+    'es': { // Spanish
+      'spain': 'España',
+      'madrid': 'Madrid',
+      'barcelona': 'Barcelona',
+      'germany': 'Alemania',
+      'france': 'Francia',
+      'europe': 'Europa'
+    },
+    'it': { // Italian
+      'italy': 'Italia',
+      'rome': 'Roma',
+      'milan': 'Milano',
+      'germany': 'Germania',
+      'spain': 'Spagna',
+      'france': 'Francia',
+      'europe': 'Europa'
+    }
+  };
+  
+  // Apply translation based on detected language
+  if (isGermanSite && countryTranslations['de'][locationLower]) {
+    const translated = countryTranslations['de'][locationLower];
+    console.log(`Hunter: Translating location "${location}" → "${translated}" for German site`);
+    return translated;
+  } else if (isFrenchSite && countryTranslations['fr'][locationLower]) {
+    const translated = countryTranslations['fr'][locationLower];
+    console.log(`Hunter: Translating location "${location}" → "${translated}" for French site`);
+    return translated;
+  } else if (isSpanishSite && countryTranslations['es'][locationLower]) {
+    const translated = countryTranslations['es'][locationLower];
+    console.log(`Hunter: Translating location "${location}" → "${translated}" for Spanish site`);
+    return translated;
+  } else if (isItalianSite && countryTranslations['it'][locationLower]) {
+    const translated = countryTranslations['it'][locationLower];
+    console.log(`Hunter: Translating location "${location}" → "${translated}" for Italian site`);
+    return translated;
+  }
+  
+  // Return original if no translation found
+  return location;
+}
+
 export async function analyzeJobUrl(jobId: number, userId: number, url: string, hunter: any, auditor: any, callAI: Function) {
   console.log(`\n========== ANALYZING JOB ${jobId} ==========`);
   console.log(`URL: ${url}`);

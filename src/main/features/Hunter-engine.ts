@@ -721,6 +721,9 @@ export async function startHunterSearch(userId: number, callAI: Function) {
           const query = jobTitle;
           console.log(`Search query: "${query}"`);
           
+          // Translate location for website's language
+          const translatedLocation = translateLocationForWebsite(profile.location || '', website.website_url);
+          
           // Scrape job URLs - Use AI-assisted scraping for LinkedIn
           let jobUrls: string[] = [];
           const ScraperService = require('../scraper-service');
@@ -730,7 +733,7 @@ export async function startHunterSearch(userId: number, callAI: Function) {
             jobUrls = await scrapeJobs(
               website.website_url, 
               query, 
-              profile.location || '', 
+              translatedLocation, 
               { email: website.email, password: website.password }, 
               userId, 
               callAI
@@ -742,7 +745,7 @@ export async function startHunterSearch(userId: number, callAI: Function) {
             await logAction(userId, 'ai_hunter', `🤖 Trying AI-assisted LinkedIn scraping...`, 'in_progress');
             jobUrls = await ScraperService.scrapeLinkedInJobsWithAI(
               query,
-              profile.location || '',
+              translatedLocation,
               userId,
               callAI,
               hunter
@@ -753,7 +756,7 @@ export async function startHunterSearch(userId: number, callAI: Function) {
           jobUrls = await scrapeJobs(
             website.website_url, 
             query, 
-            profile.location || '', 
+            translatedLocation, 
             { email: website.email, password: website.password }, 
             userId, 
             callAI

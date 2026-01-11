@@ -290,7 +290,37 @@ export function AuditorQAPanel({ userId, onCriteriaUpdate }: Props) {
                             border: `1px solid ${c.userAnswer === 'yes' ? 'var(--success)' : 'var(--error)'}40`
                           }}
                         >
-                          {c.userAnswer === 'yes' ? '✓' : '✗'} {c.criteria}
+                          {c.userAnswer === 'yes' ? '✓' : '✗'} {formatCriteriaForDisplay(c.criteria)}
+                          <button
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              // Toggle answer
+                              const newAnswer = c.userAnswer === 'yes' ? 'no' : 'yes';
+                              try {
+                                await (window as any).electron.invoke('auditor:update-criteria', {
+                                  criteriaId: c.id,
+                                  newAnswer
+                                });
+                                loadData();
+                                onCriteriaUpdate?.();
+                              } catch (err) {
+                                console.error('Error updating criteria:', err);
+                              }
+                            }}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '2px',
+                              cursor: 'pointer',
+                              opacity: 0.7,
+                              fontSize: '12px',
+                              display: 'flex',
+                              alignItems: 'center'
+                            }}
+                            title={`Change to ${c.userAnswer === 'yes' ? 'No' : 'Yes'}`}
+                          >
+                            🔄
+                          </button>
                           <button
                             onClick={() => handleDeleteCriteria(c.id)}
                             style={{

@@ -21,6 +21,7 @@ export function registerAIHandlers(): string[] {
     'auditor:get-learned-criteria',
     'auditor:save-criteria',
     'auditor:delete-criteria',
+    'auditor:update-criteria',
     'auditor:add-question'
   ];
 

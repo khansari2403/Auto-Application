@@ -123,6 +123,64 @@ export async function calculateCompatibility(userId: number, jobId: number): Pro
   const locationScore = calculateLocationMatch(profile, job);
   const languageScore = calculateLanguageMatch(profile, job, languageProficiencies, learnedCriteria);
   
+  // 🔥 RADICAL FIX: ASK USER ABOUT MISSING SKILLS BEFORE PENALIZING
+  // If there are missing skills, generate questions for them
+  if (skillsScore.missing.length > 0) {
+    console.log(`Compatibility: Found ${skillsScore.missing.length} missing skills, checking if user actually has them...`);
+    
+    // Check if we've already asked about these skills
+    const existingQuestions = (db.auditor_questions || [])
+      .filter((q: any) => q.user_id === userId && q.job_id === jobId);
+    const alreadyAnswered = learnedCriteria.map((c: any) => c.criteria);
+    
+    // Generate questions for missing skills (limit to 5 most important)
+    const skillsToAsk = skillsScore.missing
+      .filter(skill => {
+        const criteriaKey = `tool_${skill.toLowerCase().replace(/\s+/g, '_')}`;
+        return !alreadyAnswered.includes(criteriaKey) &&
+               !existingQuestions.some((q: any) => q.criteria === criteriaKey);
+      })
+      .slice(0, 5); // Ask about top 5 missing skills
+    
+    if (skillsToAsk.length > 0) {
+      console.log(`Compatibility: Generating ${skillsToAsk.length} questions for missing skills...`);
+      
+      for (const skill of skillsToAsk) {
+        const criteriaKey = `tool_${skill.toLowerCase().replace(/\s+/g, '_')}`;
+        const questionText = `Do you have experience working with ${skill}?`;
+        
+        const questionId = `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        try {
+          await runQuery('INSERT INTO auditor_questions', {
+            id: questionId,
+            user_id: userId,
+            job_id: jobId,
+            question: questionText,
+            criteria: criteriaKey,
+            answered: false,
+            timestamp: Date.now()
+          });
+          
+          console.log(`Compatibility: Created question for skill "${skill}"`);
+        } catch (e) {
+          console.error(`Error creating question for ${skill}:`, e);
+        }
+      }
+    }
+    
+    // Recalculate skills score based on learned criteria
+    const recalculatedSkillsScore = recalculateSkillsWithLearnedCriteria(
+      skillsScore, 
+      learnedCriteria
+    );
+    
+    // Use recalculated score
+    skillsScore.score = recalculatedSkillsScore.score;
+    skillsScore.matched = recalculatedSkillsScore.matched;
+    skillsScore.missing = recalculatedSkillsScore.missing;
+  }
+  
   // Weighted average:
   // - Hard skills: 35% (reduced from 40%)
   // - Experience: 30% (includes transferability bonus)

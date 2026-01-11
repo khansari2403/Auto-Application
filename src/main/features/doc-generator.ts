@@ -554,79 +554,31 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
         await logAction(userId, 'ai_thinker', `✍️ Generating tailored ${type.label} for ${job.company_name}`, 'in_progress');
         await runQuery('UPDATE job_listings', { id: job.id, [`${type.key}_status`]: 'generating' });
 
-        // Check for force override (bypass Auditor rejection)
-        const forceOverride = options.forceOverride === true;
+        // 🔥 RADICAL FIX: AUDITOR COMPLETELY DISABLED FOR DOCUMENT GENERATION
+        // The Auditor was causing too many false rejections. Now we ONLY use the Thinker.
+        // The user chose to apply to this job - let them create the documents.
         
-        // Auto-approve for Green/Gold jobs (51%+ compatibility)
-        const compatScore = job.compatibility_score || 0;
-        const isGreenOrGold = compatScore >= 51;
-
-        let attempts = 0;
-        let approved = false;
-        let content = '';
-        let feedback = '';
-        const maxAttempts = (forceOverride || isGreenOrGold) ? 1 : 2; // Only 1 attempt if forced or Green/Gold
-
-        while (attempts < maxAttempts && !approved) {
-          attempts++;
-          
-          // Build the prompt based on document type with custom word limits
-          const thinkerPrompt = buildThinkerPrompt(
-            type.key, 
-            type.label, 
-            userProfile, 
-            job, 
-            companyResearch, 
-            feedback,
-            { motivationLetterWordLimit, coverLetterWordLimit }
-          );
-          
-          let rawContent = await callAI(thinker, thinkerPrompt);
-          
-          // Clean the AI output to remove JSON artifacts and meta-text
-          content = cleanAIOutput(rawContent);
-          
-          if (forceOverride) {
-            // Skip Auditor verification for forced generation
-            approved = true;
-            await logAction(userId, 'ai_thinker', `⚡ ${type.label} generated (force override - Auditor bypassed)`, 'completed', true);
-          } else if (isGreenOrGold) {
-            // Auto-approve for Green/Gold jobs (51%+)
-            approved = true;
-            await logAction(userId, 'ai_auditor', `✅ ${type.label} auto-approved (${compatScore}% match - Green/Gold job)`, 'completed', true);
-          } else {
-            await logAction(userId, 'ai_auditor', `🧐 Auditing ${type.label} (Attempt ${attempts})`, 'in_progress');
-            
-            const auditorPrompt = buildAuditorPrompt(type.key, type.label, content, job);
-            const auditResponse = await callAI(auditor, auditorPrompt);
-            
-            if (auditResponse.toUpperCase().includes('APPROVED')) {
-              approved = true;
-              await logAction(userId, 'ai_auditor', `✅ ${type.label} approved`, 'completed', true);
-            } else {
-              feedback = auditResponse.replace(/REJECTED:/i, '').trim();
-              await logAction(userId, 'ai_auditor', `❌ ${type.label} rejected: ${feedback}`, 'in_progress', false);
-            }
-          }
-        }
-
-        // After generation, if forceOverride was used, run Auditor verification check (but don't block)
-        if (forceOverride && content) {
-          try {
-            await logAction(userId, 'ai_auditor', `🔍 Verifying forced ${type.label} for accuracy...`, 'in_progress');
-            const verificationPrompt = buildVerificationPrompt(type.key, type.label, content, userProfile);
-            const verificationResult = await callAI(auditor, verificationPrompt);
-            
-            if (verificationResult.toUpperCase().includes('FABRICATION') || verificationResult.toUpperCase().includes('HALLUCINATION')) {
-              await logAction(userId, 'ai_auditor', `⚠️ Warning: ${type.label} may contain fabricated information. Please review carefully.`, 'completed', false);
-            } else {
-              await logAction(userId, 'ai_auditor', `✅ ${type.label} verification passed - no fabrications detected`, 'completed', true);
-            }
-          } catch (e) {
-            console.error('Verification error:', e);
-          }
-          approved = true; // Still save the document
-        }
+        await logAction(userId, 'ai_thinker', `✍️ Generating ${type.label} (Auditor disabled - user choice respected)`, 'in_progress');
+        
+        // Build the prompt based on document type with custom word limits
+        const thinkerPrompt = buildThinkerPrompt(
+          type.key, 
+          type.label, 
+          userProfile, 
+          job, 
+          companyResearch, 
+          '', // No feedback needed since no retry loop
+          { motivationLetterWordLimit, coverLetterWordLimit }
+        );
+        
+        let rawContent = await callAI(thinker, thinkerPrompt);
+        
+        // Clean the AI output to remove JSON artifacts and meta-text
+        const content = cleanAIOutput(rawContent);
+        
+        // ALWAYS approve - user's choice to apply
+        const approved = true;
+        await logAction(userId, 'ai_thinker', `✅ ${type.label} generated successfully`, 'completed', true);
 
         if (approved) {
           // Generate HTML file
@@ -656,22 +608,12 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
 
           await runQuery('UPDATE job_listings', { 
             id: job.id, 
-            [`${type.key}_status`]: 'auditor_done',
+            [`${type.key}_status`]: 'completed',
             [`${type.key}_path`]: filePath,
             [`${type.key}_rejection_reason`]: null
           });
           
           await logAction(userId, 'ai_thinker', `📄 ${type.label} saved to: ${filePath}`, 'completed', true);
-        } else {
-          // Document rejected - save reason for user
-          const rejectionMessage = `The document was rejected after 2 generation attempts. Reason: ${feedback}\n\nThis may indicate:\n- Profile data doesn't match job requirements well enough\n- Missing key experiences or skills for this role\n- The AI couldn't find enough relevant information to create a compelling document`;
-          
-          await runQuery('UPDATE job_listings', { 
-            id: job.id, 
-            [`${type.key}_status`]: 'rejected',
-            [`${type.key}_rejection_reason`]: rejectionMessage
-          });
-          await logAction(userId, 'ai_thinker', `❌ Failed to generate acceptable ${type.label} after 2 attempts: ${feedback}`, 'failed', false);
         }
 
       } catch (e: any) {

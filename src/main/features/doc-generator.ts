@@ -556,12 +556,16 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
 
         // Check for force override (bypass Auditor rejection)
         const forceOverride = options.forceOverride === true;
+        
+        // Auto-approve for Green/Gold jobs (51%+ compatibility)
+        const compatScore = job.compatibility_score || 0;
+        const isGreenOrGold = compatScore >= 51;
 
         let attempts = 0;
         let approved = false;
         let content = '';
         let feedback = '';
-        const maxAttempts = forceOverride ? 1 : 2; // Only 1 attempt if forced
+        const maxAttempts = (forceOverride || isGreenOrGold) ? 1 : 2; // Only 1 attempt if forced or Green/Gold
 
         while (attempts < maxAttempts && !approved) {
           attempts++;
@@ -586,6 +590,10 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
             // Skip Auditor verification for forced generation
             approved = true;
             await logAction(userId, 'ai_thinker', `⚡ ${type.label} generated (force override - Auditor bypassed)`, 'completed', true);
+          } else if (isGreenOrGold) {
+            // Auto-approve for Green/Gold jobs (51%+)
+            approved = true;
+            await logAction(userId, 'ai_auditor', `✅ ${type.label} auto-approved (${compatScore}% match - Green/Gold job)`, 'completed', true);
           } else {
             await logAction(userId, 'ai_auditor', `🧐 Auditing ${type.label} (Attempt ${attempts})`, 'in_progress');
             

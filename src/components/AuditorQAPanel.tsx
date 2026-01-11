@@ -345,4 +345,20 @@ function getCriteriaCategory(criteria: string): string {
   return 'Other';
 }
 
+// Helper to format criteria for human readability
+function formatCriteriaForDisplay(criteria: string): string {
+  // Remove prefixes like "speak_", "tool_", "cert_", etc.
+  let formatted = criteria.replace(/^(speak_|tool_|cert_|onsite_|willing_|eu_|work_permit_)/i, '');
+  
+  // Replace underscores with spaces
+  formatted = formatted.replace(/_/g, ' ');
+  
+  // Capitalize first letter of each word
+  formatted = formatted.split(' ').map(word => 
+    word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+  ).join(' ');
+  
+  return formatted;
+}
+
 export default AuditorQAPanel;

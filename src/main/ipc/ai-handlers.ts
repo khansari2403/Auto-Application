@@ -808,30 +808,38 @@ Summary: ${String(userProfile.summary || 'Not provided')}`;
         difficultyInstruction = 'Ask EXTREME questions - be a tough interviewer, find inconsistencies, ask stress-test questions, challenge every claim, probe for failures and how they handled them.';
       }
       
-      const prompt = `You are an expert HR interviewer conducting a tough interview. Your job is to grill the candidate based on their CV and the job requirements.
+      const prompt = `You are an expert HR interviewer conducting a focused interview for a specific job position. Your job is to ask questions that directly compare the candidate's CV against the job requirements.
 
 ${difficultyInstruction}
 
-JOB REQUIREMENTS:
-${jobContext || 'No specific job context provided'}
+🎯 JOB REQUIREMENTS & DESCRIPTION:
+${jobContext || 'No specific job context provided - focus on general career discussion'}
 
-CANDIDATE'S CV:
+📄 CANDIDATE'S CV:
 ${cvContext}
 
-Generate exactly 5 interview questions that:
-1. Probe the candidate's experience relative to this specific job
-2. Challenge potential gaps between their CV and job requirements
-3. Test their claimed skills with specific scenarios
-4. Include behavioral questions about their past experiences
-5. Match the difficulty level requested
+**YOUR TASK:**
+Generate exactly 5 interview questions that SPECIFICALLY:
+1. **Compare job requirements vs CV**: Ask about skills or experiences the job requires that may NOT be obvious in their CV
+2. **Challenge gaps**: If the job needs Python but CV shows Java, ask "How would you approach learning Python for this role?"
+3. **Test relevance**: Ask how their SPECIFIC past projects relate to THIS job's challenges
+4. **Probe depth**: For skills they claim, ask scenario-based questions testing real knowledge for THIS position
+5. **Behavioral fit**: Ask how they've handled situations THIS job will involve
 
-For each question, also provide a suggested answer the candidate could give.
+**IMPORTANT:**
+- DO NOT ask generic "tell me about yourself" questions
+- DO NOT just list their CV achievements - CHALLENGE how they fit THIS job
+- FOCUS on what the JOB NEEDS, not just what they've done
+- Ask about transferable skills if there are gaps
+- Match the difficulty level requested
+
+For each question, provide a brief suggested answer approach.
 
 Respond ONLY with a valid JSON array in this exact format:
 [
   {
-    "question": "Tell me about a time when...",
-    "answer": "A strong answer would be...",
+    "question": "This job requires [X skill from job description]. Your CV shows [Y]. How would you...",
+    "answer": "A strong answer would address the gap by...",
     "difficulty": "easy|medium|hard"
   }
 ]`;

@@ -237,6 +237,42 @@ export async function calculateCompatibility(userId: number, jobId: number): Pro
 }
 
 /**
+ * Recalculate skills score based on learned criteria from user Q&A
+ * If user answered "Yes" to a skill question, count it as matched
+ */
+function recalculateSkillsWithLearnedCriteria(
+  originalScore: { score: number; matched: string[]; missing: string[] },
+  learnedCriteria: any[]
+): { score: number; matched: string[]; missing: string[] } {
+  const matched = [...originalScore.matched];
+  const missing = [...originalScore.missing];
+  
+  // Check each missing skill against learned criteria
+  for (let i = missing.length - 1; i >= 0; i--) {
+    const skill = missing[i];
+    const criteriaKey = `tool_${skill.toLowerCase().replace(/\s+/g, '_')}`;
+    
+    // Find if user answered "Yes" to this skill
+    const userCriteria = learnedCriteria.find((c: any) => c.criteria === criteriaKey);
+    
+    if (userCriteria && userCriteria.user_answer === 'yes') {
+      // User has this skill! Move from missing to matched
+      matched.push(skill);
+      missing.splice(i, 1);
+      console.log(`Compatibility: User confirmed they have "${skill}" - adding to matched`);
+    }
+  }
+  
+  // Recalculate score
+  const totalRequired = matched.length + missing.length;
+  const newScore = totalRequired > 0 
+    ? Math.round((matched.length / totalRequired) * 100)
+    : 60;
+  
+  return { score: newScore, matched, missing };
+}
+
+/**
  * Calculate skills match score
  * IMPORTANT: Soft skills should NEVER be exclusion factors
  */

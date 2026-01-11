@@ -939,6 +939,28 @@ Respond ONLY with a valid JSON array in this exact format:
     }
   });
   
+  // Update a learned criteria answer
+  ipcMain.handle('auditor:update-criteria', async (_, data) => {
+    try {
+      const { criteriaId, newAnswer } = data;
+      const db = getDatabase();
+      const criteria = db.auditor_criteria?.find((c: any) => c.id === criteriaId);
+      
+      if (!criteria) {
+        return { success: false, error: 'Criteria not found' };
+      }
+      
+      await runQuery('UPDATE auditor_criteria', {
+        id: criteriaId,
+        user_answer: newAnswer
+      });
+      
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
+  });
+  
   // Add a question from the Auditor (called during job analysis)
   ipcMain.handle('auditor:add-question', async (_, data) => {
     try {

@@ -802,7 +802,7 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
   const db = getDatabase();
 
   // Define language variables ONCE at top-level scope (fixes ReferenceError class of bugs)
-  const { isGerman, targetLanguage } = detectJobLanguage(job);
+  const { isGerman, targetLanguage, lang3 } = detectJobLanguage(job);
   const dateFolder = getJobDateFolder(job, isGerman);
 
   // Get profile based on Thinker's source settings and normalize fields
@@ -1297,7 +1297,7 @@ export async function generateSingleDocument(
   if (!userProfile) return { success: false, error: 'User profile not found' };
 
   // Define language variables ONCE at top-level scope
-  const { isGerman, targetLanguage } = detectJobLanguage(job);
+  const { isGerman, targetLanguage, lang3 } = detectJobLanguage(job);
   // (kept for parity with generateTailoredDocs and future type-specific behavior)
   void targetLanguage;
   void isGerman;

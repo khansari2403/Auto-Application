@@ -3628,7 +3628,7 @@ function saveDocumentFile(content, jobId, docType, format = "html", companyName,
 }
 async function generateTailoredDocs(job, userId, thinker, auditor, options, callAI2) {
   const db = getDatabase();
-  const { isGerman, targetLanguage } = detectJobLanguage(job);
+  const { isGerman, targetLanguage, lang3 } = detectJobLanguage(job);
   const dateFolder = getJobDateFolder(job, isGerman);
   let userProfile = await getProfileByThinkerSource(userId, thinker);
   if (!userProfile) {
@@ -3957,7 +3957,7 @@ async function generateSingleDocument(jobId, userId, docType, thinker, auditor, 
   const userProfile = ((_b = db.user_profile) == null ? void 0 : _b.find((p) => p.id === userId)) || ((_c = db.user_profile) == null ? void 0 : _c[0]);
   if (!job) return { success: false, error: "Job not found" };
   if (!userProfile) return { success: false, error: "User profile not found" };
-  const { isGerman, targetLanguage } = detectJobLanguage(job);
+  const { isGerman, targetLanguage, lang3 } = detectJobLanguage(job);
   void targetLanguage;
   void isGerman;
   const options = {};

@@ -8,117 +8,104 @@
   "user_profile": [
     {
       "id": 1,
-      "name": "Jean Dupont",
-      "title": "Développeur Backend",
-      "email": "jean@example.com",
-      "phone": "+33 1 23 45 67 89",
-      "location": "Paris",
-      "summary": "Développeur backend spécialisé en Python et API.",
-      "experiences": "[{\"title\":\"Développeur Backend\",\"company\":\"ACME\",\"startDate\":\"2021\",\"endDate\":\"2024\",\"description\":\"Développement d’API REST.\"}]",
-      "educations": "[{\"degree\":\"Licence Informatique\",\"school\":\"Sorbonne\",\"startYear\":\"2017\",\"endYear\":\"2020\"}]",
-      "skills": "[\"Python\",\"FastAPI\",\"MongoDB\",\"Kubernetes\",\"Photoshop\"]",
-      "licenses": "[\"AWS Certified Cloud Practitioner\",\"Scrum Master\"]",
-      "languages": "[\"Français\",\"Anglais\"]"
+      "name": "Jane Doe",
+      "title": "Data Analyst",
+      "email": "jane@example.com",
+      "phone": "+1 222 333",
+      "location": "London",
+      "summary": "Data analyst with SQL and Python skills.",
+      "experiences": "[{\"title\":\"Data Analyst\",\"company\":\"ACME\",\"startDate\":\"2022\",\"endDate\":\"2025\",\"description\":\"Built dashboards and ETL.\"}]",
+      "educations": "[{\"degree\":\"B.Sc. Statistics\",\"school\":\"UCL\",\"startYear\":\"2018\",\"endYear\":\"2022\"}]",
+      "skills": "[\"SQL\",\"Python\",\"Tableau\",\"Public speaking\",\"Cooking\",\"Photoshop\"]",
+      "licenses": "[\"Google Data Analytics Certificate\",\"Scrum Master\",\"AWS Cloud Practitioner\"]",
+      "languages": "[\"English\"]"
     }
   ],
   "job_listings": [
     {
-      "id": 2001,
-      "job_title": "Développeur Backend",
-      "company_name": "Exemple SAS",
-      "location": "Paris",
-      "required_skills": "Python, API, MongoDB",
-      "description": "Nous recherchons un développeur backend avec une solide expérience en Python et en conception d’API. Connaissance de MongoDB appréciée.",
+      "id": 1001,
+      "job_title": "Senior Data Analyst",
+      "company_name": "Example Ltd",
+      "location": "London",
+      "required_skills": "SQL, Python, Tableau",
+      "description": "We are looking for a Senior Data Analyst with strong SQL and Python, experience with Tableau, and stakeholder management.",
       "date_imported": "2026-01-12",
-      "cover_letter_status": "auditor_done",
-      "cover_letter_rejection_reason": null,
-      "cover_letter_path": "/app/User_Data/custom_storage/Exemple SAS/Développeur Backend/2026-01-12/cover_letter_job2001_1768311182276.html",
-      "cover_letter_pdf_path": "/app/User_Data/custom_storage/Exemple SAS/Développeur Backend/2026-01-12/cover_letter_job2001_1768311182276.pdf"
+      "cv_status": "failed",
+      "cv_rejection_reason": null,
+      "motivation_letter_status": "failed",
+      "motivation_letter_rejection_reason": null,
+      "cover_letter_status": "failed",
+      "cover_letter_rejection_reason": null
     }
   ],
-  "documents": [
-    {
-      "id": 1768311182326,
-      "job_id": "2001",
-      "user_id": 1,
-      "document_type": "cover_letter",
-      "content": "Je souhaite rejoindre Exemple SAS en tant que Développeur Backend afin de contribuer au développement d’API robustes en Python.\n\nChez ACME, j’ai conçu et maintenu des services backend et intégré MongoDB pour des besoins de persistance.\n\nJe serais ravi d’échanger avec vous sur ma candidature.",
-      "file_path": "/app/User_Data/custom_storage/Exemple SAS/Développeur Backend/2026-01-12/cover_letter_job2001_1768311182276.pdf",
-      "version": 1,
-      "status": "final",
-      "created_at": "2026-01-13T13:33:02.276Z",
-      "is_active": 1,
-      "timestamp": "2026-01-13T13:33:02.276Z"
-    }
-  ],
+  "documents": [],
   "action_logs": [
     {
-      "id": 1768311176354,
+      "id": 1768312243108,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "🔍 Researching Exemple SAS mission and history...",
+      "action_description": "🔍 Researching Example Ltd mission and history...",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:32:56.354Z"
+      "timestamp": "2026-01-13T13:50:43.108Z"
     },
     {
-      "id": 1768311176355,
+      "id": 1768312243109,
       "user_id": 1,
       "action_type": "ai_observer",
-      "action_description": "🔍 Researching company: Exemple SAS",
+      "action_description": "🔍 Researching company: Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:32:56.355Z"
+      "timestamp": "2026-01-13T13:50:43.109Z"
     },
     {
-      "id": 1768311182267,
+      "id": 1768312247473,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "✍️ Generating tailored Cover Letter for Exemple SAS",
+      "action_description": "✍️ Generating tailored CV for Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:33:02.267Z"
+      "timestamp": "2026-01-13T13:50:47.473Z"
     },
     {
-      "id": 1768311182269,
+      "id": 1768312247477,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "✅ Cover Letter generated successfully",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:33:02.269Z"
+      "action_description": "❌ Error: ensureTargetLanguageOrRetry is not defined",
+      "status": "failed",
+      "success": false,
+      "timestamp": "2026-01-13T13:50:47.477Z"
     },
     {
-      "id": 1768311182277,
+      "id": 1768312247477,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "📄 Cover Letter saved (HTML): /app/User_Data/custom_storage/Exemple SAS/Développeur Backend/2026-01-12/cover_letter_job2001_1768311182276.html",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:33:02.277Z"
-    },
-    {
-      "id": 1768311182278,
-      "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "📄 Converting to PDF: cover_letter_job2001_1768311182276.html",
+      "action_description": "✍️ Generating tailored Motivation Letter for Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:33:02.278Z"
+      "timestamp": "2026-01-13T13:50:47.477Z"
     },
     {
-      "id": 1768311184875,
+      "id": 1768312247479,
       "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "✅ PDF created: cover_letter_job2001_1768311182276.pdf",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:33:04.875Z"
+      "action_type": "ai_thinker",
+      "action_description": "❌ Error: ensureTargetLanguageOrRetry is not defined",
+      "status": "failed",
+      "success": false,
+      "timestamp": "2026-01-13T13:50:47.479Z"
     },
     {
-      "id": 1768311184877,
+      "id": 1768312247479,
       "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "✅ PDF created: cover_letter_job2001_1768311182276.pdf",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:33:04.877Z"
+      "action_type": "ai_thinker",
+      "action_description": "✍️ Generating tailored Cover Letter for Example Ltd",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:50:47.479Z"
+    },
+    {
+      "id": 1768312247481,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "❌ Error: ensureTargetLanguageOrRetry is not defined",
+      "status": "failed",
+      "success": false,
+      "timestamp": "2026-01-13T13:50:47.481Z"
     }
   ],
   "ai_models": [],

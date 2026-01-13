@@ -310,6 +310,55 @@ function filterProfileForJob(userProfile: any, job: any): { profile: any; releva
   const skillStrings = skillsRaw.map((s: any) => {
     if (typeof s === 'string') return s;
     return s?.name || s?.title || JSON.stringify(s);
+
+function ensureTargetLanguageOrRetry(args: {
+  docKey: string;
+  content: string;
+  lang3: string;
+  targetLanguage: string;
+  callAI: Function;
+  thinker: any;
+  originalPrompt: string;
+}): Promise<string> {
+  return (async () => {
+    const { docKey, content, lang3, targetLanguage, callAI, thinker, originalPrompt } = args;
+
+    // Only validate the AI-generated body content (not the template HTML).
+    // franc needs enough text; short bodies may return 'und'. We accept 'und' if target is ENGLISH.
+    const detected = franc(String(content || ''));
+
+    const acceptable = () => {
+      if (!content || String(content).trim().length < 40) return true; // too short to be reliable
+      if (lang3 === 'und') return true; // unknown JD language: do not block
+      if (detected === 'und') return true; // unknown output language: do not block
+      return detected === lang3;
+    };
+
+    if (acceptable()) return content;
+
+    // Safety net: one forced retry with even stricter instructions.
+    const fixPrompt = `${originalPrompt}
+
+CRITICAL FIX:
+- The previous output language detection was '${detected}' but the job description language is '${lang3}' which corresponds to ${targetLanguage}.
+- REWRITE the document so that it is 100% in ${targetLanguage}. Do NOT include any other language.
+- Return ONLY the rewritten content.`;
+
+    const retryRaw = await callAI(thinker, fixPrompt);
+    if (!retryRaw || String(retryRaw).startsWith('Error:')) return content;
+
+    const cleaned = cleanAIOutput(retryRaw);
+    const retryDetected = franc(String(cleaned || ''));
+
+    if (retryDetected !== 'und' && lang3 !== 'und' && retryDetected !== lang3) {
+      // Last resort: still return the retry (it is at least guided), but log callers can decide.
+      return cleaned;
+    }
+
+    return cleaned;
+  })();
+}
+
   });
 
   const certStrings = certsRaw.map((c: any) => {

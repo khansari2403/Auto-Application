@@ -900,7 +900,6 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
       // Safety net: verify the AI body language matches the JD language.
       // If mismatch, automatically retry ONCE with extra-strict language instructions.
       content = await ensureTargetLanguageOrRetry({
-        docKey: type.key,
         content,
         lang3,
         targetLanguage,

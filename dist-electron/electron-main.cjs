@@ -3696,7 +3696,6 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
       }
       let content = cleanAIOutput(rawContent);
       content = await ensureTargetLanguageOrRetry({
-        docKey: type.key,
         content,
         lang3,
         targetLanguage,

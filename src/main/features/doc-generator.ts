@@ -363,6 +363,8 @@ function generateDocumentHTML(content: string, docType: string, userProfile: any
   });
 
   // Template owns greeting/closing to avoid doubles.
+  // We currently support fully localized templates for German/English.
+  // For other languages, we fallback to English template but still force AI body language.
   const salutation = isGerman ? 'Sehr geehrte Damen und Herren,' : 'Dear Hiring Manager,';
   const closing = isGerman ? 'Mit freundlichen Grüßen' : 'Kind regards,';
 

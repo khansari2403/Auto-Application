@@ -615,85 +615,21 @@ function generateDocumentHTML(content: string, docType: string, userProfile: any
 }
 
 // Generate CV HTML with full profile - supports multiple languages
-// When targetLanguage is not ENGLISH, we use AI-generated content directly
-// because profile data is typically stored in the user's native language
 function generateCVHTML(content: string, userProfile: any, job: any, isGerman: boolean, targetLanguage?: string): string {
   const lang = (targetLanguage || (isGerman ? 'GERMAN' : 'ENGLISH')).toUpperCase();
   
-  // Multi-language support for CV section headers
+  // Multi-language labels for section headers
   const labels: Record<string, Record<string, string>> = {
-    GERMAN: {
-      summary: 'Beruflicher Werdegang',
-      experience: 'Berufserfahrung',
-      education: 'Ausbildung',
-      skills: 'Kenntnisse',
-      certifications: 'Zertifizierungen',
-      languages: 'Sprachen',
-      present: 'Heute'
-    },
-    ENGLISH: {
-      summary: 'Professional Summary',
-      experience: 'Work Experience',
-      education: 'Education',
-      skills: 'Skills',
-      certifications: 'Certifications',
-      languages: 'Languages',
-      present: 'Present'
-    },
-    FRENCH: {
-      summary: 'Résumé Professionnel',
-      experience: 'Expérience Professionnelle',
-      education: 'Formation',
-      skills: 'Compétences',
-      certifications: 'Certifications',
-      languages: 'Langues',
-      present: 'Présent'
-    },
-    SPANISH: {
-      summary: 'Resumen Profesional',
-      experience: 'Experiencia Laboral',
-      education: 'Educación',
-      skills: 'Habilidades',
-      certifications: 'Certificaciones',
-      languages: 'Idiomas',
-      present: 'Presente'
-    },
-    ITALIAN: {
-      summary: 'Profilo Professionale',
-      experience: 'Esperienza Lavorativa',
-      education: 'Formazione',
-      skills: 'Competenze',
-      certifications: 'Certificazioni',
-      languages: 'Lingue',
-      present: 'Presente'
-    },
-    DUTCH: {
-      summary: 'Professionele Samenvatting',
-      experience: 'Werkervaring',
-      education: 'Opleiding',
-      skills: 'Vaardigheden',
-      certifications: 'Certificeringen',
-      languages: 'Talen',
-      present: 'Heden'
-    },
-    PORTUGUESE: {
-      summary: 'Resumo Profissional',
-      experience: 'Experiência Profissional',
-      education: 'Educação',
-      skills: 'Habilidades',
-      certifications: 'Certificações',
-      languages: 'Idiomas',
-      present: 'Presente'
-    }
+    GERMAN: { summary: 'Berufsprofil', experience: 'Berufserfahrung', education: 'Ausbildung', skills: 'Kenntnisse', certifications: 'Zertifizierungen', languages: 'Sprachen', present: 'Heute' },
+    ENGLISH: { summary: 'Professional Summary', experience: 'Work Experience', education: 'Education', skills: 'Skills', certifications: 'Certifications', languages: 'Languages', present: 'Present' },
+    FRENCH: { summary: 'Profil Professionnel', experience: 'Expérience', education: 'Formation', skills: 'Compétences', certifications: 'Certifications', languages: 'Langues', present: 'Présent' },
+    SPANISH: { summary: 'Perfil Profesional', experience: 'Experiencia', education: 'Educación', skills: 'Habilidades', certifications: 'Certificaciones', languages: 'Idiomas', present: 'Presente' }
   };
-  
   const l = labels[lang] || labels.ENGLISH;
 
-  // For non-English CVs, use AI-generated content directly (already in target language)
-  // For English CVs, use the structured template with profile data
+  // For non-English CVs, use AI-generated content directly (it's already in target language)
   const useAIContent = lang !== 'ENGLISH' && content && content.trim().length > 100;
 
-  // Get skills and certifications for display
   const skills = userProfile?.skills || [];
   const certifications = userProfile?.licenses || [];
   
@@ -707,146 +643,60 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
     certsHTML = `<div class="skills-list">${certifications.map((c: string) => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${c}</span>`).join('')}</div>`;
   }
 
-  // Format AI content for display (convert plain text sections to HTML)
-  const formatAIContent = (text: string): string => {
-    return text
-      .replace(/\n{3,}/g, '\n\n')  // Normalize multiple newlines
-      .replace(/\n\n/g, '</p><p>')  // Paragraph breaks
-      .replace(/\n/g, '<br>')       // Line breaks
-      .replace(/^/, '<p>')          // Start paragraph
-      .replace(/$/, '</p>');        // End paragraph
+  // Format AI content - convert to readable paragraphs
+  const formatContent = (text: string): string => {
+    return text.replace(/\n/g, '<br>');
   };
 
   return `<!DOCTYPE html>
-<html lang="${lang === 'GERMAN' ? 'de' : lang === 'FRENCH' ? 'fr' : lang === 'SPANISH' ? 'es' : 'en'}">
+<html lang="${lang === 'GERMAN' ? 'de' : 'en'}">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CV - ${userProfile?.name || 'Applicant'}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      line-height: 1.5;
-      color: #1a1a1a;
-      max-width: 850px;
-      margin: 0 auto;
-      padding: 30px 40px;
-      background: #fff;
-    }
-    
-    .header {
-      display: flex;
-      gap: 20px;
-      align-items: center;
-      margin-bottom: 25px;
-      padding-bottom: 20px;
-      border-bottom: 3px solid #0077b5;
-    }
-    
-    .header-photo {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 3px solid #0077b5;
-    }
-    
-    .header-info { flex: 1; }
-    .name { font-size: 32px; font-weight: 700; color: #0077b5; }
-    .title { font-size: 18px; color: #444; margin: 5px 0; }
-    .contact { font-size: 13px; color: #666; display: flex; flex-wrap: wrap; gap: 15px; margin-top: 8px; }
-    
-    .main { display: grid; grid-template-columns: 1fr 300px; gap: 30px; }
-    .left-column { }
-    .right-column { }
-    
+    body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 850px; margin: 0 auto; padding: 30px 40px; background: #fff; }
+    .header { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 3px solid #0077b5; }
+    .name { font-size: 28px; font-weight: 700; color: #0077b5; }
+    .contact { font-size: 13px; color: #666; margin-top: 8px; }
     .section { margin-bottom: 20px; }
-    .section-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #0077b5;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      margin-bottom: 12px;
-      padding-bottom: 5px;
-      border-bottom: 2px solid #e0e0e0;
-    }
-    
-    .summary { font-size: 14px; color: #333; text-align: justify; }
-    
-    .experience-item, .education-item { margin-bottom: 18px; }
-    .item-header { display: flex; justify-content: space-between; flex-wrap: wrap; }
-    .item-title { font-weight: 600; font-size: 15px; color: #1a1a1a; }
-    .item-company { color: #666; font-size: 14px; }
-    .item-date { color: #888; font-size: 12px; }
-    .item-description { font-size: 13px; color: #444; margin-top: 5px; }
-    
-    .skills-list { display: flex; flex-wrap: wrap; gap: 6px; }
-    .skill-tag {
-      background: #e3f2fd;
-      color: #0077b5;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 500;
-    }
-    
-    .ai-content {
-      font-size: 14px;
-      line-height: 1.7;
-      color: #333;
-    }
-    .ai-content p { margin-bottom: 12px; }
-    
-    @media print {
-      body { padding: 15px; font-size: 12px; }
-      .section-title { font-size: 11px; }
-      .name { font-size: 24px; }
-    }
+    .section-title { font-size: 14px; font-weight: 700; color: #0077b5; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #e0e0e0; }
+    .content { font-size: 14px; line-height: 1.7; }
+    .skills-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .skill-tag { background: #e3f2fd; color: #0077b5; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
   </style>
 </head>
 <body>
   <div class="header">
-    ${userProfile?.photo ? `<img src="${userProfile.photo}" class="header-photo" alt="Photo">` : ''}
-    <div class="header-info">
-      <div class="name">${userProfile?.name || 'Your Name'}</div>
-      ${!useAIContent ? `<div class="title">${userProfile?.title || 'Professional Title'}</div>` : ''}
-      <div class="contact">
-        ${userProfile?.email ? `<span>📧 ${userProfile.email}</span>` : ''}
-        ${userProfile?.phone ? `<span>📱 ${userProfile.phone}</span>` : ''}
-        ${userProfile?.location ? `<span>📍 ${userProfile.location}</span>` : ''}
-      </div>
+    <div class="name">${userProfile?.name || 'Your Name'}</div>
+    <div class="contact">
+      ${userProfile?.email ? `📧 ${userProfile.email}` : ''} 
+      ${userProfile?.phone ? `| 📱 ${userProfile.phone}` : ''} 
+      ${userProfile?.location ? `| 📍 ${userProfile.location}` : ''}
     </div>
   </div>
   
-  ${useAIContent ? `
-  <!-- AI-generated CV content in ${lang} -->
-  <div class="main" style="display: block;">
-    <div class="ai-content">
-      ${formatAIContent(content)}
-    </div>
-    
-    ${skillsHTML ? `
-    <div class="section" style="margin-top: 20px;">
-      <div class="section-title">${l.skills}</div>
-      ${skillsHTML}
-    </div>
-    ` : ''}
-    
-    ${certsHTML ? `
-    <div class="section">
-      <div class="section-title">${l.certifications}</div>
-      ${certsHTML}
-    </div>
-    ` : ''}
+  <div class="content">
+    ${formatContent(content)}
   </div>
-  ` : `
-  <!-- Structured CV template -->
-  <div class="main">
+  
+  ${skillsHTML ? `
+  <div class="section" style="margin-top: 25px;">
+    <div class="section-title">${l.skills}</div>
+    ${skillsHTML}
+  </div>
+  ` : ''}
+  
+  ${certsHTML ? `
+  <div class="section">
+    <div class="section-title">${l.certifications}</div>
+    ${certsHTML}
+  </div>
+  ` : ''}
+</body>
+</html>`;
+}
     <div class="left-column">
       ${userProfile?.summary ? `
         <div class="section">

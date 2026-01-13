@@ -917,7 +917,7 @@ function buildThinkerPrompt(args: {
     motivationLetterWordLimit: string;
     coverLetterWordLimit: string;
     cvPageLimit: string;
-    targetLanguage: 'GERMAN' | 'ENGLISH';
+    targetLanguage: string;
     isGerman: boolean;
   };
 }): string {

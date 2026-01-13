@@ -1236,7 +1236,19 @@ Please fix these issues in the new version.` : ''}
 
 ${languageHardRule}
 
-CRITICAL LANGUAGE REQUIREMENT: You MUST write the entire CV in ${targetLanguage}. This includes all section headings, job descriptions, and summaries.
+CRITICAL LANGUAGE REQUIREMENT: You MUST write the entire CV in ${targetLanguage}. This includes:
+- The professional title/headline
+- All section headings
+- All job descriptions and summaries
+- Everything must be translated to ${targetLanguage}
+
+CRITICAL OUTPUT FORMAT:
+- Return ONLY plain text, nicely formatted
+- DO NOT return JSON format
+- DO NOT use quotes around text
+- DO NOT use curly braces or brackets
+- DO NOT use field labels like "Name": or "Titel":
+- Just write the CV content directly as readable text
 
 ${baseContext}
 
@@ -1248,8 +1260,9 @@ RELEVANCE RULE:
 CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 1. DO NOT fabricate or hallucinate any information - use ONLY data from the provided profile
 2. DO NOT invent job titles, companies, dates, or achievements not in the profile
-3. DO NOT include any JSON formatting or markdown code blocks
+3. DO NOT return JSON format - return PLAIN TEXT only
 4. DO NOT add meta-commentary like "Here is your CV"
+5. DO NOT wrap content in quotes or code blocks
 
 NOTE: CV generation is NOT subject to word limits.
 

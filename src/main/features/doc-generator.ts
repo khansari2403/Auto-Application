@@ -5,24 +5,42 @@ import * as path from 'path';
 let app: any;
 try { app = require('electron').app; } catch (e) { app = (global as any).electronApp; }
 
-// Get base documents directory in user data
+// Get base documents directory.
+// If the user has configured a storage path (Settings > Storage), we MUST save there.
+// Otherwise fallback to app.getPath('userData')/generated_docs.
 const getBaseDocsDir = () => {
-  const docsPath = path.join(app.getPath('userData'), 'generated_docs');
-  if (!fs.existsSync(docsPath)) {
-    fs.mkdirSync(docsPath, { recursive: true });
+  try {
+    const db = getDatabase();
+    const settings = (db.settings || [])[0] || {};
+    const configuredRoot = settings.storage_path || settings.storagePath;
+    const root = configuredRoot && String(configuredRoot).trim().length > 0
+      ? String(configuredRoot).trim()
+      : path.join(app.getPath('userData'), 'generated_docs');
+
+    if (!fs.existsSync(root)) {
+      fs.mkdirSync(root, { recursive: true });
+    }
+
+    return root;
+  } catch {
+    // Ultra-safe fallback
+    const fallback = path.join(app.getPath('userData'), 'generated_docs');
+    if (!fs.existsSync(fallback)) fs.mkdirSync(fallback, { recursive: true });
+    return fallback;
   }
-  return docsPath;
 };
 
-// Get organized documents directory: Company/Position/
-const getOrganizedDocsDir = (companyName: string, position: string) => {
+// Get organized documents directory:
+// [StorageRoot]/Company/Position/YYYY-MM-DD
+const getOrganizedDocsDir = (companyName: string, position: string, dateFolder: string) => {
   // Sanitize folder names (remove invalid characters)
-  const sanitize = (str: string) => str.replace(/[<>:"/\\|?*]/g, '_').trim().substring(0, 50);
-  
+  const sanitize = (str: string) => String(str || '').replace(/[<>:"/\\|?*]/g, '_').trim().substring(0, 50);
+
   const company = sanitize(companyName || 'Unknown_Company');
   const pos = sanitize(position || 'Unknown_Position');
-  
-  const docsPath = path.join(getBaseDocsDir(), company, pos);
+  const date = sanitize(dateFolder || 'Unknown_Date');
+
+  const docsPath = path.join(getBaseDocsDir(), company, pos, date);
   if (!fs.existsSync(docsPath)) {
     fs.mkdirSync(docsPath, { recursive: true });
   }
@@ -30,9 +48,7 @@ const getOrganizedDocsDir = (companyName: string, position: string) => {
 };
 
 // Legacy: Get simple documents directory (for backwards compatibility)
-const getDocsDir = () => {
-  return getBaseDocsDir();
-};
+const getDocsDir = () => getBaseDocsDir();
 
 /**
  * Get the profile data based on Thinker's source setting

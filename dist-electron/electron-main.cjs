@@ -3204,29 +3204,6 @@ function filterProfileForJob(userProfile, job) {
   const skillStrings = skillsRaw.map((s) => {
     if (typeof s === "string") return s;
     return (s == null ? void 0 : s.name) || (s == null ? void 0 : s.title) || JSON.stringify(s);
-    function ensureTargetLanguageOrRetry2(args) {
-      return (async () => {
-        const { content, lang3, targetLanguage, callAI: callAI2, thinker, originalPrompt } = args;
-        const detected = (0, import_franc_min.franc)(String(content || ""));
-        const acceptable = () => {
-          if (!content || String(content).trim().length < 40) return true;
-          if (lang3 === "und") return true;
-          if (detected === "und") return true;
-          return detected === lang3;
-        };
-        if (acceptable()) return content;
-        const fixPrompt = `${originalPrompt}
-
-CRITICAL FIX:
-- The previous output language detection was '${detected}' but the job description language is '${lang3}' which corresponds to ${targetLanguage}.
-- REWRITE the document so that it is 100% in ${targetLanguage}. Do NOT include any other language.
-- Return ONLY the rewritten content.`;
-        const retryRaw = await callAI2(thinker, fixPrompt);
-        if (!retryRaw || String(retryRaw).startsWith("Error:")) return content;
-        const cleaned = cleanAIOutput(retryRaw);
-        return cleaned;
-      })();
-    }
   });
   const certStrings = certsRaw.map((c) => {
     if (typeof c === "string") return c;

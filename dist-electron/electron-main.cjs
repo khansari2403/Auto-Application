@@ -3682,7 +3682,7 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
         content = stripLetterGreetingAndClosing(content, isGerman);
       }
       await logAction(userId, "ai_thinker", `\u2705 ${type.label} generated successfully`, "completed", true);
-      const htmlContent = type.key === "cv" ? generateCVHTML(content, filteredProfile, job, isGerman) : generateDocumentHTML(content, type.label, filteredProfile, job, isGerman);
+      const htmlContent = type.key === "cv" ? generateCVHTML(content, filteredProfile, job, isGerman) : generateDocumentHTML(content, type.label, filteredProfile, job, isGerman, targetLanguage);
       const htmlPath = saveDocumentFile(
         htmlContent,
         job.id,

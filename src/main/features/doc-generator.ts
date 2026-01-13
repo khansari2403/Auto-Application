@@ -877,7 +877,7 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
       // Generate HTML file
       const htmlContent = type.key === 'cv'
         ? generateCVHTML(content, filteredProfile, job, isGerman)
-        : generateDocumentHTML(content, type.label, filteredProfile, job, isGerman);
+        : generateDocumentHTML(content, type.label, filteredProfile, job, isGerman, targetLanguage);
 
       const htmlPath = saveDocumentFile(
         htmlContent,

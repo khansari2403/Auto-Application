@@ -916,6 +916,18 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
 
       let content = cleanAIOutput(rawContent);
 
+      // Safety net: verify the AI body language matches the JD language.
+      // If mismatch, automatically retry ONCE with extra-strict language instructions.
+      content = await ensureTargetLanguageOrRetry({
+        docKey: type.key,
+        content,
+        lang3,
+        targetLanguage,
+        callAI,
+        thinker,
+        originalPrompt: thinkerPrompt
+      });
+
       // For letters, ensure we never double greeting/closing
       if (type.key === 'motivation_letter' || type.key === 'cover_letter') {
         content = stripLetterGreetingAndClosing(content, isGerman);

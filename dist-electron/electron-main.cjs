@@ -3204,7 +3204,7 @@ function filterProfileForJob(userProfile, job) {
   const skillStrings = skillsRaw.map((s) => {
     if (typeof s === "string") return s;
     return (s == null ? void 0 : s.name) || (s == null ? void 0 : s.title) || JSON.stringify(s);
-    function ensureTargetLanguageOrRetry(args) {
+    function ensureTargetLanguageOrRetry2(args) {
       return (async () => {
         const { docKey, content, lang3, targetLanguage, callAI: callAI2, thinker, originalPrompt } = args;
         const detected = (0, import_franc_min.franc)(String(content || ""));
@@ -3705,6 +3705,15 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
         throw new Error(rawContent || "AI returned empty content");
       }
       let content = cleanAIOutput(rawContent);
+      content = await ensureTargetLanguageOrRetry({
+        docKey: type.key,
+        content,
+        lang3,
+        targetLanguage,
+        callAI: callAI2,
+        thinker,
+        originalPrompt: thinkerPrompt
+      });
       if (type.key === "motivation_letter" || type.key === "cover_letter") {
         content = stripLetterGreetingAndClosing(content, isGerman);
       }

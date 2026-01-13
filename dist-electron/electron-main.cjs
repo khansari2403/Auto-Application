@@ -3613,7 +3613,7 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
         throw new Error(rawContent || "AI returned empty content");
       }
       let content = cleanAIOutput(rawContent);
-      if (type.key !== "cv") {
+      if (type.key === "motivation_letter" || type.key === "cover_letter") {
         content = stripLetterGreetingAndClosing(content, isGerman);
       }
       await logAction(userId, "ai_thinker", `\u2705 ${type.label} generated successfully`, "completed", true);

@@ -789,7 +789,7 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
       let content = cleanAIOutput(rawContent);
 
       // For letters, ensure we never double greeting/closing
-      if (type.key !== 'cv') {
+      if (type.key === 'motivation_letter' || type.key === 'cover_letter') {
         content = stripLetterGreetingAndClosing(content, isGerman);
       }
 

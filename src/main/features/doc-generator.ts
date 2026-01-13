@@ -835,7 +835,7 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
 
       // Convert to PDF immediately
       try {
-        const { convertHtmlToPdf } = require('./pdf-export');
+        const { convertHtmlToPdf } = await import('./pdf-export');
         const pdfResult = await convertHtmlToPdf(htmlPath, userId);
 
         if (pdfResult.success && pdfResult.pdfPath) {

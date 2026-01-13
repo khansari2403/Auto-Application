@@ -3653,7 +3653,7 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
       });
       await logAction(userId, "ai_thinker", `\u{1F4C4} ${type.label} saved (HTML): ${htmlPath}`, "completed", true);
       try {
-        const { convertHtmlToPdf: convertHtmlToPdf2 } = (init_pdf_export(), __toCommonJS(pdf_export_exports));
+        const { convertHtmlToPdf: convertHtmlToPdf2 } = await Promise.resolve().then(() => (init_pdf_export(), pdf_export_exports));
         const pdfResult = await convertHtmlToPdf2(htmlPath, userId);
         if (pdfResult.success && pdfResult.pdfPath) {
           await runQuery("UPDATE job_listings", {

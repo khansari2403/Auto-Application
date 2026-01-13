@@ -840,21 +840,21 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
     <div class="left-column">
       ${userProfile?.summary ? `
         <div class="section">
-          <div class="section-title">${isGerman ? 'Beruflicher Werdegang' : 'Professional Summary'}</div>
+          <div class="section-title">${l.summary}</div>
           <div class="summary">${userProfile.summary}</div>
         </div>
       ` : ''}
       
       ${experiencesHTML ? `
         <div class="section">
-          <div class="section-title">${isGerman ? 'Berufserfahrung' : 'Work Experience'}</div>
+          <div class="section-title">${l.experience}</div>
           ${experiencesHTML}
         </div>
       ` : ''}
       
       ${educationsHTML ? `
         <div class="section">
-          <div class="section-title">${isGerman ? 'Ausbildung' : 'Education'}</div>
+          <div class="section-title">${l.education}</div>
           ${educationsHTML}
         </div>
       ` : ''}
@@ -863,23 +863,23 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
     <div class="right-column">
       ${skillsHTML ? `
         <div class="section">
-          <div class="section-title">${isGerman ? 'Kenntnisse' : 'Skills'}</div>
+          <div class="section-title">${l.skills}</div>
           ${skillsHTML}
         </div>
       ` : ''}
       
       ${certsHTML ? `
         <div class="section">
-          <div class="section-title">${isGerman ? 'Zertifizierungen' : 'Certifications'}</div>
+          <div class="section-title">${l.certifications}</div>
           ${certsHTML}
         </div>
       ` : ''}
       
       ${userProfile?.languages?.length > 0 ? `
         <div class="section">
-          <div class="section-title">${isGerman ? 'Sprachen' : 'Languages'}</div>
+          <div class="section-title">${l.languages}</div>
           <div class="skills-list">
-            ${userProfile.languages.map((l: string) => `<span class="skill-tag" style="background: #e8f5e9; color: #388e3c;">${l}</span>`).join('')}
+            ${userProfile.languages.map((lng: string) => `<span class="skill-tag" style="background: #e8f5e9; color: #388e3c;">${lng}</span>`).join('')}
           </div>
         </div>
       ` : ''}

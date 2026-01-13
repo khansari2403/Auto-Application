@@ -30,82 +30,233 @@
       "required_skills": "SQL, Python, Tableau",
       "description": "We are looking for a Senior Data Analyst with strong SQL and Python, experience with Tableau, and stakeholder management.",
       "date_imported": "2026-01-12",
-      "cv_status": "failed",
+      "cv_status": "auditor_done",
       "cv_rejection_reason": null,
-      "motivation_letter_status": "failed",
+      "cv_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768312913578.html",
+      "cv_pdf_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768312913578.pdf",
+      "motivation_letter_status": "auditor_done",
       "motivation_letter_rejection_reason": null,
-      "cover_letter_status": "failed",
-      "cover_letter_rejection_reason": null
+      "motivation_letter_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768312916199.html",
+      "motivation_letter_pdf_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768312916199.pdf",
+      "cover_letter_status": "auditor_done",
+      "cover_letter_rejection_reason": null,
+      "cover_letter_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768312918686.html",
+      "cover_letter_pdf_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768312918686.pdf"
     }
   ],
-  "documents": [],
+  "documents": [
+    {
+      "id": 1768312914116,
+      "job_id": "1001",
+      "user_id": 1,
+      "document_type": "cv",
+      "content": "Professional Summary\nData analyst skilled in SQL, Python, and Tableau.\n\nExperience\nData Analyst - ACME (2022-2025)\n- Built ETL pipelines and dashboards.\n\nEducation\nB.Sc. Statistics - UCL (2018-2022)\n\nSkills\nSQL, Python, Tableau\n\nCertifications\nGoogle Data Analytics Certificate",
+      "file_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768312913578.pdf",
+      "version": 1,
+      "status": "final",
+      "created_at": "2026-01-13T14:01:53.578Z",
+      "is_active": 1,
+      "timestamp": "2026-01-13T14:01:53.579Z"
+    },
+    {
+      "id": 1768312916598,
+      "job_id": "1001",
+      "user_id": 1,
+      "document_type": "motivation_letter",
+      "content": "I am applying for the Senior Data Analyst role at Example Ltd. I bring hands-on experience delivering analytics using SQL and Python, and building stakeholder-facing Tableau dashboards.\n\nAt ACME, I built ETL workflows and automated reporting, improving data reliability and speeding up decision-making. I am confident I can translate your requirements into actionable insights and scalable reporting.\n\nThank you for your time and consideration. I would welcome the opportunity to discuss how I can contribute.",
+      "file_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768312916199.pdf",
+      "version": 1,
+      "status": "final",
+      "created_at": "2026-01-13T14:01:56.199Z",
+      "is_active": 1,
+      "timestamp": "2026-01-13T14:01:56.199Z"
+    },
+    {
+      "id": 1768312919468,
+      "job_id": "1001",
+      "user_id": 1,
+      "document_type": "cover_letter",
+      "content": "I am applying for the Senior Data Analyst role at Example Ltd. I bring hands-on experience delivering analytics using SQL and Python, and building stakeholder-facing Tableau dashboards.\n\nAt ACME, I built ETL workflows and automated reporting, improving data reliability and speeding up decision-making. I am confident I can translate your requirements into actionable insights and scalable reporting.\n\nThank you for your time and consideration. I would welcome the opportunity to discuss how I can contribute.",
+      "file_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768312918686.pdf",
+      "version": 1,
+      "status": "final",
+      "created_at": "2026-01-13T14:01:58.686Z",
+      "is_active": 1,
+      "timestamp": "2026-01-13T14:01:58.686Z"
+    }
+  ],
   "action_logs": [
     {
-      "id": 1768312858600,
+      "id": 1768312908354,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "🔍 Researching Example Ltd mission and history...",
       "status": "in_progress",
-      "timestamp": "2026-01-13T14:00:58.600Z"
+      "timestamp": "2026-01-13T14:01:48.354Z"
     },
     {
-      "id": 1768312858605,
+      "id": 1768312908355,
       "user_id": 1,
       "action_type": "ai_observer",
       "action_description": "🔍 Researching company: Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T14:00:58.605Z"
+      "timestamp": "2026-01-13T14:01:48.355Z"
     },
     {
-      "id": 1768312865170,
+      "id": 1768312913575,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✍️ Generating tailored CV for Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T14:01:05.170Z"
+      "timestamp": "2026-01-13T14:01:53.575Z"
     },
     {
-      "id": 1768312865175,
+      "id": 1768312913578,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "❌ Error: ensureTargetLanguageOrRetry is not defined",
-      "status": "failed",
-      "success": false,
-      "timestamp": "2026-01-13T14:01:05.175Z"
+      "action_description": "✅ CV generated successfully",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:01:53.578Z"
     },
     {
-      "id": 1768312865175,
+      "id": 1768312913579,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "📄 CV saved (HTML): /app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768312913578.html",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:01:53.579Z"
+    },
+    {
+      "id": 1768312913581,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: cv_job1001_1768312913578.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T14:01:53.581Z"
+    },
+    {
+      "id": 1768312916187,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cv_job1001_1768312913578.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:01:56.187Z"
+    },
+    {
+      "id": 1768312916189,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cv_job1001_1768312913578.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:01:56.189Z"
+    },
+    {
+      "id": 1768312916190,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✍️ Generating tailored Motivation Letter for Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T14:01:05.175Z"
+      "timestamp": "2026-01-13T14:01:56.190Z"
     },
     {
-      "id": 1768312865177,
+      "id": 1768312916193,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "❌ Error: ensureTargetLanguageOrRetry is not defined",
-      "status": "failed",
-      "success": false,
-      "timestamp": "2026-01-13T14:01:05.177Z"
+      "action_description": "✅ Motivation Letter generated successfully",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:01:56.193Z"
     },
     {
-      "id": 1768312865177,
+      "id": 1768312916200,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "📄 Motivation Letter saved (HTML): /app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768312916199.html",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:01:56.200Z"
+    },
+    {
+      "id": 1768312916200,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: motivation_letter_job1001_1768312916199.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T14:01:56.200Z"
+    },
+    {
+      "id": 1768312918681,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: motivation_letter_job1001_1768312916199.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:01:58.681Z"
+    },
+    {
+      "id": 1768312918683,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: motivation_letter_job1001_1768312916199.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:01:58.683Z"
+    },
+    {
+      "id": 1768312918684,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✍️ Generating tailored Cover Letter for Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T14:01:05.177Z"
+      "timestamp": "2026-01-13T14:01:58.684Z"
     },
     {
-      "id": 1768312865178,
+      "id": 1768312918686,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "❌ Error: ensureTargetLanguageOrRetry is not defined",
-      "status": "failed",
-      "success": false,
-      "timestamp": "2026-01-13T14:01:05.178Z"
+      "action_description": "✅ Cover Letter generated successfully",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:01:58.686Z"
+    },
+    {
+      "id": 1768312918687,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "📄 Cover Letter saved (HTML): /app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768312918686.html",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:01:58.687Z"
+    },
+    {
+      "id": 1768312918688,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: cover_letter_job1001_1768312918686.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T14:01:58.688Z"
+    },
+    {
+      "id": 1768312921284,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cover_letter_job1001_1768312918686.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:02:01.284Z"
+    },
+    {
+      "id": 1768312921286,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cover_letter_job1001_1768312918686.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:02:01.286Z"
     }
   ],
   "ai_models": [],

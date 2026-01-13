@@ -1,3 +1,5 @@
-2026/01/13-13:59:30.377 39af Reusing MANIFEST /app/User_Data/browser_data/Default/Local Storage/leveldb/MANIFEST-000001
-2026/01/13-13:59:30.381 39af Recovering log #3
-2026/01/13-13:59:30.381 39af Reusing old log /app/User_Data/browser_data/Default/Local Storage/leveldb/000003.log 
+2026/01/13-14:00:58.860 3b15 Reusing MANIFEST /app/User_Data/browser_data/Default/Local Storage/leveldb/MANIFEST-000001
+2026/01/13-14:00:58.864 3b15 Recovering log #3
+2026/01/13-14:00:58.864 3b15 Level-0 table #3: started
+2026/01/13-14:00:58.867 3b15 Level-0 table #3: 44276 bytes OK
+2026/01/13-14:00:58.870 3b15 Delete type=0 #3

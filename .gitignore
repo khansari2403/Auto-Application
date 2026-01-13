@@ -187,3 +187,7 @@ dist-ssr
 *.env
 *.env.*
 node_modules/electron/dist/electron
+-e 
+# Environment files
+*.env
+*.env.*

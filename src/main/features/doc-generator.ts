@@ -334,18 +334,31 @@ function filterProfileForJob(userProfile: any, job: any): { profile: any; releva
   const jobText = `${job?.job_title || ''} ${job?.required_skills || ''} ${job?.description || ''}`;
   const jobTokens = new Set(tokenize(jobText));
 
-  const skillsRaw: any[] = Array.isArray(userProfile?.skills) ? userProfile.skills : [];
-  const certsRaw: any[] = Array.isArray(userProfile?.licenses) ? userProfile.licenses : [];
+  // Parse skills - handle both array and JSON string formats
+  let skillsRaw: any[] = [];
+  if (Array.isArray(userProfile?.skills)) {
+    skillsRaw = userProfile.skills;
+  } else if (typeof userProfile?.skills === 'string') {
+    try { skillsRaw = JSON.parse(userProfile.skills); } catch { skillsRaw = []; }
+  }
+
+  // Parse certifications/licenses - handle both array and JSON string formats  
+  let certsRaw: any[] = [];
+  if (Array.isArray(userProfile?.licenses)) {
+    certsRaw = userProfile.licenses;
+  } else if (typeof userProfile?.licenses === 'string') {
+    try { certsRaw = JSON.parse(userProfile.licenses); } catch { certsRaw = []; }
+  }
 
   const skillStrings = skillsRaw.map((s: any) => {
     if (typeof s === 'string') return s;
     return s?.name || s?.title || JSON.stringify(s);
-  });
+  }).filter(s => s && s.length > 0);
 
   const certStrings = certsRaw.map((c: any) => {
     if (typeof c === 'string') return c;
     return c?.name || c?.title || c?.issuer || JSON.stringify(c);
-  });
+  }).filter(c => c && c.length > 0);
 
   const scoredSkills = skillStrings
     .map(s => ({ s, score: computeRelevanceScore(s, jobTokens) }))
@@ -355,13 +368,16 @@ function filterProfileForJob(userProfile: any, job: any): { profile: any; releva
     .map(s => ({ s, score: computeRelevanceScore(s, jobTokens) }))
     .sort((a, b) => b.score - a.score || a.s.localeCompare(b.s));
 
-  // Strict caps requested
-  const relevantSkills = scoredSkills.filter(x => x.score > 0).slice(0, 7).map(x => x.s);
-  const relevantCerts = scoredCerts.filter(x => x.score > 0).slice(0, 5).map(x => x.s);
+  // Take top 7 skills (prioritize those with matches, but always include some)
+  const relevantSkills = scoredSkills.slice(0, 7).map(x => x.s);
+  // Take top 5 certifications
+  const relevantCerts = scoredCerts.slice(0, 5).map(x => x.s);
 
-  // If none match, fallback to a small subset (still capped)
-  const finalSkills = relevantSkills.length > 0 ? relevantSkills : skillStrings.slice(0, 5);
-  const finalCerts = relevantCerts.length > 0 ? relevantCerts : certStrings.slice(0, 3);
+  // Ensure we have at least some skills/certs if available
+  const finalSkills = relevantSkills.length > 0 ? relevantSkills : skillStrings.slice(0, 7);
+  const finalCerts = relevantCerts.length > 0 ? relevantCerts : certStrings.slice(0, 5);
+
+  console.log(`[Relevance Filter] Skills: ${finalSkills.length}/${skillStrings.length}, Certs: ${finalCerts.length}/${certStrings.length}`);
 
   const filteredProfile = {
     ...userProfile,

@@ -1060,15 +1060,14 @@ REQUIREMENTS:
 5. Include a clear call to action
 6. No clichés or AI-sounding phrases
 7. LANGUAGE: You MUST write the entire document in the SAME LANGUAGE as the job description provided above. If the job is in German, write in German. If in English, write in English.
-8. MUST end with proper sign-off: "Kind regards," followed by the applicant's full name
+8. Do NOT include any greeting/salutation or any closing/sign-off. The system template adds those.
 
 STRUCTURE:
-- Opening: "Dear Hiring Manager," then state the position and express interest (1-2 sentences)
-- Middle (2 paragraphs): Your relevant qualifications and why you're a great fit
-- Closing: Thank them, suggest next steps
-- Sign-off: "Kind regards," + new line + "${userProfile?.name || '[Your Name]'}"
+- Opening paragraph: state the position and express interest (1-2 sentences)
+- Middle (2 paragraphs): your relevant qualifications and why you're a great fit
+- Closing paragraph: thank them, suggest next steps
 
-Return ONLY the cover letter content, starting with "Dear Hiring Manager," and ending with the sign-off.`,
+Return ONLY the cover letter BODY (paragraphs). No greeting, no sign-off.`,
 
     portfolio: `You are a Portfolio Description writer. Create a portfolio summary for this job application.
 

@@ -452,7 +452,12 @@ function generateDocumentHTML(content: string, docType: string, userProfile: any
       </div>
     </div>
     <div style="text-align: right; font-size: 12px; color: #999;">
-      ${docType.toUpperCase()}
+      ${isGerman
+        ? (docType.toLowerCase().includes('motivation') ? 'MOTIVATIONSSCHREIBEN'
+          : docType.toLowerCase().includes('cover') ? 'ANSCHREIBEN'
+          : docType.toLowerCase().includes('portfolio') ? 'PORTFOLIO'
+          : docType.toUpperCase())
+        : docType.toUpperCase()}
     </div>
   </div>
   

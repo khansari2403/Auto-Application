@@ -1002,9 +1002,9 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
 
       await logAction(userId, 'ai_thinker', `✅ ${type.label} generated successfully`, 'completed', true);
 
-      // Generate HTML file
+      // Generate HTML file - pass targetLanguage for proper localization
       const htmlContent = type.key === 'cv'
-        ? generateCVHTML(content, filteredProfile, job, isGerman)
+        ? generateCVHTML(content, filteredProfile, job, isGerman, targetLanguage)
         : generateDocumentHTML(content, type.label, filteredProfile, job, isGerman, targetLanguage);
 
       const htmlPath = saveDocumentFile(

@@ -352,7 +352,7 @@ const DOC_TYPES = [
 ];
 
 // Generate HTML template for document
-function generateDocumentHTML(content: string, docType: string, userProfile: any, job: any, isGerman: boolean): string {
+function generateDocumentHTML(content: string, docType: string, userProfile: any, job: any, isGerman: boolean, targetLanguage?: string): string {
   const title = `${docType} - ${userProfile?.name || 'Applicant'} - ${job?.company_name || 'Company'}`;
   const isLetter = docType.toLowerCase().includes('letter');
 

@@ -3222,7 +3222,7 @@ function filterProfileForJob(userProfile, job) {
   };
   return { profile: filteredProfile, relevantSkills: finalSkills, relevantCerts: finalCerts };
 }
-function generateDocumentHTML(content, docType, userProfile, job, isGerman) {
+function generateDocumentHTML(content, docType, userProfile, job, isGerman, targetLanguage) {
   const title = `${docType} - ${(userProfile == null ? void 0 : userProfile.name) || "Applicant"} - ${(job == null ? void 0 : job.company_name) || "Company"}`;
   const isLetter = docType.toLowerCase().includes("letter");
   const currentDate = (/* @__PURE__ */ new Date()).toLocaleDateString(isGerman ? "de-DE" : "en-US", {

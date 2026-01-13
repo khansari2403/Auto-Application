@@ -1,6 +1,6 @@
 import { runQuery, getDatabase, logAction, getAllQuery } from '../database';
 import { getCompanyInfo } from '../scraper-service';
-import { franc } from 'franc-min';
+import franc from 'franc-min';
 import * as fs from 'fs';
 import * as path from 'path';
 let app: any;

@@ -157,6 +157,7 @@ function cleanAIOutput(content: string): string {
   cleaned = cleaned.trim();
 
   return cleaned;
+}
 
 // Safety net: validate the generated body language and (if mismatch) retry once.
 async function ensureTargetLanguageOrRetry(args: {
@@ -188,9 +189,6 @@ CRITICAL FIX:
 
   return cleanAIOutput(retryRaw);
 }
-
-}
-
 function stripLetterGreetingAndClosing(text: string, isGerman: boolean): string {
   let out = (text || '').trim();
 

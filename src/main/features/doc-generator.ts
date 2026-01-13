@@ -1131,6 +1131,7 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
       // Convert to PDF immediately
       try {
         const { convertHtmlToPdf } = await import('./pdf-export');
+        console.log(`[PDF] Starting conversion for: ${htmlPath}`);
         const pdfResult = await convertHtmlToPdf(htmlPath, userId);
 
         if (pdfResult.success && pdfResult.pdfPath) {
@@ -1147,9 +1148,14 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
           });
 
           await logAction(userId, 'pdf', `✅ PDF created: ${path.basename(pdfResult.pdfPath)}`, 'completed', true);
+          console.log(`[PDF] Success: ${pdfResult.pdfPath}`);
+        } else {
+          console.error(`[PDF] Conversion failed: ${pdfResult.error || 'Unknown error'}`);
+          await logAction(userId, 'pdf', `⚠️ PDF conversion failed: ${pdfResult.error || 'Unknown'}`, 'failed', false);
         }
-      } catch (pdfErr) {
-        console.error('Auto-PDF conversion failed:', pdfErr);
+      } catch (pdfErr: any) {
+        console.error('[PDF] Auto-PDF conversion error:', pdfErr?.message || pdfErr);
+        await logAction(userId, 'pdf', `❌ PDF error: ${pdfErr?.message || 'Unknown'}`, 'failed', false);
       }
 
     } catch (e: any) {

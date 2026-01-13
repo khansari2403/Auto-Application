@@ -1032,7 +1032,7 @@ MUST INCLUDE:
 Length: Approximately ${motivationWordLimit} words. This is a formal document.
 LANGUAGE: You MUST write the entire document in the SAME LANGUAGE as the job description provided above. If the job is in German, write in German. If in English, write in English.
 
-Return ONLY the motivation letter content, starting directly with the date and ending with the sign-off.`,
+Return ONLY the motivation letter BODY (paragraphs). Start directly with the first paragraph and end with the final paragraph. No greeting, no sign-off, no date, no address.`,
 
     cover_letter: `You are an expert Cover Letter writer. Create a concise, professional cover letter.
 

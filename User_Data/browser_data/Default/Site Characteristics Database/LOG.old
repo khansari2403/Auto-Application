@@ -1,2 +1,3 @@
-2026/01/13-13:18:50.928 264d Creating DB /app/User_Data/browser_data/Default/Site Characteristics Database since it was missing.
-2026/01/13-13:18:50.936 264d Reusing MANIFEST /app/User_Data/browser_data/Default/Site Characteristics Database/MANIFEST-000001
+2026/01/13-13:21:08.646 2946 Reusing MANIFEST /app/User_Data/browser_data/Default/Site Characteristics Database/MANIFEST-000001
+2026/01/13-13:21:08.647 2946 Recovering log #3
+2026/01/13-13:21:08.647 2946 Reusing old log /app/User_Data/browser_data/Default/Site Characteristics Database/000003.log 

@@ -8,324 +8,255 @@
   "user_profile": [
     {
       "id": 1,
-      "name": "Max Mustermann",
-      "title": "Software Engineer",
-      "email": "max@example.com",
-      "phone": "+49 111 222",
-      "location": "Berlin",
-      "summary": "Backend engineer with Python and FastAPI experience.",
-      "experiences": "[{\"title\":\"Backend Engineer\",\"company\":\"ACME\",\"startDate\":\"2021\",\"endDate\":\"2024\",\"description\":\"Built APIs with Python/FastAPI and MongoDB.\"},{\"title\":\"Support Specialist\",\"company\":\"OtherCo\",\"startDate\":\"2019\",\"endDate\":\"2021\",\"description\":\"Customer support and ticket handling.\"}]",
-      "educations": "[{\"degree\":\"B.Sc. Informatik\",\"school\":\"TU Berlin\",\"startYear\":\"2017\",\"endYear\":\"2021\"}]",
-      "skills": "[\"Python\",\"FastAPI\",\"MongoDB\",\"Kubernetes\",\"Photoshop\",\"Cooking\"]",
-      "licenses": "[\"AWS Certified Cloud Practitioner\",\"Scrum Master\",\"Adobe Certified Expert\"]",
-      "languages": "[\"Deutsch\",\"English\"]"
+      "name": "Jane Doe",
+      "title": "Data Analyst",
+      "email": "jane@example.com",
+      "phone": "+1 222 333",
+      "location": "London",
+      "summary": "Data analyst with SQL and Python skills.",
+      "experiences": "[{\"title\":\"Data Analyst\",\"company\":\"ACME\",\"startDate\":\"2022\",\"endDate\":\"2025\",\"description\":\"Built dashboards and ETL.\"}]",
+      "educations": "[{\"degree\":\"B.Sc. Statistics\",\"school\":\"UCL\",\"startYear\":\"2018\",\"endYear\":\"2022\"}]",
+      "skills": "[\"SQL\",\"Python\",\"Tableau\",\"Public speaking\",\"Cooking\",\"Photoshop\"]",
+      "licenses": "[\"Google Data Analytics Certificate\",\"Scrum Master\",\"AWS Cloud Practitioner\"]",
+      "languages": "[\"English\"]"
     }
   ],
   "job_listings": [
     {
-      "id": 999,
-      "job_title": "Backend Entwickler (m/w/d)",
-      "company_name": "Beispiel GmbH",
-      "location": "Berlin",
-      "required_skills": "Python, FastAPI, MongoDB",
-      "description": "Wir suchen einen Backend Entwickler mit Erfahrung in Python, FastAPI und MongoDB. Kenntnisse in Kubernetes sind von Vorteil.",
+      "id": 1001,
+      "job_title": "Senior Data Analyst",
+      "company_name": "Example Ltd",
+      "location": "London",
+      "required_skills": "SQL, Python, Tableau",
+      "description": "We are looking for a Senior Data Analyst with strong SQL and Python, experience with Tableau, and stakeholder management.",
       "date_imported": "2026-01-12",
       "cv_status": "auditor_done",
       "cv_rejection_reason": null,
-      "cv_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768310473371.html",
-      "cv_pdf_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768310473371.pdf",
+      "cv_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768310835256.html",
+      "cv_pdf_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768310835256.pdf",
       "motivation_letter_status": "auditor_done",
       "motivation_letter_rejection_reason": null,
-      "motivation_letter_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768310475998.html",
-      "motivation_letter_pdf_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768310475998.pdf",
+      "motivation_letter_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768310838050.html",
+      "motivation_letter_pdf_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768310838050.pdf",
       "cover_letter_status": "auditor_done",
       "cover_letter_rejection_reason": null,
-      "cover_letter_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768310478605.html",
-      "cover_letter_pdf_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768310478605.pdf",
-      "portfolio_status": "auditor_done",
-      "portfolio_rejection_reason": null,
-      "portfolio_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768310481234.html",
-      "portfolio_pdf_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768310481234.pdf"
+      "cover_letter_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768310840656.html",
+      "cover_letter_pdf_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768310840656.pdf"
     }
   ],
   "documents": [
     {
-      "id": 1768310473702,
-      "job_id": "999",
+      "id": 1768310835726,
+      "job_id": "1001",
       "user_id": 1,
       "document_type": "cv",
-      "content": "Berufliches Profil\nErfahrener Backend-Entwickler mit Schwerpunkt auf Python, FastAPI und MongoDB.\n\nBerufserfahrung\nBackend Engineer - ACME (2021-2024)\n- Entwicklung von REST-APIs mit FastAPI und MongoDB.\n\nAusbildung\nB.Sc. Informatik - TU Berlin (2017-2021)\n\nKenntnisse\nPython, FastAPI, MongoDB, Kubernetes\n\nZertifizierungen\nAWS Certified Cloud Practitioner",
-      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768310473371.pdf",
+      "content": "Professional Summary\nData analyst skilled in SQL, Python, and Tableau.\n\nExperience\nData Analyst - ACME (2022-2025)\n- Built ETL pipelines and dashboards.\n\nEducation\nB.Sc. Statistics - UCL (2018-2022)\n\nSkills\nSQL, Python, Tableau\n\nCertifications\nGoogle Data Analytics Certificate",
+      "file_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768310835256.pdf",
       "version": 1,
       "status": "final",
-      "created_at": "2026-01-13T13:21:13.371Z",
+      "created_at": "2026-01-13T13:27:15.257Z",
       "is_active": 1,
-      "timestamp": "2026-01-13T13:21:13.371Z"
+      "timestamp": "2026-01-13T13:27:15.257Z"
     },
     {
-      "id": 1768310476503,
-      "job_id": "999",
+      "id": 1768310838237,
+      "job_id": "1001",
       "user_id": 1,
       "document_type": "motivation_letter",
-      "content": "In der ausgeschriebenen Position als Backend Entwickler bei Beispiel GmbH möchte ich meine Erfahrung im Aufbau robuster APIs mit Python und FastAPI einbringen.\n\nBei ACME habe ich REST-APIs mit FastAPI entworfen und produktiv betrieben und dabei MongoDB als Datenspeicher integriert. Zusätzlich bringe ich Kenntnisse in Kubernetes mit.\n\nGern möchte ich diese Erfahrung nutzen, um Ihre Backend-Landschaft weiterzuentwickeln. Über die Möglichkeit eines Gesprächs freue ich mich.",
-      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768310475998.pdf",
+      "content": "I am applying for the Senior Data Analyst role at Example Ltd. I bring hands-on experience delivering analytics using SQL and Python, and building stakeholder-facing Tableau dashboards.\n\nAt ACME, I built ETL workflows and automated reporting, improving data reliability and speeding up decision-making. I am confident I can translate your requirements into actionable insights and scalable reporting.\n\nThank you for your time and consideration. I would welcome the opportunity to discuss how I can contribute.",
+      "file_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768310838050.pdf",
       "version": 1,
       "status": "final",
-      "created_at": "2026-01-13T13:21:15.999Z",
+      "created_at": "2026-01-13T13:27:18.050Z",
       "is_active": 1,
-      "timestamp": "2026-01-13T13:21:15.999Z"
+      "timestamp": "2026-01-13T13:27:18.050Z"
     },
     {
-      "id": 1768310478702,
-      "job_id": "999",
+      "id": 1768310841385,
+      "job_id": "1001",
       "user_id": 1,
       "document_type": "cover_letter",
-      "content": "In der ausgeschriebenen Position als Backend Entwickler bei Beispiel GmbH möchte ich meine Erfahrung im Aufbau robuster APIs mit Python und FastAPI einbringen.\n\nBei ACME habe ich REST-APIs mit FastAPI entworfen und produktiv betrieben und dabei MongoDB als Datenspeicher integriert. Zusätzlich bringe ich Kenntnisse in Kubernetes mit.\n\nGern möchte ich diese Erfahrung nutzen, um Ihre Backend-Landschaft weiterzuentwickeln. Über die Möglichkeit eines Gesprächs freue ich mich.",
-      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768310478605.pdf",
+      "content": "I am applying for the Senior Data Analyst role at Example Ltd. I bring hands-on experience delivering analytics using SQL and Python, and building stakeholder-facing Tableau dashboards.\n\nAt ACME, I built ETL workflows and automated reporting, improving data reliability and speeding up decision-making. I am confident I can translate your requirements into actionable insights and scalable reporting.\n\nThank you for your time and consideration. I would welcome the opportunity to discuss how I can contribute.",
+      "file_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768310840656.pdf",
       "version": 1,
       "status": "final",
-      "created_at": "2026-01-13T13:21:18.605Z",
+      "created_at": "2026-01-13T13:27:20.656Z",
       "is_active": 1,
-      "timestamp": "2026-01-13T13:21:18.605Z"
-    },
-    {
-      "id": 1768310481446,
-      "job_id": "999",
-      "user_id": 1,
-      "document_type": "portfolio",
-      "content": "In der ausgeschriebenen Position als Backend Entwickler bei Beispiel GmbH möchte ich meine Erfahrung im Aufbau robuster APIs mit Python und FastAPI einbringen.\n\nBei ACME habe ich REST-APIs mit FastAPI entworfen und produktiv betrieben und dabei MongoDB als Datenspeicher integriert. Zusätzlich bringe ich Kenntnisse in Kubernetes mit.\n\nGern möchte ich diese Erfahrung nutzen, um Ihre Backend-Landschaft weiterzuentwickeln. Über die Möglichkeit eines Gesprächs freue ich mich.",
-      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768310481234.pdf",
-      "version": 1,
-      "status": "final",
-      "created_at": "2026-01-13T13:21:21.234Z",
-      "is_active": 1,
-      "timestamp": "2026-01-13T13:21:21.234Z"
+      "timestamp": "2026-01-13T13:27:20.656Z"
     }
   ],
   "action_logs": [
     {
-      "id": 1768310468429,
+      "id": 1768310828526,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "🔍 Researching Beispiel GmbH mission and history...",
+      "action_description": "🔍 Researching Example Ltd mission and history...",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:21:08.429Z"
+      "timestamp": "2026-01-13T13:27:08.526Z"
     },
     {
-      "id": 1768310468431,
+      "id": 1768310828527,
       "user_id": 1,
       "action_type": "ai_observer",
-      "action_description": "🔍 Researching company: Beispiel GmbH",
+      "action_description": "🔍 Researching company: Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:21:08.431Z"
+      "timestamp": "2026-01-13T13:27:08.527Z"
     },
     {
-      "id": 1768310473368,
+      "id": 1768310835250,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "✍️ Generating tailored CV for Beispiel GmbH",
+      "action_description": "✍️ Generating tailored CV for Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:21:13.368Z"
+      "timestamp": "2026-01-13T13:27:15.250Z"
     },
     {
-      "id": 1768310473370,
+      "id": 1768310835255,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✅ CV generated successfully",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:13.370Z"
+      "timestamp": "2026-01-13T13:27:15.255Z"
     },
     {
-      "id": 1768310473372,
+      "id": 1768310835258,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "📄 CV saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768310473371.html",
+      "action_description": "📄 CV saved (HTML): /app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768310835256.html",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:13.372Z"
+      "timestamp": "2026-01-13T13:27:15.258Z"
     },
     {
-      "id": 1768310473373,
+      "id": 1768310835259,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "📄 Converting to PDF: cv_job999_1768310473371.html",
+      "action_description": "📄 Converting to PDF: cv_job1001_1768310835256.html",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:21:13.373Z"
+      "timestamp": "2026-01-13T13:27:15.259Z"
     },
     {
-      "id": 1768310475988,
+      "id": 1768310838020,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "✅ PDF created: cv_job999_1768310473371.pdf",
+      "action_description": "✅ PDF created: cv_job1001_1768310835256.pdf",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:15.988Z"
+      "timestamp": "2026-01-13T13:27:18.020Z"
     },
     {
-      "id": 1768310475990,
+      "id": 1768310838022,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "✅ PDF created: cv_job999_1768310473371.pdf",
+      "action_description": "✅ PDF created: cv_job1001_1768310835256.pdf",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:15.990Z"
+      "timestamp": "2026-01-13T13:27:18.022Z"
     },
     {
-      "id": 1768310475991,
+      "id": 1768310838022,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "✍️ Generating tailored Motivation Letter for Beispiel GmbH",
+      "action_description": "✍️ Generating tailored Motivation Letter for Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:21:15.991Z"
+      "timestamp": "2026-01-13T13:27:18.022Z"
     },
     {
-      "id": 1768310475992,
+      "id": 1768310838024,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✅ Motivation Letter generated successfully",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:15.992Z"
+      "timestamp": "2026-01-13T13:27:18.024Z"
     },
     {
-      "id": 1768310475999,
+      "id": 1768310838051,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "📄 Motivation Letter saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768310475998.html",
+      "action_description": "📄 Motivation Letter saved (HTML): /app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768310838050.html",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:15.999Z"
+      "timestamp": "2026-01-13T13:27:18.051Z"
     },
     {
-      "id": 1768310476001,
+      "id": 1768310838052,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "📄 Converting to PDF: motivation_letter_job999_1768310475998.html",
+      "action_description": "📄 Converting to PDF: motivation_letter_job1001_1768310838050.html",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:21:16.001Z"
+      "timestamp": "2026-01-13T13:27:18.052Z"
     },
     {
-      "id": 1768310478600,
+      "id": 1768310840652,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "✅ PDF created: motivation_letter_job999_1768310475998.pdf",
+      "action_description": "✅ PDF created: motivation_letter_job1001_1768310838050.pdf",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:18.600Z"
+      "timestamp": "2026-01-13T13:27:20.652Z"
     },
     {
-      "id": 1768310478602,
+      "id": 1768310840654,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "✅ PDF created: motivation_letter_job999_1768310475998.pdf",
+      "action_description": "✅ PDF created: motivation_letter_job1001_1768310838050.pdf",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:18.602Z"
+      "timestamp": "2026-01-13T13:27:20.654Z"
     },
     {
-      "id": 1768310478603,
+      "id": 1768310840654,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "✍️ Generating tailored Cover Letter for Beispiel GmbH",
+      "action_description": "✍️ Generating tailored Cover Letter for Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:21:18.603Z"
+      "timestamp": "2026-01-13T13:27:20.654Z"
     },
     {
-      "id": 1768310478604,
+      "id": 1768310840656,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✅ Cover Letter generated successfully",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:18.604Z"
+      "timestamp": "2026-01-13T13:27:20.656Z"
     },
     {
-      "id": 1768310478606,
+      "id": 1768310840657,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "📄 Cover Letter saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768310478605.html",
+      "action_description": "📄 Cover Letter saved (HTML): /app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768310840656.html",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:18.606Z"
+      "timestamp": "2026-01-13T13:27:20.657Z"
     },
     {
-      "id": 1768310478606,
+      "id": 1768310840658,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "📄 Converting to PDF: cover_letter_job999_1768310478605.html",
+      "action_description": "📄 Converting to PDF: cover_letter_job1001_1768310840656.html",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:21:18.606Z"
+      "timestamp": "2026-01-13T13:27:20.658Z"
     },
     {
-      "id": 1768310481230,
+      "id": 1768310843247,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "✅ PDF created: cover_letter_job999_1768310478605.pdf",
+      "action_description": "✅ PDF created: cover_letter_job1001_1768310840656.pdf",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:21.230Z"
+      "timestamp": "2026-01-13T13:27:23.247Z"
     },
     {
-      "id": 1768310481231,
+      "id": 1768310843248,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "✅ PDF created: cover_letter_job999_1768310478605.pdf",
+      "action_description": "✅ PDF created: cover_letter_job1001_1768310840656.pdf",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:21:21.231Z"
-    },
-    {
-      "id": 1768310481232,
-      "user_id": 1,
-      "action_type": "ai_thinker",
-      "action_description": "✍️ Generating tailored Portfolio for Beispiel GmbH",
-      "status": "in_progress",
-      "timestamp": "2026-01-13T13:21:21.232Z"
-    },
-    {
-      "id": 1768310481233,
-      "user_id": 1,
-      "action_type": "ai_thinker",
-      "action_description": "✅ Portfolio generated successfully",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:21:21.233Z"
-    },
-    {
-      "id": 1768310481235,
-      "user_id": 1,
-      "action_type": "ai_thinker",
-      "action_description": "📄 Portfolio saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768310481234.html",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:21:21.235Z"
-    },
-    {
-      "id": 1768310481236,
-      "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "📄 Converting to PDF: portfolio_job999_1768310481234.html",
-      "status": "in_progress",
-      "timestamp": "2026-01-13T13:21:21.236Z"
-    },
-    {
-      "id": 1768310483800,
-      "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "✅ PDF created: portfolio_job999_1768310481234.pdf",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:21:23.800Z"
-    },
-    {
-      "id": 1768310483801,
-      "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "✅ PDF created: portfolio_job999_1768310481234.pdf",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:21:23.801Z"
+      "timestamp": "2026-01-13T13:27:23.248Z"
     }
   ],
   "ai_models": [],

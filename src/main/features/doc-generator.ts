@@ -129,8 +129,26 @@ If fabrications are detected: "FABRICATION DETECTED: [list specific fabricated i
 function cleanAIOutput(content: string): string {
   let cleaned = content || '';
 
+  // Check if the entire content is JSON-formatted and try to extract text
+  if (cleaned.trim().startsWith('{') || cleaned.trim().startsWith('"')) {
+    try {
+      // Try to parse as JSON and extract meaningful content
+      const parsed = JSON.parse(cleaned);
+      if (typeof parsed === 'string') {
+        cleaned = parsed;
+      } else if (typeof parsed === 'object') {
+        // Extract first string value from object
+        const values = Object.values(parsed);
+        const textValue = values.find(v => typeof v === 'string' && (v as string).length > 50);
+        if (textValue) cleaned = textValue as string;
+      }
+    } catch {
+      // Not valid JSON, continue with string cleaning
+    }
+  }
+
   // Remove JSON wrapper patterns
-  cleaned = cleaned.replace(/^\s*\{\s*"(coverLetter|motivationLetter|cv|letter|portfolio|proposal)"\s*:\s*"/i, '');
+  cleaned = cleaned.replace(/^\s*\{\s*"(coverLetter|motivationLetter|cv|letter|portfolio|proposal|content|text|body)"\s*:\s*"/i, '');
   cleaned = cleaned.replace(/"\s*\}\s*$/i, '');
 
   // Remove markdown code blocks
@@ -139,7 +157,7 @@ function cleanAIOutput(content: string): string {
 
   // Remove meta-commentary at the start
   cleaned = cleaned.replace(/^Here is (the|your|a) (motivation letter|cover letter|CV|resume|portfolio|proposal)[:\s]*/i, '');
-  cleaned = cleaned.replace(/^(Below is|I've created|I have written)[^.]*\.\s*/i, '');
+  cleaned = cleaned.replace(/^(Below is|I've created|I have written|Hier ist)[^.]*\.\s*/i, '');
 
   // Remove em-dashes and replace with regular dashes
   cleaned = cleaned.replace(/—/g, '-');
@@ -148,10 +166,23 @@ function cleanAIOutput(content: string): string {
   // Remove escaped newlines and fix formatting
   cleaned = cleaned.replace(/\\n/g, '\n');
   cleaned = cleaned.replace(/\\"/g, '"');
+  cleaned = cleaned.replace(/\\t/g, ' ');
+
+  // Remove JSON-style field labels that appear in the text
+  cleaned = cleaned.replace(/"(Kontakt|Name|Titel|E-Mail|Telefon|Ort|Berufliches Profil|Berufserfahrung|Bildung|Kenntnisse|Zertifizierungen|Sprachen|Contact|Title|Email|Phone|Location|Summary|Experience|Education|Skills|Certifications|Languages)":\s*[{\["]?/gi, '\n$1: ');
+  cleaned = cleaned.replace(/"(Unternehmen|Zeitraum|Beschreibung|Schule|Abschluss|Fachbereich|Company|Period|Description|School|Degree|Field)":\s*"/gi, '\n  $1: ');
+  
+  // Clean up remaining JSON artifacts
+  cleaned = cleaned.replace(/[{}\[\]]/g, '');
+  cleaned = cleaned.replace(/",?\s*$/gm, '');
+  cleaned = cleaned.replace(/^\s*",?/gm, '');
 
   // Remove any remaining JSON artifacts
   cleaned = cleaned.replace(/^\s*[\[{]/, '');
   cleaned = cleaned.replace(/[\]}]\s*$/, '');
+
+  // Normalize whitespace
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
 
   // Trim whitespace
   cleaned = cleaned.trim();

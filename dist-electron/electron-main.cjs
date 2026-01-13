@@ -3716,7 +3716,7 @@ function buildThinkerPrompt(args) {
   const cvPageLimit = constraints.cvPageLimit || "2";
   const targetLanguage = constraints.targetLanguage;
   const isGerman = constraints.isGerman;
-  const languageHardRule = isGerman ? `ABSOLUTE LANGUAGE RULE: Output MUST be 100% German. ZERO English words, phrases, headings, salutations, or closings. If you output any English, the document is INVALID.` : `LANGUAGE RULE: Output MUST be 100% English. Do not use German.`;
+  const languageHardRule = `ABSOLUTE LANGUAGE RULE: Output MUST be 100% in ${targetLanguage}. Do NOT mix languages. Do NOT include any words, headings, salutations, or closings in any other language. If you output ANY other language, the document is INVALID.`;
   const baseContext = `
 ${languageHardRule}
 

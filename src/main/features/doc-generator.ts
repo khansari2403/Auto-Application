@@ -958,7 +958,11 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 3. DO NOT include any JSON formatting or markdown code blocks
 4. DO NOT add meta-commentary like "Here is your CV"
 
-NOTE: CV generation is NOT subject to word limits. Use the full profile data.
+NOTE: CV generation is NOT subject to word limits.
+
+PAGE LIMIT REQUIREMENT:
+- Keep the CV within ${cvPageLimit} A4 pages.
+- If you must shorten, keep only the most relevant experiences and the TOP 5-7 skills and TOP 3-5 certifications (already provided above).
 
 REQUIREMENTS:
 1. Tailor the CV specifically to the job requirements.

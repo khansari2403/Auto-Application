@@ -724,76 +724,8 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
           ${certsHTML}
         </div>
       ` : ''}
-      
-      ${generateLanguagesHTML(userProfile?.languages, l)}
-    </div>
-  </div>
-  `}
 </body>
 </html>`;
-}
-
-// Helper functions for structured CV
-function generateExperiencesHTML(experiences: any, labels: any): string {
-  if (!experiences || !Array.isArray(experiences) || experiences.length === 0) return '';
-  
-  const items = experiences.map((exp: any) => `
-    <div class="experience-item">
-      <div class="item-header">
-        <div>
-          <span class="item-title">${exp.title || exp.job_title || exp}</span>
-          ${(exp.company || exp.company_name) ? `<span class="item-company"> - ${exp.company || exp.company_name}</span>` : ''}
-        </div>
-        <span class="item-date">${exp.startDate || exp.start_date || ''} - ${exp.endDate || exp.end_date || labels.present}</span>
-      </div>
-      ${(exp.location || exp.city) ? `<div style="color: #666; font-size: 13px;">${exp.location || exp.city}</div>` : ''}
-      ${(exp.description || exp.summary) ? `<div class="item-description">${exp.description || exp.summary}</div>` : ''}
-    </div>
-  `).join('');
-  
-  return `
-    <div class="section">
-      <div class="section-title">${labels.experience}</div>
-      ${items}
-    </div>
-  `;
-}
-
-function generateEducationsHTML(educations: any): string {
-  if (!educations || !Array.isArray(educations) || educations.length === 0) return '';
-  
-  const items = educations.map((edu: any) => `
-    <div class="education-item">
-      <div class="item-header">
-        <div>
-          <span class="item-title">${edu.degree || edu.qualification || edu}</span>
-          ${(edu.field || edu.major) ? `<span class="item-company"> - ${edu.field || edu.major}</span>` : ''}
-        </div>
-        <span class="item-date">${edu.startYear || edu.start_year || edu.startDate || ''} - ${edu.endYear || edu.end_year || edu.endDate || ''}</span>
-      </div>
-      ${(edu.school || edu.university || edu.institution) ? `<div style="color: #666; font-size: 13px;">${edu.school || edu.university || edu.institution}</div>` : ''}
-    </div>
-  `).join('');
-  
-  return `
-    <div class="section">
-      <div class="section-title">Education</div>
-      ${items}
-    </div>
-  `;
-}
-
-function generateLanguagesHTML(languages: any, labels: any): string {
-  if (!languages || !Array.isArray(languages) || languages.length === 0) return '';
-  
-  return `
-    <div class="section">
-      <div class="section-title">${labels.languages}</div>
-      <div class="skills-list">
-        ${languages.map((lng: string) => `<span class="skill-tag" style="background: #e8f5e9; color: #388e3c;">${lng}</span>`).join('')}
-      </div>
-    </div>
-  `;
 }
 
 // Save document to file with organized directory structure

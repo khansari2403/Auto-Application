@@ -8,17 +8,17 @@
   "user_profile": [
     {
       "id": 1,
-      "name": "Jean Dupont",
-      "title": "Développeur Backend",
-      "email": "jean@example.com",
-      "phone": "+33 1 23 45 67 89",
-      "location": "Paris",
-      "summary": "Développeur backend spécialisé en Python et API.",
-      "experiences": "[{\"title\":\"Développeur Backend\",\"company\":\"ACME\",\"startDate\":\"2021\",\"endDate\":\"2024\",\"description\":\"Développement d’API REST.\"}]",
-      "educations": "[{\"degree\":\"Licence Informatique\",\"school\":\"Sorbonne\",\"startYear\":\"2017\",\"endYear\":\"2020\"}]",
-      "skills": "[\"Python\",\"FastAPI\",\"MongoDB\",\"Kubernetes\",\"Photoshop\"]",
-      "licenses": "[\"AWS Certified Cloud Practitioner\",\"Scrum Master\"]",
-      "languages": "[\"Français\",\"Anglais\"]"
+      "name": "Max Mustermann",
+      "title": "Senior Backend Developer",
+      "email": "max@example.de",
+      "phone": "+49 123 456789",
+      "location": "Berlin",
+      "summary": "Erfahrener Backend-Entwickler mit 8 Jahren Erfahrung.",
+      "experiences": "[{\"title\":\"Senior Developer\",\"company\":\"TechCorp\",\"startDate\":\"2020\",\"endDate\":\"2024\",\"description\":\"Backend development\"},{\"title\":\"Developer\",\"company\":\"StartupXYZ\",\"startDate\":\"2016\",\"endDate\":\"2020\",\"description\":\"Full-stack development\"}]",
+      "educations": "[{\"degree\":\"M.Sc. Informatik\",\"school\":\"TU Berlin\",\"startYear\":\"2012\",\"endYear\":\"2016\"}]",
+      "skills": "[\"Python\",\"JavaScript\",\"TypeScript\",\"Java\",\"C++\",\"Django\",\"FastAPI\",\"React\",\"Vue.js\",\"Angular\",\"PostgreSQL\",\"MongoDB\",\"Redis\",\"Elasticsearch\",\"Docker\",\"Kubernetes\",\"AWS\",\"GCP\",\"Azure\",\"Git\",\"CI/CD\",\"Agile\",\"Scrum\"]",
+      "licenses": "[\"AWS Solutions Architect\",\"Kubernetes Administrator\",\"Google Cloud Professional\",\"Scrum Master\",\"PMP\",\"ISTQB\",\"MongoDB Developer\",\"Python Institute PCEP\"]",
+      "languages": "[\"Deutsch\",\"Englisch\",\"Französisch\"]"
     }
   ],
   "job_listings": [
@@ -56,6 +56,23 @@
       "required_skills": "Python, Django, PostgreSQL, Docker",
       "description": "Nous recherchons un développeur backend senior pour rejoindre notre équipe technique.\n    \nProfil recherché:\n- 5+ ans d'expérience en développement Python\n- Maîtrise de Django et des API REST\n- Connaissance de PostgreSQL et des bases de données NoSQL\n- Expérience avec Docker et Kubernetes\n\nNous offrons:\n- Salaire compétitif\n- Télétravail partiel\n- Formation continue",
       "date_imported": "2026-01-15"
+    },
+    {
+      "id": 4001,
+      "job_title": "Backend-Entwickler",
+      "company_name": "Deutsche Tech GmbH",
+      "location": "München",
+      "required_skills": "Python, Django, PostgreSQL, Docker, Kubernetes",
+      "description": "Wir suchen einen erfahrenen Backend-Entwickler (m/w/d).\n\nAnforderungen:\n- 5+ Jahre Erfahrung mit Python\n- Kenntnisse in Django und REST-APIs\n- Erfahrung mit PostgreSQL\n- Docker und Kubernetes Kenntnisse\n\nAufgaben:\n- Entwicklung von Microservices\n- Code-Reviews und Mentoring",
+      "date_imported": "2026-01-20",
+      "cv_status": "auditor_done",
+      "cv_rejection_reason": null,
+      "cv_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cv_job4001_1768315188240.html",
+      "cv_pdf_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cv_job4001_1768315188240.pdf",
+      "cover_letter_status": "auditor_done",
+      "cover_letter_rejection_reason": null,
+      "cover_letter_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cover_letter_job4001_1768315190740.html",
+      "cover_letter_pdf_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cover_letter_job4001_1768315190740.pdf"
     }
   ],
   "documents": [
@@ -97,6 +114,32 @@
       "created_at": "2026-01-13T14:38:28.145Z",
       "is_active": 1,
       "timestamp": "2026-01-13T14:38:28.145Z"
+    },
+    {
+      "id": 1768315188336,
+      "job_id": "4001",
+      "user_id": 1,
+      "document_type": "cv",
+      "content": "BERUFSPROFIL\n\nAls erfahrener Backend-Entwickler bringe ich fundierte Kenntnisse in Python, Django und API-Entwicklung mit.\n\nBERUFSERFAHRUNG\n- Backend-Entwickler bei ACME (2021-2024): Entwicklung von REST-APIs\n\nFÄHIGKEITEN\n- Python, FastAPI, MongoDB",
+      "file_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cv_job4001_1768315188240.pdf",
+      "version": 1,
+      "status": "final",
+      "created_at": "2026-01-13T14:39:48.240Z",
+      "is_active": 1,
+      "timestamp": "2026-01-13T14:39:48.241Z"
+    },
+    {
+      "id": 1768315190982,
+      "job_id": "4001",
+      "user_id": 1,
+      "document_type": "cover_letter",
+      "content": "Ich möchte mein Interesse an der Position bekunden.\n\nMit meiner Erfahrung in Python bin ich überzeugt, einen Beitrag leisten zu können.",
+      "file_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cover_letter_job4001_1768315190740.pdf",
+      "version": 1,
+      "status": "final",
+      "created_at": "2026-01-13T14:39:50.740Z",
+      "is_active": 1,
+      "timestamp": "2026-01-13T14:39:50.740Z"
     }
   ],
   "action_logs": [
@@ -294,6 +337,126 @@
       "status": "completed",
       "success": true,
       "timestamp": "2026-01-13T14:38:30.598Z"
+    },
+    {
+      "id": 1768315183159,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "🔍 Researching Deutsche Tech GmbH mission and history...",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T14:39:43.159Z"
+    },
+    {
+      "id": 1768315183160,
+      "user_id": 1,
+      "action_type": "ai_observer",
+      "action_description": "🔍 Researching company: Deutsche Tech GmbH",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T14:39:43.160Z"
+    },
+    {
+      "id": 1768315188234,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✍️ Generating tailored CV for Deutsche Tech GmbH",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T14:39:48.234Z"
+    },
+    {
+      "id": 1768315188239,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✅ CV generated successfully",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:39:48.239Z"
+    },
+    {
+      "id": 1768315188242,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "📄 CV saved (HTML): /app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cv_job4001_1768315188240.html",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:39:48.242Z"
+    },
+    {
+      "id": 1768315188245,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: cv_job4001_1768315188240.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T14:39:48.245Z"
+    },
+    {
+      "id": 1768315190728,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cv_job4001_1768315188240.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:39:50.728Z"
+    },
+    {
+      "id": 1768315190730,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cv_job4001_1768315188240.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:39:50.730Z"
+    },
+    {
+      "id": 1768315190731,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✍️ Generating tailored Cover Letter for Deutsche Tech GmbH",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T14:39:50.731Z"
+    },
+    {
+      "id": 1768315190734,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✅ Cover Letter generated successfully",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:39:50.734Z"
+    },
+    {
+      "id": 1768315190741,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "📄 Cover Letter saved (HTML): /app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cover_letter_job4001_1768315190740.html",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:39:50.741Z"
+    },
+    {
+      "id": 1768315190742,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: cover_letter_job4001_1768315190740.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T14:39:50.742Z"
+    },
+    {
+      "id": 1768315192137,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cover_letter_job4001_1768315190740.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:39:52.137Z"
+    },
+    {
+      "id": 1768315192140,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cover_letter_job4001_1768315190740.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T14:39:52.140Z"
     }
   ],
   "ai_models": [],

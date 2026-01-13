@@ -32,10 +32,14 @@ async function launchBrowser(options: { headless?: boolean | 'new', userDataDir?
     defaultArgs.push(`--proxy-server=${proxyServer}`);
   }
 
+  // IMPORTANT: This environment can be ARM64; ensure we use system Chromium.
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
+
   const launchOptions: any = {
     headless: options.headless !== undefined ? options.headless : false,
+    executablePath,
     userDataDir: options.userDataDir || getUserDataDir(),
-    args: [...defaultArgs, ...(options.args || [])]
+    args: [...defaultArgs, '--disable-dev-shm-usage', ...(options.args || [])]
   };
 
   const browser = await puppeteer.launch(launchOptions);

@@ -878,10 +878,12 @@ async function launchBrowser(options = {}) {
     console.log(`Scraper: Using proxy server: ${proxyServer}`);
     defaultArgs.push(`--proxy-server=${proxyServer}`);
   }
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
   const launchOptions = {
     headless: options.headless !== void 0 ? options.headless : false,
+    executablePath,
     userDataDir: options.userDataDir || getUserDataDir2(),
-    args: [...defaultArgs, ...options.args || []]
+    args: [...defaultArgs, "--disable-dev-shm-usage", ...options.args || []]
   };
   const browser = await import_puppeteer2.default.launch(launchOptions);
   if (proxyServer && proxyServer.includes("@")) {

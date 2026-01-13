@@ -126,36 +126,189 @@ If fabrications are detected: "FABRICATION DETECTED: [list specific fabricated i
 
 // Clean AI output - remove JSON artifacts and meta-text
 function cleanAIOutput(content: string): string {
-  let cleaned = content;
-  
+  let cleaned = content || '';
+
   // Remove JSON wrapper patterns
-  cleaned = cleaned.replace(/^\s*\{\s*"(coverLetter|motivationLetter|cv|letter)"\s*:\s*"/i, '');
+  cleaned = cleaned.replace(/^\s*\{\s*"(coverLetter|motivationLetter|cv|letter|portfolio|proposal)"\s*:\s*"/i, '');
   cleaned = cleaned.replace(/"\s*\}\s*$/i, '');
-  
+
   // Remove markdown code blocks
   cleaned = cleaned.replace(/```[a-z]*\n?/gi, '');
   cleaned = cleaned.replace(/```/g, '');
-  
+
   // Remove meta-commentary at the start
-  cleaned = cleaned.replace(/^Here is (the|your|a) (motivation letter|cover letter|CV|resume)[:\s]*/i, '');
+  cleaned = cleaned.replace(/^Here is (the|your|a) (motivation letter|cover letter|CV|resume|portfolio|proposal)[:\s]*/i, '');
   cleaned = cleaned.replace(/^(Below is|I've created|I have written)[^.]*\.\s*/i, '');
-  
+
   // Remove em-dashes and replace with regular dashes
   cleaned = cleaned.replace(/—/g, '-');
   cleaned = cleaned.replace(/–/g, '-');
-  
+
   // Remove escaped newlines and fix formatting
   cleaned = cleaned.replace(/\\n/g, '\n');
   cleaned = cleaned.replace(/\\"/g, '"');
-  
+
   // Remove any remaining JSON artifacts
   cleaned = cleaned.replace(/^\s*[\[{]/, '');
   cleaned = cleaned.replace(/[\]}]\s*$/, '');
-  
+
   // Trim whitespace
   cleaned = cleaned.trim();
-  
+
   return cleaned;
+}
+
+function stripLetterGreetingAndClosing(text: string, isGerman: boolean): string {
+  let out = (text || '').trim();
+
+  // Kill typical greeting lines
+  const greetingPatterns = isGerman
+    ? [
+        /^\s*(sehr\s+geehrte[rn]?|liebe[rn]?|hallo)\b[^\n]*\n+/i,
+        /^\s*\b(guten\s+tag|guten\s+morgen|guten\s+abend)\b[^\n]*\n+/i,
+      ]
+    : [
+        /^\s*dear\b[^\n]*\n+/i,
+        /^\s*to\s+the\s+hiring\s+manager\b[^\n]*\n+/i,
+        /^\s*hello\b[^\n]*\n+/i,
+      ];
+
+  for (const re of greetingPatterns) {
+    out = out.replace(re, '').trim();
+  }
+
+  // Kill common closings
+  const closingPatterns = isGerman
+    ? [
+        /\n\s*(mit\s+freundlichen\s+gr\u00fc\u00dfen|freundliche\s+gr\u00fc\u00dfe|beste\s+gr\u00fc\u00dfe|hochachtungsvoll)[^\n]*$/i,
+      ]
+    : [
+        /\n\s*(kind\s+regards|best\s+regards|sincerely|yours\s+sincerely|yours\s+faithfully)[^\n]*$/i,
+      ];
+
+  for (const re of closingPatterns) {
+    out = out.replace(re, '').trim();
+  }
+
+  // If the model repeats applicant name at end, strip it.
+  out = out.replace(/\n\s*[A-Z][A-Za-z\-\s]{2,}\s*$/i, '').trim();
+
+  return out;
+}
+
+function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage: 'GERMAN' | 'ENGLISH' } {
+  const jobText = `${job?.job_title || ''} ${job?.required_skills || ''} ${job?.description || ''}`.toLowerCase();
+  // German-specific signals (keep fast and simple, but better than a tiny list)
+  const germanSignals = [
+    'kenntnisse', 'erfahrung', 'aufgaben', 'profil', 'wir bieten', 'bewerbung', 'anschreiben', 'lebenslauf',
+    'm/w/d', 'ihr profil', 'ihre aufgaben', 'anforderungen', 'qualifikation', 'teamf\u00e4higkeit', 'selbst\u00e4ndig',
+    'unbefristet', 'vollzeit', 'teilzeit', 'standort', 'deutsch',
+    'entwickler', 'ingenieur', 'manager', 'studium', 'abschluss'
+  ];
+  const isGerman = germanSignals.some(k => jobText.includes(k));
+  return { isGerman, targetLanguage: isGerman ? 'GERMAN' : 'ENGLISH' };
+}
+
+function getJobDateFolder(job: any, isGerman: boolean): string {
+  // Use date_imported if present, else today.
+  const raw = job?.date_imported || job?.dateImported || job?.date_scraped || job?.dateScraped;
+  let d: Date;
+  if (raw) {
+    const parsed = new Date(raw);
+    d = isNaN(parsed.getTime()) ? new Date() : parsed;
+  } else {
+    d = new Date();
+  }
+  // Always YYYY-MM-DD (user confirmed)
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function normalizeProfileArrays(profile: any): any {
+  const parseField = (field: any) => {
+    if (!field) return [];
+    if (Array.isArray(field)) return field;
+    if (typeof field === 'string') {
+      try { return JSON.parse(field); } catch { return []; }
+    }
+    return [];
+  };
+
+  return {
+    ...profile,
+    experiences: parseField(profile.experiences),
+    educations: parseField(profile.educations),
+    skills: parseField(profile.skills),
+    licenses: parseField(profile.licenses),
+    languages: parseField(profile.languages)
+  };
+}
+
+function tokenize(text: string): string[] {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[^a-z\u00c0-\u017F0-9\+\#\.\-\s]/g, ' ')
+    .split(/\s+/)
+    .map(t => t.trim())
+    .filter(t => t.length >= 2);
+}
+
+function computeRelevanceScore(itemText: string, jobTokens: Set<string>): number {
+  const tokens = tokenize(itemText);
+  let score = 0;
+  for (const t of tokens) {
+    if (jobTokens.has(t)) score += 3;
+  }
+  // Bonus for exact phrase contains
+  const lower = String(itemText || '').toLowerCase();
+  for (const jt of Array.from(jobTokens)) {
+    if (jt.length >= 4 && lower.includes(jt)) score += 1;
+  }
+  return score;
+}
+
+function filterProfileForJob(userProfile: any, job: any): { profile: any; relevantSkills: string[]; relevantCerts: string[] } {
+  const jobText = `${job?.job_title || ''} ${job?.required_skills || ''} ${job?.description || ''}`;
+  const jobTokens = new Set(tokenize(jobText));
+
+  const skillsRaw: any[] = Array.isArray(userProfile?.skills) ? userProfile.skills : [];
+  const certsRaw: any[] = Array.isArray(userProfile?.licenses) ? userProfile.licenses : [];
+
+  const skillStrings = skillsRaw.map((s: any) => {
+    if (typeof s === 'string') return s;
+    return s?.name || s?.title || JSON.stringify(s);
+  });
+
+  const certStrings = certsRaw.map((c: any) => {
+    if (typeof c === 'string') return c;
+    return c?.name || c?.title || c?.issuer || JSON.stringify(c);
+  });
+
+  const scoredSkills = skillStrings
+    .map(s => ({ s, score: computeRelevanceScore(s, jobTokens) }))
+    .sort((a, b) => b.score - a.score || a.s.localeCompare(b.s));
+
+  const scoredCerts = certStrings
+    .map(s => ({ s, score: computeRelevanceScore(s, jobTokens) }))
+    .sort((a, b) => b.score - a.score || a.s.localeCompare(b.s));
+
+  // Strict caps requested
+  const relevantSkills = scoredSkills.filter(x => x.score > 0).slice(0, 7).map(x => x.s);
+  const relevantCerts = scoredCerts.filter(x => x.score > 0).slice(0, 5).map(x => x.s);
+
+  // If none match, fallback to a small subset (still capped)
+  const finalSkills = relevantSkills.length > 0 ? relevantSkills : skillStrings.slice(0, 5);
+  const finalCerts = relevantCerts.length > 0 ? relevantCerts : certStrings.slice(0, 3);
+
+  const filteredProfile = {
+    ...userProfile,
+    skills: finalSkills,
+    licenses: finalCerts
+  };
+
+  return { profile: filteredProfile, relevantSkills: finalSkills, relevantCerts: finalCerts };
 }
 
 // Document type definitions

@@ -41,71 +41,71 @@
   "documents": [],
   "action_logs": [
     {
-      "id": 1768312770173,
+      "id": 1768312858600,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "🔍 Researching Example Ltd mission and history...",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:59:30.173Z"
+      "timestamp": "2026-01-13T14:00:58.600Z"
     },
     {
-      "id": 1768312770175,
+      "id": 1768312858605,
       "user_id": 1,
       "action_type": "ai_observer",
       "action_description": "🔍 Researching company: Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:59:30.175Z"
+      "timestamp": "2026-01-13T14:00:58.605Z"
     },
     {
-      "id": 1768312776994,
+      "id": 1768312865170,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✍️ Generating tailored CV for Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:59:36.994Z"
+      "timestamp": "2026-01-13T14:01:05.170Z"
     },
     {
-      "id": 1768312777003,
+      "id": 1768312865175,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "❌ Error: ensureTargetLanguageOrRetry is not defined",
       "status": "failed",
       "success": false,
-      "timestamp": "2026-01-13T13:59:37.003Z"
+      "timestamp": "2026-01-13T14:01:05.175Z"
     },
     {
-      "id": 1768312777004,
+      "id": 1768312865175,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✍️ Generating tailored Motivation Letter for Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:59:37.004Z"
+      "timestamp": "2026-01-13T14:01:05.175Z"
     },
     {
-      "id": 1768312777008,
+      "id": 1768312865177,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "❌ Error: ensureTargetLanguageOrRetry is not defined",
       "status": "failed",
       "success": false,
-      "timestamp": "2026-01-13T13:59:37.008Z"
+      "timestamp": "2026-01-13T14:01:05.177Z"
     },
     {
-      "id": 1768312777011,
+      "id": 1768312865177,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✍️ Generating tailored Cover Letter for Example Ltd",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:59:37.011Z"
+      "timestamp": "2026-01-13T14:01:05.177Z"
     },
     {
-      "id": 1768312777016,
+      "id": 1768312865178,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "❌ Error: ensureTargetLanguageOrRetry is not defined",
       "status": "failed",
       "success": false,
-      "timestamp": "2026-01-13T13:59:37.016Z"
+      "timestamp": "2026-01-13T14:01:05.178Z"
     }
   ],
   "ai_models": [],

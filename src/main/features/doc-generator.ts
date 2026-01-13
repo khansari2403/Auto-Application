@@ -845,7 +845,7 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
     ${userProfile?.photo ? `<img src="${userProfile.photo}" class="header-photo" alt="Photo">` : ''}
     <div class="header-info">
       <div class="name">${userProfile?.name || 'Your Name'}</div>
-      <div class="title">${userProfile?.title || 'Professional Title'}</div>
+      ${!useAIContent ? `<div class="title">${userProfile?.title || 'Professional Title'}</div>` : ''}
       <div class="contact">
         ${userProfile?.email ? `<span>📧 ${userProfile.email}</span>` : ''}
         ${userProfile?.phone ? `<span>📱 ${userProfile.phone}</span>` : ''}

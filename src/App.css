@@ -1,0 +1,106 @@
+/**
+ * App.css - Additional styles for App component
+ * Works alongside the theme system
+ */
+
+/* Loading and Error States */
+.app-container.loading,
+.app-container.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner,
+.error-message {
+  text-align: center;
+  padding: 40px;
+  background: var(--card-bg);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: var(--card-border);
+}
+
+[data-theme-style="glassmorphism"] .loading-spinner,
+[data-theme-style="glassmorphism"] .error-message {
+  backdrop-filter: var(--card-backdrop);
+  -webkit-backdrop-filter: var(--card-backdrop);
+}
+
+.loading-spinner p,
+.error-message p {
+  margin: 0;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+/* Header specific */
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Navigation Layout - Flexbox with space-between */
+.app-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  overflow-x: auto;
+}
+
+.nav-main {
+  display: flex;
+  gap: 4px;
+  flex-wrap: nowrap;
+}
+
+.nav-secondary {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Navigation scrollbar */
+.app-nav::-webkit-scrollbar {
+  height: 6px;
+}
+
+.app-nav::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.app-nav::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+/* Content Section */
+.content-section h2 {
+  margin: 0 0 16px 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.content-section p {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* Footer (if needed) */
+.app-footer {
+  padding: 16px 24px;
+  background: var(--card-bg);
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.app-footer p {
+  margin: 0;
+}

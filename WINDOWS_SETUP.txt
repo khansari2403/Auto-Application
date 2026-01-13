@@ -1,0 +1,144 @@
+================================================================================
+JOB APPLICATION AUTOMATION APP - WINDOWS SETUP INSTRUCTIONS
+================================================================================
+
+IMPORTANT: The project files are on a Linux system. You need to copy them to 
+your Windows PC first.
+
+================================================================================
+STEP 1: DOWNLOAD THE PROJECT FILES
+================================================================================
+
+The project has been compressed into a file: job-automation-app.tar.gz
+
+You have two options:
+
+OPTION A: Download from Linux System (if you have access)
+- The file is located at: /home/code/job-automation-app.tar.gz
+- Download it to your Windows PC
+- Extract it using 7-Zip or WinRAR (or Windows built-in extractor)
+
+OPTION B: I can help you copy files manually
+- Tell me and I'll create individual files for you
+
+================================================================================
+STEP 2: EXTRACT THE FILES
+================================================================================
+
+1. Download job-automation-app.tar.gz
+2. Right-click on it
+3. Select "Extract All..." (or use 7-Zip/WinRAR)
+4. Extract to: C:\Users\Sideadde\job-automation-app
+
+After extraction, you should see these folders:
+- src/
+- public/
+- node_modules/ (may not be there yet)
+
+And these files:
+- package.json
+- package-lock.json
+- electron-main.ts
+- preload.ts
+- vite.config.ts
+- tsconfig.json
+- index.html
+
+================================================================================
+STEP 3: INSTALL NODE.JS (if not already installed)
+================================================================================
+
+1. Go to https://nodejs.org
+2. Download the LTS version (Long Term Support)
+3. Run the installer
+4. Follow the installation steps
+5. Restart your computer
+
+To verify Node.js is installed, open Command Prompt and type:
+  node --version
+  npm --version
+
+You should see version numbers like: v18.0.0
+
+================================================================================
+STEP 4: INSTALL DEPENDENCIES
+================================================================================
+
+1. Open Command Prompt
+2. Navigate to your project folder:
+   cd C:\Users\Sideadde\job-automation-app
+
+3. Run:
+   npm install
+
+This will download all required packages (takes 2-5 minutes)
+
+================================================================================
+STEP 5: START THE APP
+================================================================================
+
+Once npm install is complete, run:
+  npm run electron-dev
+
+This will:
+- Start the development server
+- Open the Electron app window
+- Show the Job Application Automation interface
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+ERROR: "npm: command not found"
+SOLUTION: Node.js is not installed. Install it from https://nodejs.org
+
+ERROR: "package.json not found"
+SOLUTION: You didn't extract the files correctly. Make sure all files are in
+          C:\Users\Sideadde\job-automation-app
+
+ERROR: "Port 5173 already in use"
+SOLUTION: Open Command Prompt and run:
+          netstat -ano | findstr :5173
+          taskkill /PID <PID> /F
+
+ERROR: "Module not found"
+SOLUTION: Delete node_modules and package-lock.json, then run npm install again:
+          rmdir /s /q node_modules
+          del package-lock.json
+          npm install
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+Once the app is running, you can:
+
+1. Configure Settings:
+   - Enter your LinkedIn profile URL
+   - Set job search preferences
+   - Add AI models (GPT-4, Gemini, etc.)
+   - Configure email settings
+   - Add job websites to search
+   - Add companies to monitor
+
+2. View Activity Log:
+   - See real-time actions
+   - Check for errors
+   - Get recommendations
+
+3. Start Job Search:
+   - Search multiple job websites
+   - Filter by your preferences
+   - Generate CVs and motivation letters
+   - Submit applications
+
+================================================================================
+NEED HELP?
+================================================================================
+
+If you get stuck:
+1. Copy the exact error message
+2. Tell me what step you're on
+3. I'll help you fix it
+
+Good luck! 🚀

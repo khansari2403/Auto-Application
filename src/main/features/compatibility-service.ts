@@ -1,0 +1,848 @@
+import { getAllQuery, runQuery, getDatabase } from '../database';
+
+interface SkillMatch {
+  skill: string;
+  weight: number;
+  matched: boolean;
+}
+
+interface CompatibilityResult {
+  score: number;
+  level: 'red' | 'yellow' | 'green' | 'gold';
+  matchedSkills: string[];
+  missingSkills: string[];
+  experienceMatch: number;
+  educationMatch: number;
+  locationMatch: boolean;
+  profileSource?: string; // Which profile source was used
+  breakdown: {
+    skills: number;
+    experience: number;
+    education: number;
+    location: number;
+  };
+}
+
+/**
+ * Get the profile data based on Auditor's source setting
+ */
+async function getProfileBySource(userId: number): Promise<{ profile: any; source: string }> {
+  // Get Auditor settings
+  const models = await getAllQuery('SELECT * FROM ai_models');
+  const auditor = models.find((m: any) => m.role === 'Auditor' && m.status === 'active');
+  const source = auditor?.auditor_source || 'all';
+  
+  // Get profiles based on source
+  const profiles = await getAllQuery('SELECT * FROM user_profile');
+  const linkedinProfile = profiles.find((p: any) => p.source === 'linkedin');
+  const manualProfile = profiles.find((p: any) => p.source === 'manual');
+  const baseProfile = profiles[0];
+  
+  // Get uploaded CVs
+  const db = getDatabase();
+  const documents = db.documents || [];
+  const uploadedCvs = documents.filter((d: any) => d.doc_type === 'uploaded_cv');
+  
+  let selectedProfile = baseProfile;
+  let usedSource = 'combined';
+  
+  switch (source) {
+    case 'linkedin':
+      if (linkedinProfile) {
+        selectedProfile = linkedinProfile;
+        usedSource = 'LinkedIn Profile';
+      }
+      break;
+    case 'manual':
+      if (manualProfile) {
+        selectedProfile = manualProfile;
+        usedSource = 'Manual Profile';
+      }
+      break;
+    case 'uploaded_cv':
+      // For uploaded CVs, we'd need to extract text - for now use base profile with CV note
+      if (uploadedCvs.length > 0) {
+        usedSource = 'Uploaded CV: ' + (uploadedCvs[0].file_name || 'CV Document');
+      }
+      selectedProfile = baseProfile;
+      break;
+    case 'all':
+    default:
+      // Combine all sources (default behavior)
+      usedSource = 'All Sources (Combined)';
+      break;
+  }
+  
+  return { profile: selectedProfile, source: usedSource };
+}
+
+/**
+ * Calculate compatibility score between user profile and job
+ * Score: 0-100
+ * - Red: 0-25 (Poor match)
+ * - Yellow: 26-50 (Fair match)
+ * - Green: 51-75 (Good match)
+ * - Gold: 76-100 (Excellent match)
+ * 
+ * IMPORTANT AUDITOR RULES:
+ * 1. Soft skills should NEVER be exclusion factors
+ * 2. Experience is transferable - 5+ years in one role indicates potential for transition
+ * 3. Language proficiency from Search Profile bypasses language scoring
+ * 4. Learned criteria from user Q&A overrides uncertain requirements
+ */
+export async function calculateCompatibility(userId: number, jobId: number): Promise<CompatibilityResult> {
+  // Get user profile based on Auditor source setting
+  const { profile, source } = await getProfileBySource(userId);
+  
+  // Get search profiles for language proficiency override
+  const searchProfiles = await getAllQuery('SELECT * FROM search_profiles');
+  const activeProfile = searchProfiles.find((p: any) => p.is_active === 1) || searchProfiles[0];
+  let languageProficiencies: Record<string, string> = {};
+  try {
+    if (activeProfile?.language_proficiencies) {
+      languageProficiencies = JSON.parse(activeProfile.language_proficiencies);
+    }
+  } catch (e) {}
+  
+  // Get learned criteria from Auditor Q&A
+  const db = getDatabase();
+  const learnedCriteria = (db.auditor_criteria || []).filter((c: any) => c.user_id === userId);
+  
+  // Get job listing
+  const jobs = await getAllQuery('SELECT * FROM job_listings');
+  const job = jobs.find((j: any) => j.id === jobId);
+  
+  if (!profile || !job) {
+    return createEmptyResult();
+  }
+  
+  // Calculate each component (soft skills are NOT exclusion factors)
+  const skillsScore = calculateSkillsMatch(profile, job);
+  const experienceScore = calculateExperienceMatch(profile, job);
+  const educationScore = calculateEducationMatch(profile, job);
+  const locationScore = calculateLocationMatch(profile, job);
+  const languageScore = calculateLanguageMatch(profile, job, languageProficiencies, learnedCriteria);
+  
+  // 🔥 RADICAL FIX V2: ASK USER ABOUT MISSING SKILLS *BEFORE* PENALIZING THE SCORE
+  // The key change: We generate questions and HOLD the score at a neutral level
+  // until the user has had a chance to answer the questions.
+  
+  // Get already answered criteria
+  const alreadyAnswered = learnedCriteria.map((c: any) => c.criteria);
+  
+  // Check existing questions for this job
+  const existingQuestions = (db.auditor_questions || [])
+    .filter((q: any) => q.user_id === userId && q.job_id === jobId);
+  
+  // First, recalculate skills based on what user has already told us
+  const recalculatedSkillsScore = recalculateSkillsWithLearnedCriteria(
+    skillsScore, 
+    learnedCriteria
+  );
+  
+  // Update skillsScore with recalculated values
+  skillsScore.score = recalculatedSkillsScore.score;
+  skillsScore.matched = recalculatedSkillsScore.matched;
+  skillsScore.missing = recalculatedSkillsScore.missing;
+  
+  // Now check if there are STILL missing skills that we haven't asked about
+  if (skillsScore.missing.length > 0) {
+    console.log(`Compatibility: Found ${skillsScore.missing.length} missing skills after checking learned criteria`);
+    
+    // Find skills we haven't asked about yet
+    const skillsToAsk = skillsScore.missing
+      .filter(skill => {
+        const criteriaKey = `tool_${skill.toLowerCase().replace(/\s+/g, '_')}`;
+        return !alreadyAnswered.includes(criteriaKey) &&
+               !existingQuestions.some((q: any) => q.criteria === criteriaKey) && !learnedCriteria.some((c: any) => c.criteria === criteriaKey);
+      })
+      .slice(0, 5); // Ask about top 5 missing skills
+    
+    const validSkillsToAsk = skillsToAsk.filter(s => s && s.toLowerCase() !== "not specified" && s.toLowerCase() !== "n/a");
+    if (validSkillsToAsk.length > 0) {
+      console.log(`Compatibility: Generating ${skillsToAsk.length} questions BEFORE finalizing score...`);
+      
+      for (const skill of validSkillsToAsk) {
+        const criteriaKey = `tool_${skill.toLowerCase().replace(/\s+/g, '_')}`;
+        const questionText = `Do you have experience working with ${skill}? (Please confirm if this is part of your skillset)`;
+        
+        const questionId = `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        try {
+          await runQuery('INSERT INTO auditor_questions', {
+            id: questionId,
+            user_id: userId,
+            job_id: jobId,
+            question: questionText,
+            criteria: criteriaKey,
+            answered: false,
+            timestamp: Date.now()
+          });
+          
+          console.log(`Compatibility: Created question for skill "${skill}"`);
+        } catch (e) {
+          console.error(`Error creating question for ${skill}:`, e);
+        }
+      }
+      
+      // 🔥 KEY FIX: If we just created questions, DON'T penalize the score yet!
+      // Give the user the benefit of the doubt until they answer.
+      // Treat unanswered skills as "neutral" (50% chance they have them)
+      const unansweredCount = skillsToAsk.length;
+      const totalSkills = skillsScore.matched.length + skillsScore.missing.length;
+      
+      if (totalSkills > 0) {
+        // Boost score by assuming 50% of unanswered skills are actually skills the user has
+        const assumedMatches = Math.ceil(unansweredCount * 0.5);
+        const adjustedMatchCount = skillsScore.matched.length + assumedMatches;
+        skillsScore.score = Math.round((adjustedMatchCount / totalSkills) * 100);
+        console.log(`Compatibility: Adjusted score from ${recalculatedSkillsScore.score} to ${skillsScore.score} (pending ${unansweredCount} questions)`);
+      }
+    }
+  }
+  
+  // Weighted average:
+  // - Hard skills: 35% (reduced from 40%)
+  // - Experience: 30% (includes transferability bonus)
+  // - Education: 15% (reduced from 20%)
+  // - Location: 10%
+  // - Language: 10% (new - can be bypassed with proficiency)
+  const totalScore = Math.round(
+    skillsScore.score * 0.35 +
+    experienceScore * 0.30 +
+    educationScore * 0.15 +
+    locationScore * 0.10 +
+    languageScore * 0.10
+  );
+  
+  // Determine level
+  let level: 'red' | 'yellow' | 'green' | 'gold';
+  if (totalScore >= 76) level = 'gold';
+  else if (totalScore >= 51) level = 'green';
+  else if (totalScore >= 26) level = 'yellow';
+  else level = 'red';
+  
+  // Update job with compatibility score, source, and detailed breakdown
+  await runQuery('UPDATE job_listings', {
+    id: jobId,
+    compatibility_score: totalScore,
+    compatibility_source: source,
+    compatibility_matched_skills: JSON.stringify(skillsScore.matched),
+    compatibility_missing_skills: JSON.stringify(skillsScore.missing),
+    compatibility_breakdown: JSON.stringify({
+      skills: skillsScore.score,
+      experience: experienceScore,
+      education: educationScore,
+      location: locationScore,
+      language: languageScore
+    })
+  });
+  
+  return {
+    score: totalScore,
+    level,
+    matchedSkills: skillsScore.matched,
+    missingSkills: skillsScore.missing,
+    experienceMatch: experienceScore,
+    educationMatch: educationScore,
+    locationMatch: locationScore > 50,
+    profileSource: source,
+    breakdown: {
+      skills: skillsScore.score,
+      experience: experienceScore,
+      education: educationScore,
+      location: locationScore
+    }
+  };
+}
+
+/**
+ * Recalculate skills score based on learned criteria from user Q&A
+ * If user answered "Yes" to a skill question, count it as matched
+ */
+function recalculateSkillsWithLearnedCriteria(
+  originalScore: { score: number; matched: string[]; missing: string[] },
+  learnedCriteria: any[]
+): { score: number; matched: string[]; missing: string[] } {
+  const matched = [...originalScore.matched];
+  const missing = [...originalScore.missing];
+  
+  // Check each missing skill against learned criteria
+  for (let i = missing.length - 1; i >= 0; i--) {
+    const skill = missing[i];
+    const criteriaKey = `tool_${skill.toLowerCase().replace(/\s+/g, '_')}`;
+    
+    // Find if user answered "Yes" to this skill
+    const userCriteria = learnedCriteria.find((c: any) => c.criteria === criteriaKey);
+    
+    if (userCriteria && userCriteria.userAnswer === 'yes') {
+      // User has this skill! Move from missing to matched
+      matched.push(skill);
+      missing.splice(i, 1);
+      console.log(`Compatibility: User confirmed they have "${skill}" - adding to matched`);
+    }
+  }
+  
+  // Recalculate score
+  const totalRequired = matched.length + missing.length;
+  const newScore = totalRequired > 0 
+    ? Math.round((matched.length / totalRequired) * 100)
+    : 60;
+  
+  return { score: newScore, matched, missing };
+}
+
+/**
+ * Calculate skills match score
+ * IMPORTANT: Soft skills should NEVER be exclusion factors
+ */
+function calculateSkillsMatch(profile: any, job: any): { score: number; matched: string[]; missing: string[] } {
+  const userSkills = extractSkills(profile);
+  const { hardSkills, softSkills } = extractJobSkillsWithType(job);
+  
+  // Only consider hard skills for matching - soft skills are bonus, not requirements
+  const requiredSkills = hardSkills;
+  
+  if (requiredSkills.length === 0) {
+    return { score: 60, matched: [], missing: [] }; // Higher neutral if no hard requirements
+  }
+  
+  const matched: string[] = [];
+  const missing: string[] = [];
+  
+  for (const required of requiredSkills) {
+    const found = userSkills.some(skill => 
+      skill.toLowerCase().includes(required.toLowerCase()) ||
+      required.toLowerCase().includes(skill.toLowerCase()) ||
+      areSimilarSkills(skill, required)
+    );
+    
+    if (found) {
+      matched.push(required);
+    } else {
+      missing.push(required);
+    }
+  }
+  
+  // Calculate base score from hard skills
+  let score = requiredSkills.length > 0 
+    ? Math.round((matched.length / requiredSkills.length) * 100)
+    : 60;
+  
+  // Bonus for soft skills (they're positive, not exclusionary)
+  const softSkillsMatched = softSkills.filter(soft => 
+    userSkills.some(skill => 
+      skill.toLowerCase().includes(soft.toLowerCase()) ||
+      soft.toLowerCase().includes(skill.toLowerCase())
+    )
+  );
+  
+  // Add up to 15% bonus for soft skills matches
+  if (softSkills.length > 0 && softSkillsMatched.length > 0) {
+    const softBonus = Math.round((softSkillsMatched.length / softSkills.length) * 15);
+    score = Math.min(100, score + softBonus);
+  }
+  
+  return { score, matched, missing };
+}
+
+/**
+ * Extract skills from user profile
+ */
+function extractSkills(profile: any): string[] {
+  const skills: string[] = [];
+  
+  // From skills field
+  if (profile.skills) {
+    if (typeof profile.skills === 'string') {
+      skills.push(...profile.skills.split(',').map((s: string) => s.trim()));
+    } else if (Array.isArray(profile.skills)) {
+      skills.push(...profile.skills);
+    }
+  }
+  
+  // From certifications
+  if (profile.certifications) {
+    if (typeof profile.certifications === 'string') {
+      skills.push(...profile.certifications.split(',').map((s: string) => s.trim()));
+    } else if (Array.isArray(profile.certifications)) {
+      skills.push(...profile.certifications);
+    }
+  }
+  
+  // From summary/headline
+  if (profile.summary) {
+    const technicalTerms = extractTechnicalTerms(profile.summary);
+    skills.push(...technicalTerms);
+  }
+  
+  return [...new Set(skills.filter(s => s.length > 1))];
+}
+
+/**
+ * Extract required skills from job listing - separate hard and soft skills
+ * IMPORTANT: Soft skills are NEVER exclusion factors - they only provide bonus points
+ */
+function extractJobSkillsWithType(job: any): { hardSkills: string[]; softSkills: string[] } {
+  const hardSkills: string[] = [];
+  const softSkills: string[] = [];
+  
+  // Comprehensive list of soft skills that should NEVER be exclusion factors
+  // These are subjective and virtually all candidates possess some level of these
+  const softSkillPatterns = [
+    // Communication & Interpersonal
+    'communication', 'kommunikation', 'teamwork', 'team player', 'teamarbeit', 
+    'leadership', 'führung', 'führungsqualitäten', 'interpersonal', 'collaboration', 
+    'zusammenarbeit', 'networking', 'relationship building', 'stakeholder management',
+    'written communication', 'verbal communication', 'presentation skills',
+    'public speaking', 'active listening', 'negotiation', 'persuasion',
+    
+    // Problem Solving & Thinking
+    'problem solving', 'problem-solving', 'problemlösung', 'critical thinking',
+    'analytical thinking', 'analytical skills', 'analytisch', 'strategic thinking',
+    'creative thinking', 'creativity', 'kreativität', 'innovation', 'innovative',
+    'decision making', 'entscheidungsfindung', 'judgment', 'reasoning',
+    
+    // Work Habits & Attitude
+    'time management', 'zeitmanagement', 'adaptability', 'anpassungsfähigkeit',
+    'flexibility', 'flexibilität', 'motivation', 'self-motivated', 'selbstmotiviert',
+    'detail oriented', 'detail-oriented', 'detailorientiert', 'attention to detail',
+    'organizational', 'organisiert', 'multitasking', 'prioritization',
+    'work ethic', 'strong work ethic', 'arbeitsmoral', 'positive attitude',
+    'enthusiasm', 'begeisterung', 'passion', 'leidenschaft', 'dedication',
+    'commitment', 'engagement', 'drive', 'initiative', 'eigeninitiative',
+    'proactive', 'proaktiv', 'self starter', 'self-starter', 'selbstständig',
+    
+    // Personal Qualities
+    'customer service', 'kundenservice', 'customer focus', 'kundenorientierung',
+    'conflict resolution', 'konfliktlösung', 'empathy', 'empathie', 
+    'emotional intelligence', 'emotionale intelligenz', 'stress management',
+    'punctuality', 'pünktlichkeit', 'reliability', 'zuverlässigkeit',
+    'accountability', 'verantwortungsbewusstsein', 'patience', 'geduld',
+    'resilience', 'resilienz', 'open minded', 'open-minded', 'aufgeschlossen',
+    'curious', 'neugierig', 'willingness to learn', 'lernbereitschaft',
+    'growth mindset', 'can-do attitude', 'positive mindset',
+    
+    // Generic buzzwords that should not block candidates
+    'dynamic', 'dynamisch', 'energetic', 'professional', 'professionell',
+    'fast learner', 'quick learner', 'schnelle auffassungsgabe',
+    'independent', 'selbständig', 'team-oriented', 'teamorientiert',
+    'goal-oriented', 'zielorientiert', 'results-driven', 'ergebnisorientiert',
+    'hands-on', 'hands on', 'praktisch', 'pragmatic', 'structured', 'strukturiert'
+  ];
+  
+  const allSkills: string[] = [];
+  
+  // From required_skills field
+  if (job.required_skills) {
+    if (typeof job.required_skills === 'string') {
+      allSkills.push(...job.required_skills.split(',').map((s: string) => s.trim()));
+    } else if (Array.isArray(job.required_skills)) {
+      allSkills.push(...job.required_skills);
+    }
+  }
+  
+  // From description
+  if (job.description) {
+    const technicalTerms = extractTechnicalTerms(job.description);
+    allSkills.push(...technicalTerms);
+  }
+  
+  // Categorize skills
+  const uniqueSkills = [...new Set(allSkills.filter(s => s.length > 1))];
+  
+  for (const skill of uniqueSkills) {
+    const skillLower = skill.toLowerCase();
+    const isSoftSkill = softSkillPatterns.some(pattern => 
+      skillLower.includes(pattern) || pattern.includes(skillLower)
+    );
+    
+    if (isSoftSkill) {
+      softSkills.push(skill);
+    } else {
+      hardSkills.push(skill);
+    }
+  }
+  
+  return { 
+    hardSkills: hardSkills.slice(0, 20), // Limit to top 20 hard skills
+    softSkills: softSkills.slice(0, 10)  // Limit to top 10 soft skills
+  };
+}
+
+/**
+ * Extract required skills from job listing (legacy - kept for compatibility)
+ */
+function extractJobSkills(job: any): string[] {
+  const { hardSkills, softSkills } = extractJobSkillsWithType(job);
+  return [...hardSkills, ...softSkills];
+}
+
+/**
+ * Extract technical terms from text
+ * NOTE: We intentionally EXCLUDE soft skills here - they should NOT be used for job matching
+ */
+function extractTechnicalTerms(text: string): string[] {
+  const technicalPatterns = [
+    // Programming languages
+    /\b(JavaScript|TypeScript|Python|Java|C\+\+|C#|Ruby|Go|Rust|PHP|Swift|Kotlin|Scala)\b/gi,
+    // Frameworks
+    /\b(React|Angular|Vue|Node\.js|Express|Django|Flask|Spring|\.NET|Laravel|Rails)\b/gi,
+    // Tools & Technologies
+    /\b(AWS|Azure|GCP|Docker|Kubernetes|Git|Jenkins|CI\/CD|Terraform|Ansible)\b/gi,
+    // Databases
+    /\b(SQL|PostgreSQL|MySQL|MongoDB|Redis|Elasticsearch|Oracle|DynamoDB)\b/gi,
+    // Methodologies (only technical ones - NOT soft skills)
+    /\b(Agile|Scrum|Kanban|PMP|Six Sigma|Lean|DevOps|ITIL)\b/gi,
+    // DO NOT include soft skills like Leadership, Communication, etc.
+    // Those are handled separately in extractJobSkillsWithType()
+  ];
+  
+  const terms: string[] = [];
+  
+  for (const pattern of technicalPatterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      terms.push(...matches.map(m => m.trim()));
+    }
+  }
+  
+  return [...new Set(terms)];
+}
+
+/**
+ * Check if two skills are similar (accounting for variations)
+ */
+function areSimilarSkills(skill1: string, skill2: string): boolean {
+  const s1 = skill1.toLowerCase().replace(/[^a-z0-9]/g, '');
+  const s2 = skill2.toLowerCase().replace(/[^a-z0-9]/g, '');
+  
+  // Exact match after normalization
+  if (s1 === s2) return true;
+  
+  // One contains the other
+  if (s1.includes(s2) || s2.includes(s1)) return true;
+  
+  // Common skill variations
+  const variations: Record<string, string[]> = {
+    'javascript': ['js', 'ecmascript'],
+    'typescript': ['ts'],
+    'python': ['py'],
+    'kubernetes': ['k8s'],
+    'postgresql': ['postgres', 'psql'],
+    'mongodb': ['mongo'],
+    'nodejs': ['node', 'expressjs'],
+    'reactjs': ['react', 'reactnative'],
+    'projectmanagement': ['pm', 'projectmanager'],
+    'machinelearning': ['ml', 'ai', 'deeplearning'],
+  };
+  
+  for (const [base, alts] of Object.entries(variations)) {
+    if ((s1 === base || alts.includes(s1)) && (s2 === base || alts.includes(s2))) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Calculate experience match score
+ * IMPORTANT: Experience is TRANSFERABLE - 5+ years in any role indicates transition potential
+ */
+function calculateExperienceMatch(profile: any, job: any): number {
+  // Get user's total years of experience
+  let userYears = 0;
+  let longestRoleYears = 0;
+  
+  if (profile.experiences && Array.isArray(profile.experiences)) {
+    for (const exp of profile.experiences) {
+      if (exp.start_date && exp.end_date) {
+        const start = new Date(exp.start_date);
+        const end = exp.end_date === 'Present' ? new Date() : new Date(exp.end_date);
+        const roleYears = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365);
+        userYears += roleYears;
+        longestRoleYears = Math.max(longestRoleYears, roleYears);
+      }
+    }
+  }
+  
+  // Parse required experience from job
+  let requiredYears = 0;
+  const description = (job.description || '').toLowerCase();
+  const experienceLevel = (job.experience_level || '').toLowerCase();
+  
+  // Check experience level field
+  if (experienceLevel.includes('entry') || experienceLevel.includes('junior')) {
+    requiredYears = 1;
+  } else if (experienceLevel.includes('mid') || experienceLevel.includes('intermediate')) {
+    requiredYears = 3;
+  } else if (experienceLevel.includes('senior')) {
+    requiredYears = 5;
+  } else if (experienceLevel.includes('lead') || experienceLevel.includes('principal')) {
+    requiredYears = 7;
+  }
+  
+  // Parse from description
+  const yearsMatch = description.match(/(\d+)\+?\s*years?\s*(of)?\s*(experience|exp)/i);
+  if (yearsMatch) {
+    requiredYears = Math.max(requiredYears, parseInt(yearsMatch[1]));
+  }
+  
+  // Calculate score
+  if (requiredYears === 0) return 70; // Neutral if not specified
+  
+  // TRANSITIONAL EXPERIENCE BONUS:
+  // If user has 5+ years in ANY role, they have demonstrated commitment and can transition
+  const transitionBonus = longestRoleYears >= 5 ? 15 : (longestRoleYears >= 3 ? 10 : 0);
+  
+  if (userYears >= requiredYears) {
+    // Full score if meets requirements, bonus for exceeding
+    const exceedBonus = Math.min((userYears - requiredYears) * 5, 15);
+    return Math.min(85 + exceedBonus, 100);
+  } else {
+    // Partial score based on how close, plus transition bonus
+    const ratio = userYears / requiredYears;
+    const baseScore = Math.round(ratio * 70);
+    return Math.min(baseScore + transitionBonus, 85);
+  }
+}
+
+/**
+ * Calculate education match score
+ */
+function calculateEducationMatch(profile: any, job: any): number {
+  const description = (job.description || '').toLowerCase();
+  const userEducation = profile.education || [];
+  
+  // Education level hierarchy
+  const levels: Record<string, number> = {
+    'high school': 1,
+    'associate': 2,
+    'bachelor': 3,
+    'master': 4,
+    'phd': 5,
+    'doctorate': 5
+  };
+  
+  // Determine required level from job
+  let requiredLevel = 0;
+  if (description.includes('phd') || description.includes('doctorate')) requiredLevel = 5;
+  else if (description.includes('master') || description.includes('mba') || description.includes('m.sc')) requiredLevel = 4;
+  else if (description.includes('bachelor') || description.includes('b.sc') || description.includes('degree')) requiredLevel = 3;
+  else if (description.includes('associate')) requiredLevel = 2;
+  
+  if (requiredLevel === 0) return 70; // Neutral if not specified
+  
+  // Get user's highest education level
+  let userLevel = 0;
+  if (Array.isArray(userEducation)) {
+    for (const edu of userEducation) {
+      const degree = (edu.degree || '').toLowerCase();
+      for (const [key, value] of Object.entries(levels)) {
+        if (degree.includes(key)) {
+          userLevel = Math.max(userLevel, value);
+        }
+      }
+    }
+  }
+  
+  // Calculate score
+  if (userLevel >= requiredLevel) {
+    return 100;
+  } else if (userLevel === requiredLevel - 1) {
+    return 70; // One level below is acceptable
+  } else {
+    return Math.max(30, userLevel * 15);
+  }
+}
+
+/**
+ * Calculate location match score
+ */
+function calculateLocationMatch(profile: any, job: any): number {
+  const userLocation = (profile.location || '').toLowerCase();
+  const jobLocation = (job.location || '').toLowerCase();
+  const jobType = (job.job_type || '').toLowerCase();
+  
+  // Remote jobs are always a match
+  if (jobType.includes('remote') || jobLocation.includes('remote')) {
+    return 100;
+  }
+  
+  // If no locations specified
+  if (!userLocation || !jobLocation) {
+    return 50; // Neutral
+  }
+  
+  // Extract city and country
+  const userParts = userLocation.split(',').map(p => p.trim());
+  const jobParts = jobLocation.split(',').map(p => p.trim());
+  
+  // Check for city match
+  for (const userPart of userParts) {
+    for (const jobPart of jobParts) {
+      if (userPart.includes(jobPart) || jobPart.includes(userPart)) {
+        return 100;
+      }
+    }
+  }
+  
+  // Check for country/region match (partial score)
+  const userCountry = userParts[userParts.length - 1];
+  const jobCountry = jobParts[jobParts.length - 1];
+  
+  if (userCountry === jobCountry) {
+    return 70; // Same country
+  }
+  
+  return 30; // Different location
+}
+
+/**
+ * Create empty result for missing data
+ */
+function createEmptyResult(): CompatibilityResult {
+  return {
+    score: 0,
+    level: 'red',
+    matchedSkills: [],
+    missingSkills: [],
+    experienceMatch: 0,
+    educationMatch: 0,
+    locationMatch: false,
+    breakdown: {
+      skills: 0,
+      experience: 0,
+      education: 0,
+      location: 0
+    }
+  };
+}
+
+/**
+ * Calculate language match score
+ * IMPORTANT: If user has set language proficiency in Search Profile, this bypasses job language requirements
+ */
+function calculateLanguageMatch(profile: any, job: any, languageProficiencies: Record<string, string>, learnedCriteria?: any[]): number {
+  const jobDescription = (job.description || '').toLowerCase();
+  const jobLanguages = (job.languages || '').toLowerCase();
+  
+  // Extract required languages from job
+  const requiredLanguages: string[] = [];
+  const commonLanguages = ['english', 'german', 'french', 'spanish', 'italian', 'dutch', 'portuguese', 'chinese', 'japanese', 'korean', 'russian', 'arabic', 'hindi', 'polish', 'swedish', 'norwegian', 'danish', 'finnish', 'czech', 'hungarian', 'turkish', 'greek', 'hebrew', 'thai', 'vietnamese', 'indonesian', 'malay'];
+  
+  for (const lang of commonLanguages) {
+    if (jobDescription.includes(lang) || jobLanguages.includes(lang)) {
+      requiredLanguages.push(lang);
+    }
+  }
+  
+  // Also check for "native speaker" requirements
+  const hasNativeRequirement = jobDescription.includes('native speaker') || 
+                                jobDescription.includes('mother tongue') ||
+                                jobDescription.includes('fluent');
+  
+  // If no language requirements found, return high score
+  if (requiredLanguages.length === 0) {
+    return 80;
+  }
+  
+  // Get user's languages from profile
+  const userLanguages = profile.languages || [];
+  const userLanguagesLower = (Array.isArray(userLanguages) ? userLanguages : []).map((l: string) => l.toLowerCase());
+  
+  // Check proficiency levels from Search Profile (this BYPASSES job requirements)
+  const userProficienciesLower: Record<string, string> = {};
+  for (const [lang, level] of Object.entries(languageProficiencies)) {
+    userProficienciesLower[lang.toLowerCase()] = level;
+  }
+  
+  // Check learned criteria for language answers
+  const learnedLanguages: Record<string, boolean> = {};
+  if (learnedCriteria) {
+    for (const c of learnedCriteria) {
+      const criteriaLower = c.criteria.toLowerCase();
+      for (const lang of commonLanguages) {
+        if (criteriaLower.includes(lang) || criteriaLower.includes('speak ' + lang)) {
+          learnedLanguages[lang] = c.userAnswer === 'yes';
+        }
+      }
+    }
+  }
+  
+  let matchedCount = 0;
+  
+  for (const required of requiredLanguages) {
+    // First check learned criteria (highest priority - user explicitly answered)
+    if (learnedLanguages[required] === true) {
+      matchedCount++;
+      continue;
+    }
+    if (learnedLanguages[required] === false) {
+      // User explicitly said they don't speak this language
+      continue;
+    }
+    
+    // Check if user has this language
+    const hasLanguage = userLanguagesLower.some(l => l.includes(required) || required.includes(l));
+    
+    // Check if user has proficiency set (this gives automatic match)
+    const hasProficiency = Object.keys(userProficienciesLower).some(l => 
+      l.includes(required) || required.includes(l)
+    );
+    
+    if (hasLanguage || hasProficiency) {
+      matchedCount++;
+      
+      // Extra credit for high proficiency
+      const profLevel = Object.entries(userProficienciesLower).find(([l]) => 
+        l.includes(required) || required.includes(l)
+      )?.[1];
+      
+      if (profLevel && ['C1', 'C2'].includes(profLevel)) {
+        matchedCount += 0.2; // Bonus for high proficiency
+      }
+    }
+  }
+  
+  // Calculate score
+  const matchRatio = matchedCount / requiredLanguages.length;
+  let score = Math.round(matchRatio * 100);
+  
+  // Apply native speaker penalty only if absolutely required and not met
+  if (hasNativeRequirement && matchRatio < 1) {
+    score = Math.max(score - 10, 0);
+  }
+  
+  return score;
+}
+
+/**
+ * Calculate compatibility for all jobs
+ */
+export async function calculateAllCompatibility(userId: number): Promise<void> {
+  const jobs = await getAllQuery('SELECT * FROM job_listings');
+  
+  for (const job of jobs) {
+    if (!job.compatibility_score || job.compatibility_score === 0) {
+      await calculateCompatibility(userId, job.id);
+    }
+  }
+}
+
+/**
+ * Get jobs filtered by minimum compatibility
+ */
+export async function getJobsByCompatibility(userId: number, minLevel: 'red' | 'yellow' | 'green' | 'gold'): Promise<any[]> {
+  const jobs = await getAllQuery('SELECT * FROM job_listings');
+  
+  const minScore = {
+    'red': 0,
+    'yellow': 26,
+    'green': 51,
+    'gold': 76
+  }[minLevel];
+  
+  return jobs.filter((job: any) => (job.compatibility_score || 0) >= minScore);
+}

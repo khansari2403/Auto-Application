@@ -1,0 +1,849 @@
+import puppeteer, { Browser, Page } from 'puppeteer';
+import { logAction, getDatabase, runQuery } from '../database';
+import path from 'path';
+import fs from 'fs';
+let app: any;
+try { app = require('electron').app; } catch (e) { app = (global as any).electronApp; }
+
+// Get persistent user data directory for browser session
+const getUserDataDir = () => {
+  const browserDataDir = path.join(app.getPath('userData'), 'linkedin_browser_data');
+  if (!fs.existsSync(browserDataDir)) {
+    fs.mkdirSync(browserDataDir, { recursive: true });
+  }
+  return browserDataDir;
+};
+
+// Shared browser instance for session persistence
+let sharedBrowser: Browser | null = null;
+let sharedPage: Page | null = null;
+
+interface LinkedInProfile {
+  name: string;
+  title: string;
+  location: string;
+  photo: string;
+  summary: string;
+  experiences: Array<{
+    title: string;
+    company: string;
+    location: string;
+    startDate: string;
+    endDate: string;
+    description: string;
+  }>;
+  educations: Array<{
+    school: string;
+    degree: string;
+    field: string;
+    startYear: string;
+    endYear: string;
+  }>;
+  skills: string[];
+  licenses: string[];
+  languages: string[];
+}
+
+/**
+ * Check if user is already logged in to LinkedIn
+ */
+async function isLoggedIn(page: Page): Promise<boolean> {
+  try {
+    // Check for feed or profile indicators
+    const loggedInIndicators = await page.evaluate(() => {
+      return !!(
+        document.querySelector('.global-nav__me') ||
+        document.querySelector('.feed-identity-module') ||
+        document.querySelector('[data-test-id="nav-settings"]') ||
+        document.querySelector('.share-box-feed-entry__trigger') ||
+        window.location.href.includes('/feed/') ||
+        window.location.href.includes('/in/')
+      );
+    });
+    return loggedInIndicators;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Get or create a shared browser instance with persistent session
+ */
+async function getOrCreateBrowser(): Promise<{ browser: Browser; page: Page; isNew: boolean }> {
+  // If we have an existing browser that's still connected, reuse it
+  if (sharedBrowser && sharedBrowser.isConnected()) {
+    // Get existing pages or create new one
+    const pages = await sharedBrowser.pages();
+    if (pages.length > 0 && sharedPage && !sharedPage.isClosed()) {
+      return { browser: sharedBrowser, page: sharedPage, isNew: false };
+    }
+    // Create new page if none exist
+    sharedPage = await sharedBrowser.newPage();
+    await setupPage(sharedPage);
+    return { browser: sharedBrowser, page: sharedPage, isNew: false };
+  }
+  
+  // Launch new browser with persistent session
+  console.log('Launching new browser with user data dir:', getUserDataDir());
+  sharedBrowser = await puppeteer.launch({
+    headless: false,
+    userDataDir: getUserDataDir(),
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-blink-features=AutomationControlled',
+      '--disable-infobars',
+      '--window-size=1280,800',
+      '--start-maximized'
+    ]
+  });
+  
+  const pages = await sharedBrowser.pages();
+  sharedPage = pages.length > 0 ? pages[0] : await sharedBrowser.newPage();
+  await setupPage(sharedPage);
+  
+  return { browser: sharedBrowser, page: sharedPage, isNew: true };
+}
+
+/**
+ * Setup page with anti-detection measures
+ */
+async function setupPage(page: Page) {
+  await page.setViewport({ width: 1280, height: 800 });
+  await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+  
+  // Hide webdriver property
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+    // Override permissions
+    const originalQuery = window.navigator.permissions.query;
+    (window.navigator.permissions.query as any) = (parameters: any) =>
+      parameters.name === 'notifications'
+        ? Promise.resolve({ state: 'denied' } as PermissionStatus)
+        : originalQuery(parameters);
+  });
+}
+
+/**
+ * Open LinkedIn in browser for manual login
+ * Returns the browser instance for later scraping
+ */
+export async function openLinkedInForLogin(userId: number): Promise<{ success: boolean; message: string; isLoggedIn?: boolean }> {
+  try {
+    await logAction(userId, 'linkedin', '🔗 Opening LinkedIn...', 'in_progress');
+    
+    const { browser, page, isNew } = await getOrCreateBrowser();
+    
+    // Set generous timeouts
+    page.setDefaultNavigationTimeout(60000);
+    page.setDefaultTimeout(30000);
+    
+    // Store references globally
+    (global as any).linkedInBrowser = browser;
+    (global as any).linkedInPage = page;
+    
+    // Check if already logged in
+    if (!isNew) {
+      const currentUrl = page.url();
+      if (currentUrl.includes('linkedin.com')) {
+        const loggedIn = await isLoggedIn(page);
+        if (loggedIn) {
+          await logAction(userId, 'linkedin', '✅ Already logged in to LinkedIn!', 'completed', true);
+          return { 
+            success: true, 
+            message: 'You are already logged in to LinkedIn. You can click "Fetch Profile" directly.',
+            isLoggedIn: true
+          };
+        }
+      }
+    }
+    
+    // Navigate to LinkedIn login - use domcontentloaded for faster response
+    try {
+      await page.goto('https://www.linkedin.com/login', { waitUntil: 'domcontentloaded', timeout: 45000 });
+    } catch (navError: any) {
+      console.log('Navigation timeout, checking if page loaded...');
+      // Check if we're on LinkedIn despite the timeout
+      const currentUrl = page.url();
+      if (!currentUrl.includes('linkedin.com')) {
+        throw new Error('Failed to open LinkedIn. Please check your internet connection.');
+      }
+    }
+    
+    // Wait a bit for page to stabilize
+    await new Promise(r => setTimeout(r, 2000));
+    
+    // Check if we got redirected to feed (meaning already logged in)
+    const currentUrl = page.url();
+    if (currentUrl.includes('/feed') || currentUrl.includes('/in/')) {
+      await logAction(userId, 'linkedin', '✅ Already logged in to LinkedIn!', 'completed', true);
+      return { 
+        success: true, 
+        message: 'You are already logged in to LinkedIn! Click "Fetch Profile" to capture your profile.',
+        isLoggedIn: true
+      };
+    }
+    
+    await logAction(userId, 'linkedin', '✅ LinkedIn opened. Please login manually.', 'completed', true);
+    
+    return { 
+      success: true, 
+      message: 'LinkedIn opened. Please login manually in the browser window, then click "Fetch Profile".',
+      isLoggedIn: false
+    };
+  } catch (error: any) {
+    await logAction(userId, 'linkedin', `❌ Error: ${error.message}`, 'failed', false);
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Expand all LinkedIn profile sections by navigating to detail pages
+ * This ensures we capture ALL profile data including experiences, education, certifications, skills, and languages
+ */
+async function expandAllLinkedInSections(page: Page): Promise<{
+  experiences: any[];
+  educations: any[];
+  skills: string[];
+  licenses: string[];
+  languages: string[];
+}> {
+  console.log('Expanding LinkedIn profile sections...');
+  
+  const collectedData = {
+    experiences: [] as any[],
+    educations: [] as any[],
+    skills: [] as string[],
+    licenses: [] as string[],
+    languages: [] as string[]
+  };
+  
+  // Get the current profile URL for navigation
+  const currentUrl = page.url();
+  const profileUrlMatch = currentUrl.match(/linkedin\.com\/in\/([^\/\?]+)/);
+  const profileSlug = profileUrlMatch ? profileUrlMatch[1] : 'me';
+  const baseProfileUrl = `https://www.linkedin.com/in/${profileSlug}`;
+  
+  // First, scroll through the main page to trigger lazy loading
+  await page.evaluate(async () => {
+    const scrollStep = 500;
+    const scrollDelay = 300;
+    const pageHeight = document.body.scrollHeight;
+    
+    for (let position = 0; position < pageHeight; position += scrollStep) {
+      window.scrollTo(0, position);
+      await new Promise(r => setTimeout(r, scrollDelay));
+    }
+    window.scrollTo(0, 0);
+  });
+  
+  await new Promise(r => setTimeout(r, 1000));
+  
+  // Click all "See more" buttons on the main page first
+  await page.evaluate(() => {
+    const clickTexts = ['see more', 'show all', 'mehr anzeigen', 'alle anzeigen', 'show more'];
+    
+    document.querySelectorAll('button, a').forEach(el => {
+      const text = el.textContent?.toLowerCase() || '';
+      const ariaLabel = el.getAttribute('aria-label')?.toLowerCase() || '';
+      
+      for (const clickText of clickTexts) {
+        if (text.includes(clickText) || ariaLabel.includes(clickText)) {
+          try {
+            (el as HTMLElement).click();
+          } catch (e) {}
+        }
+      }
+    });
+  });
+  
+  await new Promise(r => setTimeout(r, 1000));
+  
+  // Define detail pages to scrape
+  const detailPages = [
+    { section: 'experience', path: 'details/experience' },
+    { section: 'education', path: 'details/education' },
+    { section: 'skills', path: 'details/skills' },
+    { section: 'certifications', path: 'details/certifications' },
+    { section: 'languages', path: 'details/languages' },
+    { section: 'courses', path: 'details/courses' },
+    { section: 'projects', path: 'details/projects' },
+    { section: 'honors', path: 'details/honors' },
+    { section: 'volunteering', path: 'details/volunteering-experiences' }
+  ];
+  
+  for (const { section, path } of detailPages) {
+    try {
+      const detailUrl = `${baseProfileUrl}/${path}/`;
+      console.log(`Navigating to ${section} detail page: ${detailUrl}`);
+      
+      await page.goto(detailUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await new Promise(r => setTimeout(r, 2000));
+      
+      // Check if page exists (not redirected to 404 or main profile)
+      const pageUrl = page.url();
+      if (!pageUrl.includes(path)) {
+        console.log(`${section} section not found, skipping...`);
+        continue;
+      }
+      
+      // Scroll to load all items
+      await page.evaluate(async () => {
+        const scrollStep = 500;
+        const scrollDelay = 300;
+        let lastHeight = 0;
+        let currentHeight = document.body.scrollHeight;
+        
+        while (currentHeight > lastHeight) {
+          lastHeight = currentHeight;
+          window.scrollTo(0, currentHeight);
+          await new Promise(r => setTimeout(r, scrollDelay));
+          currentHeight = document.body.scrollHeight;
+        }
+        window.scrollTo(0, 0);
+      });
+      
+      await new Promise(r => setTimeout(r, 1000));
+      
+      // Click all "See more" buttons on detail page
+      await page.evaluate(() => {
+        document.querySelectorAll('button.inline-show-more-text__button, button[aria-label*="see more"], button[aria-label*="See more"]').forEach(btn => {
+          try { (btn as HTMLElement).click(); } catch (e) {}
+        });
+      });
+      
+      await new Promise(r => setTimeout(r, 500));
+      
+      // Extract data based on section type
+      if (section === 'experience') {
+        const experiences = await page.evaluate(() => {
+          const items: any[] = [];
+          document.querySelectorAll('.pvs-list__paged-list-item, li.pvs-list__item--line-clamp, .artdeco-list__item').forEach(item => {
+            const titleEl = item.querySelector('.t-bold span[aria-hidden="true"], .mr1.t-bold span');
+            const companyEl = item.querySelector('.t-14.t-normal span[aria-hidden="true"], .t-14.t-normal');
+            const datesEl = item.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"], .pvs-entity__caption-wrapper');
+            const descEl = item.querySelector('.pvs-list__outer-container .t-14.t-normal.t-black span[aria-hidden="true"], .inline-show-more-text');
+            const locationEl = item.querySelector('.t-black--light span[aria-hidden="true"]:last-child');
+            
+            const title = titleEl?.textContent?.trim();
+            if (title) {
+              const companyText = companyEl?.textContent || '';
+              const [company, ...locationParts] = companyText.split('·').map((s: string) => s.trim());
+              const datesText = datesEl?.textContent || '';
+              const dateMatch = datesText.match(/(\w+\.?\s*\d{4})\s*[-–]\s*(\w+\.?\s*\d{4}|Present|Heute|Aktuell)/i);
+              
+              items.push({
+                title,
+                company: company || '',
+                location: locationParts.join(' ').trim() || locationEl?.textContent?.trim() || '',
+                startDate: dateMatch?.[1] || '',
+                endDate: dateMatch?.[2] || '',
+                description: descEl?.textContent?.trim() || ''
+              });
+            }
+          });
+          return items;
+        });
+        collectedData.experiences = experiences;
+        console.log(`Found ${experiences.length} experiences`);
+        
+      } else if (section === 'education') {
+        const educations = await page.evaluate(() => {
+          const items: any[] = [];
+          document.querySelectorAll('.pvs-list__paged-list-item, li.pvs-list__item--line-clamp, .artdeco-list__item').forEach(item => {
+            const schoolEl = item.querySelector('.t-bold span[aria-hidden="true"]');
+            const degreeEl = item.querySelector('.t-14.t-normal span[aria-hidden="true"]');
+            const datesEl = item.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]');
+            
+            const school = schoolEl?.textContent?.trim();
+            if (school) {
+              const degreeText = degreeEl?.textContent || '';
+              const [degree, field] = degreeText.split(',').map((s: string) => s.trim());
+              const datesText = datesEl?.textContent || '';
+              const yearMatch = datesText.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+              
+              items.push({
+                school,
+                degree: degree || '',
+                field: field || '',
+                startYear: yearMatch?.[1] || '',
+                endYear: yearMatch?.[2] || ''
+              });
+            }
+          });
+          return items;
+        });
+        collectedData.educations = educations;
+        console.log(`Found ${educations.length} education entries`);
+        
+      } else if (section === 'skills') {
+        const skills = await page.evaluate(() => {
+          const items: string[] = [];
+          document.querySelectorAll('.t-bold span[aria-hidden="true"]').forEach(el => {
+            const skill = el.textContent?.trim();
+            if (skill && skill.length > 1 && skill.length < 100) {
+              items.push(skill);
+            }
+          });
+          return [...new Set(items)];
+        });
+        collectedData.skills = skills;
+        console.log(`Found ${skills.length} skills`);
+        
+      } else if (section === 'certifications') {
+        const licenses = await page.evaluate(() => {
+          const items: string[] = [];
+          document.querySelectorAll('.t-bold span[aria-hidden="true"]').forEach(el => {
+            const cert = el.textContent?.trim();
+            if (cert && cert.length > 1 && cert.length < 200) {
+              items.push(cert);
+            }
+          });
+          return [...new Set(items)];
+        });
+        collectedData.licenses = licenses;
+        console.log(`Found ${licenses.length} certifications/licenses`);
+        
+      } else if (section === 'languages') {
+        const languages = await page.evaluate(() => {
+          const items: string[] = [];
+          document.querySelectorAll('.t-bold span[aria-hidden="true"]').forEach(el => {
+            const lang = el.textContent?.trim();
+            if (lang && lang.length > 1 && lang.length < 50) {
+              items.push(lang);
+            }
+          });
+          return [...new Set(items)];
+        });
+        collectedData.languages = languages;
+        console.log(`Found ${languages.length} languages`);
+      }
+      
+    } catch (e: any) {
+      console.log(`Error scraping ${section} section:`, e.message);
+    }
+  }
+  
+  // Navigate back to main profile
+  try {
+    await page.goto(baseProfileUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+    await new Promise(r => setTimeout(r, 1000));
+  } catch (e) {
+    console.log('Error navigating back to main profile');
+  }
+  
+  console.log('Finished expanding and collecting all sections');
+  return collectedData;
+}
+
+/**
+ * Scrape the currently open LinkedIn profile
+ */
+export async function scrapeLinkedInProfile(userId: number, profileUrl?: string): Promise<{ success: boolean; data?: LinkedInProfile; error?: string }> {
+  let page: Page | null = null;
+  let browser: Browser | null = null;
+  
+  try {
+    await logAction(userId, 'linkedin', '🔍 Starting LinkedIn profile capture...', 'in_progress');
+    
+    // Try to get existing browser or create new one
+    const browserResult = await getOrCreateBrowser();
+    browser = browserResult.browser;
+    page = browserResult.page;
+    
+    // Update global references
+    (global as any).linkedInBrowser = browser;
+    (global as any).linkedInPage = page;
+    
+    // Set more generous timeouts
+    page.setDefaultNavigationTimeout(90000);
+    page.setDefaultTimeout(30000);
+    
+    // Check if logged in
+    const currentUrl = page.url();
+    if (!currentUrl.includes('linkedin.com') || currentUrl.includes('/login') || currentUrl.includes('/checkpoint')) {
+      // Navigate to check login status - use domcontentloaded instead of networkidle2 for faster response
+      try {
+        await page.goto('https://www.linkedin.com/feed/', { waitUntil: 'domcontentloaded', timeout: 45000 });
+        // Wait a bit for page to stabilize
+        await new Promise(r => setTimeout(r, 2000));
+      } catch (navError: any) {
+        console.log('Feed navigation timeout, checking if page loaded anyway...');
+      }
+      
+      const loggedIn = await isLoggedIn(page);
+      if (!loggedIn) {
+        return { 
+          success: false, 
+          error: 'Not logged in to LinkedIn. Please click "Sign in to LinkedIn" first and complete the login process.'
+        };
+      }
+    }
+    
+    // Navigate to profile if URL provided, otherwise go to own profile
+    const targetUrl = profileUrl || 'https://www.linkedin.com/in/me/';
+    console.log('Navigating to profile:', targetUrl);
+    
+    // Use domcontentloaded for faster initial load
+    try {
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 45000 });
+    } catch (navError: any) {
+      console.log('Profile navigation timeout, checking if page loaded anyway...');
+      // Check if we're on the right page despite timeout
+      const currentPageUrl = page.url();
+      if (!currentPageUrl.includes('/in/')) {
+        throw new Error('Failed to navigate to profile page');
+      }
+    }
+    
+    // Wait for profile to load with multiple possible selectors
+    try {
+      await Promise.race([
+        page.waitForSelector('.pv-top-card', { timeout: 15000 }),
+        page.waitForSelector('.scaffold-layout__main', { timeout: 15000 }),
+        page.waitForSelector('h1.text-heading-xlarge', { timeout: 15000 }),
+        page.waitForSelector('.pv-text-details__left-panel', { timeout: 15000 })
+      ]);
+    } catch (e) {
+      console.log('Profile selector not found within timeout, continuing anyway...');
+    }
+    
+    // Random delay to appear human
+    await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
+    
+    // First, extract basic info from main profile page
+    const basicInfo = await page.evaluate(() => {
+      const getText = (selector: string) => document.querySelector(selector)?.textContent?.trim() || '';
+      const getAttr = (selector: string, attr: string) => document.querySelector(selector)?.getAttribute(attr) || '';
+      
+      const name = getText('.pv-top-card--list li:first-child') || getText('h1.text-heading-xlarge') || getText('.pv-text-details__left-panel h1');
+      const title = getText('.pv-top-card--list-bullet li:first-child') || getText('.text-body-medium.break-words') || '';
+      const location = getText('.pv-top-card--list-bullet li:last-child') || getText('.text-body-small.inline.t-black--light.break-words') || '';
+      const photo = getAttr('.pv-top-card-profile-picture__image', 'src') || getAttr('img.pv-top-card-profile-picture__image--show', 'src') || '';
+      const summary = getText('.pv-about-section .pv-about__summary-text') || getText('#about ~ .display-flex .full-width') || getText('.pv-shared-text-with-see-more span[aria-hidden="true"]') || '';
+      
+      return { name, title, location, photo, summary };
+    });
+    
+    console.log(`Basic info extracted: ${basicInfo.name}, ${basicInfo.title}`);
+    await logAction(userId, 'linkedin', `📋 Found profile: ${basicInfo.name}. Collecting all sections...`, 'in_progress');
+    
+    // IMPORTANT: Navigate to detail pages and collect ALL data from each section
+    const detailData = await expandAllLinkedInSections(page);
+    
+    // Combine basic info with detailed section data
+    const profileData = {
+      ...basicInfo,
+      experiences: detailData.experiences.length > 0 ? detailData.experiences : [],
+      educations: detailData.educations.length > 0 ? detailData.educations : [],
+      skills: detailData.skills.length > 0 ? detailData.skills : [],
+      licenses: detailData.licenses.length > 0 ? detailData.licenses : [],
+      languages: detailData.languages.length > 0 ? detailData.languages : []
+    };
+    
+    // If detail pages didn't return data, fall back to main page extraction
+    if (profileData.experiences.length === 0 || profileData.educations.length === 0) {
+      console.log('Detail pages incomplete, falling back to main page extraction...');
+      
+      // Navigate back to profile and extract from main page
+      const targetUrl = profileUrl || 'https://www.linkedin.com/in/me/';
+      await page.goto(targetUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+      await new Promise(r => setTimeout(r, 2000));
+      
+      // Scroll and click see more buttons
+      await page.evaluate(async () => {
+        for (let i = 0; i < 5; i++) {
+          window.scrollBy(0, 500);
+          await new Promise(r => setTimeout(r, 300));
+        }
+        window.scrollTo(0, 0);
+      });
+      
+      const fallbackData = await page.evaluate(() => {
+        const experiences: any[] = [];
+        document.querySelectorAll('#experience ~ .pvs-list__outer-container > ul > li, [data-field="experience_grouping"] li').forEach(li => {
+          const titleEl = li.querySelector('.t-bold span[aria-hidden="true"]');
+          const companyEl = li.querySelector('.t-14.t-normal span[aria-hidden="true"]');
+          const datesEl = li.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]');
+          const descEl = li.querySelector('.pvs-list__outer-container .t-14.t-normal.t-black span[aria-hidden="true"]');
+          
+          if (titleEl?.textContent) {
+            const fullText = companyEl?.textContent || '';
+            const [company, ...locationParts] = fullText.split('·').map((s: string) => s.trim());
+            const datesText = datesEl?.textContent || '';
+            const dateMatch = datesText.match(/(\w+\.?\s*\d{4})\s*[-–]\s*(\w+\.?\s*\d{4}|Present|Heute|Aktuell)/i);
+            
+            experiences.push({
+              title: titleEl.textContent.trim(),
+              company: company || '',
+              location: locationParts.join(' ').trim(),
+              startDate: dateMatch?.[1] || '',
+              endDate: dateMatch?.[2] || '',
+              description: descEl?.textContent?.trim() || ''
+            });
+          }
+        });
+        
+        const educations: any[] = [];
+        document.querySelectorAll('#education ~ .pvs-list__outer-container > ul > li, [data-field="education_grouping"] li').forEach(li => {
+          const schoolEl = li.querySelector('.t-bold span[aria-hidden="true"]');
+          const degreeEl = li.querySelector('.t-14.t-normal span[aria-hidden="true"]');
+          const datesEl = li.querySelector('.t-14.t-normal.t-black--light span[aria-hidden="true"]');
+          
+          if (schoolEl?.textContent) {
+            const degreeText = degreeEl?.textContent || '';
+            const [degree, field] = degreeText.split(',').map((s: string) => s.trim());
+            const datesText = datesEl?.textContent || '';
+            const yearMatch = datesText.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+            
+            educations.push({
+              school: schoolEl.textContent.trim(),
+              degree: degree || '',
+              field: field || '',
+              startYear: yearMatch?.[1] || '',
+              endYear: yearMatch?.[2] || ''
+            });
+          }
+        });
+        
+        const skills: string[] = [];
+        document.querySelectorAll('#skills ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach(el => {
+          const skill = el.textContent?.trim();
+          if (skill && skill.length > 1 && !skills.includes(skill)) skills.push(skill);
+        });
+        
+        const licenses: string[] = [];
+        document.querySelectorAll('#licenses_and_certifications ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach(el => {
+          const license = el.textContent?.trim();
+          if (license && license.length > 1 && !licenses.includes(license)) licenses.push(license);
+        });
+        
+        const languages: string[] = [];
+        document.querySelectorAll('#languages ~ .pvs-list__outer-container .t-bold span[aria-hidden="true"]').forEach(el => {
+          const lang = el.textContent?.trim();
+          if (lang && lang.length > 1 && !languages.includes(lang)) languages.push(lang);
+        });
+        
+        return { experiences, educations, skills, licenses, languages };
+      });
+      
+      // Merge fallback with existing (prefer detail page data if available)
+      if (profileData.experiences.length === 0) profileData.experiences = fallbackData.experiences;
+      if (profileData.educations.length === 0) profileData.educations = fallbackData.educations;
+      if (profileData.skills.length === 0) profileData.skills = fallbackData.skills;
+      if (profileData.licenses.length === 0) profileData.licenses = fallbackData.licenses;
+      if (profileData.languages.length === 0) profileData.languages = fallbackData.languages;
+    }
+    
+    console.log(`Profile data collected: ${profileData.experiences.length} experiences, ${profileData.educations.length} education, ${profileData.skills.length} skills, ${profileData.licenses.length} licenses, ${profileData.languages.length} languages`);
+    
+    await logAction(userId, 'linkedin', `✅ Profile captured: ${profileData.name}`, 'completed', true);
+    
+    // Don't close the browser - keep it open for future scraping
+    // The session will persist due to userDataDir
+    
+    return { success: true, data: profileData as LinkedInProfile };
+    
+  } catch (error: any) {
+    console.error('LinkedIn scrape error:', error);
+    await logAction(userId, 'linkedin', `❌ Capture failed: ${error.message}`, 'failed', false);
+    
+    // Don't close the browser on error - let user retry
+    
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Enhance incomplete LinkedIn profile using Hunter AI
+ * If DOM scraping returns incomplete data, use AI to extract from raw page text
+ */
+export async function enhanceProfileWithAI(
+  userId: number, 
+  incompleteProfile: LinkedInProfile, 
+  pageContent: string, 
+  callAI: Function,
+  hunterModel: any
+): Promise<LinkedInProfile> {
+  // Check what fields are missing
+  const missing: string[] = [];
+  if (!incompleteProfile.experiences || incompleteProfile.experiences.length === 0) missing.push('experiences');
+  if (!incompleteProfile.educations || incompleteProfile.educations.length === 0) missing.push('educations');
+  if (!incompleteProfile.skills || incompleteProfile.skills.length === 0) missing.push('skills');
+  if (!incompleteProfile.licenses || incompleteProfile.licenses.length === 0) missing.push('certifications');
+  if (!incompleteProfile.languages || incompleteProfile.languages.length === 0) missing.push('languages');
+  if (!incompleteProfile.summary) missing.push('summary');
+  
+  if (missing.length === 0) {
+    console.log('Profile is complete, no AI enhancement needed');
+    return incompleteProfile;
+  }
+  
+  console.log(`Profile incomplete, missing: ${missing.join(', ')}. Using AI to extract...`);
+  await logAction(userId, 'linkedin', `🤖 Using Hunter AI to extract: ${missing.join(', ')}`, 'in_progress');
+  
+  try {
+    const prompt = `You are a LinkedIn profile data extractor. Extract the following information from this LinkedIn profile page content.
+
+WHAT TO EXTRACT: ${missing.join(', ')}
+
+PAGE CONTENT:
+${pageContent.substring(0, 8000)}
+
+EXISTING DATA (DO NOT CHANGE):
+Name: ${incompleteProfile.name}
+Title: ${incompleteProfile.title}
+Location: ${incompleteProfile.location}
+
+Return ONLY a valid JSON object with the missing fields. Use these exact formats:
+
+{
+  ${missing.includes('experiences') ? '"experiences": [{"title": "Job Title", "company": "Company Name", "location": "City", "startDate": "Month Year", "endDate": "Month Year or Present", "description": "Brief description"}],' : ''}
+  ${missing.includes('educations') ? '"educations": [{"school": "University Name", "degree": "Degree Type", "field": "Field of Study", "startYear": "2020", "endYear": "2024"}],' : ''}
+  ${missing.includes('skills') ? '"skills": ["Skill 1", "Skill 2", "Skill 3"],' : ''}
+  ${missing.includes('certifications') ? '"certifications": ["Cert 1", "Cert 2"],' : ''}
+  ${missing.includes('languages') ? '"languages": ["Language 1", "Language 2"],' : ''}
+  ${missing.includes('summary') ? '"summary": "Professional summary text",' : ''}
+}
+
+If you cannot find data for a field, use an empty array [] or empty string "".
+IMPORTANT: Return ONLY valid JSON, no explanation.`;
+
+    const response = await callAI(hunterModel, prompt);
+    
+    // Parse AI response
+    try {
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const extracted = JSON.parse(jsonMatch[0]);
+        
+        // Merge with existing profile
+        const enhanced: LinkedInProfile = {
+          ...incompleteProfile,
+          experiences: (extracted.experiences?.length > 0) ? extracted.experiences : incompleteProfile.experiences,
+          educations: (extracted.educations?.length > 0) ? extracted.educations : incompleteProfile.educations,
+          skills: (extracted.skills?.length > 0) ? extracted.skills : incompleteProfile.skills,
+          licenses: (extracted.certifications?.length > 0) ? extracted.certifications : incompleteProfile.licenses,
+          languages: (extracted.languages?.length > 0) ? extracted.languages : incompleteProfile.languages,
+          summary: extracted.summary || incompleteProfile.summary
+        };
+        
+        await logAction(userId, 'linkedin', `✅ AI extracted additional profile data`, 'completed', true);
+        return enhanced;
+      }
+    } catch (parseError) {
+      console.error('Failed to parse AI profile extraction:', parseError);
+    }
+  } catch (aiError: any) {
+    console.error('AI profile enhancement failed:', aiError);
+    await logAction(userId, 'linkedin', `⚠️ AI enhancement failed: ${aiError.message}`, 'failed', false);
+  }
+  
+  return incompleteProfile;
+}
+
+/**
+ * Scrape LinkedIn profile with AI enhancement for incomplete data
+ */
+export async function scrapeLinkedInProfileWithAI(
+  userId: number, 
+  profileUrl: string | undefined, 
+  callAI: Function,
+  hunterModel: any
+): Promise<{ success: boolean; data?: LinkedInProfile; error?: string }> {
+  // First try normal scraping
+  const result = await scrapeLinkedInProfile(userId, profileUrl);
+  
+  if (!result.success || !result.data) {
+    return result;
+  }
+  
+  // Check if profile data is incomplete
+  const profile = result.data;
+  const isIncomplete = 
+    (!profile.experiences || profile.experiences.length === 0) ||
+    (!profile.skills || profile.skills.length === 0) ||
+    (!profile.educations || profile.educations.length === 0);
+  
+  if (isIncomplete && hunterModel && callAI) {
+    console.log('Profile data incomplete, attempting AI enhancement...');
+    
+    // Get page content for AI
+    let pageContent = '';
+    try {
+      if (sharedPage && !sharedPage.isClosed()) {
+        pageContent = await sharedPage.evaluate(() => document.body.innerText);
+      }
+    } catch (e) {
+      console.log('Could not get page content for AI enhancement');
+    }
+    
+    if (pageContent && pageContent.length > 500) {
+      const enhanced = await enhanceProfileWithAI(userId, profile, pageContent, callAI, hunterModel);
+      return { success: true, data: enhanced };
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Save scraped profile to database
+ */
+export async function saveLinkedInProfile(userId: number, profileData: LinkedInProfile): Promise<{ success: boolean }> {
+  try {
+    const db = getDatabase();
+    
+    // Check if profile exists
+    const existingProfile = db.user_profile.find((p: any) => p.id === userId) || db.user_profile[0];
+    
+    const profileToSave = {
+      id: existingProfile?.id || userId,
+      name: profileData.name,
+      title: profileData.title,
+      location: profileData.location,
+      photo: profileData.photo,
+      summary: profileData.summary,
+      experiences: JSON.stringify(profileData.experiences),
+      educations: JSON.stringify(profileData.educations),
+      skills: JSON.stringify(profileData.skills),
+      licenses: JSON.stringify(profileData.licenses),
+      languages: JSON.stringify(profileData.languages),
+      linkedin_imported: true,
+      updated_at: new Date().toISOString()
+    };
+    
+    if (existingProfile) {
+      await runQuery('UPDATE user_profile', profileToSave);
+    } else {
+      await runQuery('INSERT INTO user_profile', profileToSave);
+    }
+    
+    await logAction(userId, 'linkedin', `💾 Profile saved to database`, 'completed', true);
+    return { success: true };
+    
+  } catch (error: any) {
+    console.error('Save profile error:', error);
+    return { success: false };
+  }
+}
+
+/**
+ * Close LinkedIn browser if open
+ */
+export async function closeLinkedInBrowser(): Promise<void> {
+  if (sharedBrowser && sharedBrowser.isConnected()) {
+    await sharedBrowser.close();
+    sharedBrowser = null;
+    sharedPage = null;
+  }
+  
+  // Also clear global references
+  (global as any).linkedInBrowser = null;
+  (global as any).linkedInPage = null;
+}
+
+/**
+ * Export isSearching state for UI sync
+ */
+export const isSearching = false;

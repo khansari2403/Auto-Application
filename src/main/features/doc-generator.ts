@@ -868,22 +868,49 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
   }
 }
 
-// Build Thinker prompt based on document type
-function buildThinkerPrompt(
-  docKey: string, 
-  docLabel: string, 
-  userProfile: any, 
-  job: any, 
-  companyResearch: string, 
-  feedback: string,
-  wordLimits?: { motivationLetterWordLimit: string; coverLetterWordLimit: string; cvPageLimit?: string; targetLanguage?: string }
-): string {
-  const motivationWordLimit = wordLimits?.motivationLetterWordLimit || '450';
-  const coverWordLimit = wordLimits?.coverLetterWordLimit || '280';
-  const cvPageLimit = wordLimits?.cvPageLimit || '2';
-  
-  const baseContext = `\nCRITICAL LANGUAGE REQUIREMENT: You MUST write the entire document in ${targetLanguage}. This is a non-negotiable requirement.\n
-USER PROFILE:
+// Build Thinker prompt based on document type.
+// IMPORTANT: This must NOT reference free variables like `targetLanguage`.
+function buildThinkerPrompt(args: {
+  docKey: string;
+  docLabel: string;
+  userProfile: any;
+  job: any;
+  companyResearch: string;
+  feedback: string;
+  constraints: {
+    motivationLetterWordLimit: string;
+    coverLetterWordLimit: string;
+    cvPageLimit: string;
+    targetLanguage: 'GERMAN' | 'ENGLISH';
+    isGerman: boolean;
+  };
+}): string {
+  const {
+    docKey,
+    docLabel,
+    userProfile,
+    job,
+    companyResearch,
+    feedback,
+    constraints
+  } = args;
+
+  const motivationWordLimit = constraints.motivationLetterWordLimit || '450';
+  const coverWordLimit = constraints.coverLetterWordLimit || '280';
+  const cvPageLimit = constraints.cvPageLimit || '2';
+  const targetLanguage = constraints.targetLanguage;
+  const isGerman = constraints.isGerman;
+
+  const languageHardRule = isGerman
+    ? `ABSOLUTE LANGUAGE RULE: Output MUST be 100% German. ZERO English words, phrases, headings, salutations, or closings. If you output any English, the document is INVALID.`
+    : `LANGUAGE RULE: Output MUST be 100% English. Do not use German.`;
+
+  const baseContext = `
+${languageHardRule}
+
+PAGE LIMIT: ${cvPageLimit} A4 pages maximum (applies to ALL documents).
+
+USER PROFILE (FILTERED FOR RELEVANCE - DO NOT ADD OTHER SKILLS/CERTS):
 Name: ${userProfile?.name || 'N/A'}
 Title: ${userProfile?.title || 'N/A'}
 Location: ${userProfile?.location || 'N/A'}
@@ -891,9 +918,9 @@ Email: ${userProfile?.email || 'N/A'}
 Phone: ${userProfile?.phone || 'N/A'}
 Summary: ${userProfile?.summary || 'N/A'}
 Experiences: ${JSON.stringify(userProfile?.experiences || [])}
-Skills: ${JSON.stringify(userProfile?.skills || [])}
+Skills (ONLY these 5-7): ${JSON.stringify(userProfile?.skills || [])}
 Education: ${JSON.stringify(userProfile?.educations || [])}
-Certifications: ${JSON.stringify(userProfile?.licenses || [])}
+Certifications (ONLY these 3-5): ${JSON.stringify(userProfile?.licenses || [])}
 Languages: ${JSON.stringify(userProfile?.languages || [])}
 
 JOB DETAILS:
@@ -907,7 +934,8 @@ Required Skills: ${job.required_skills || 'N/A'}
 COMPANY RESEARCH:
 ${companyResearch || 'No additional company research available. Focus on what can be inferred from the job description.'}
 
-${feedback ? `PREVIOUS FEEDBACK FROM AUDITOR: ${feedback}\nPlease fix these issues in the new version.` : ''}
+${feedback ? `PREVIOUS FEEDBACK FROM AUDITOR: ${feedback}
+Please fix these issues in the new version.` : ''}
 `;
 
   const prompts: Record<string, string> = {

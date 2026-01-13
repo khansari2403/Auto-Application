@@ -941,7 +941,9 @@ Please fix these issues in the new version.` : ''}
   const prompts: Record<string, string> = {
     cv: `You are a professional CV/Resume writer. Create a tailored CV for this job application.
 
-CRITICAL LANGUAGE REQUIREMENT: You MUST write the entire CV in ${targetLanguage}. This includes all section headings, job descriptions, and summaries. If the job description is in German, the CV MUST be 100% in German.
+${languageHardRule}
+
+CRITICAL LANGUAGE REQUIREMENT: You MUST write the entire CV in ${targetLanguage}. This includes all section headings, job descriptions, and summaries.
 
 ${baseContext}
 

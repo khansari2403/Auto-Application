@@ -3066,6 +3066,23 @@ function cleanAIOutput(content) {
   cleaned = cleaned.replace(/[\]}]\s*$/, "");
   cleaned = cleaned.trim();
   return cleaned;
+  async function ensureTargetLanguageOrRetry2(args) {
+    const { content: content2, lang3, targetLanguage, callAI: callAI2, thinker, originalPrompt } = args;
+    const text = String(content2 || "").trim();
+    if (text.length < 40) return content2;
+    if (lang3 === "und") return content2;
+    const detected = (0, import_franc_min.franc)(text);
+    if (detected === "und" || detected === lang3) return content2;
+    const fixPrompt = `${originalPrompt}
+
+CRITICAL FIX:
+- The previous output language detection was '${detected}' but the job description language is '${lang3}' which corresponds to ${targetLanguage}.
+- REWRITE the document so that it is 100% in ${targetLanguage}. Do NOT include any other language.
+- Return ONLY the rewritten content.`;
+    const retryRaw = await callAI2(thinker, fixPrompt);
+    if (!retryRaw || String(retryRaw).startsWith("Error:")) return content2;
+    return cleanAIOutput(retryRaw);
+  }
 }
 function stripLetterGreetingAndClosing(text, isGerman) {
   let out = (text || "").trim();

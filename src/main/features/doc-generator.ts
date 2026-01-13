@@ -157,6 +157,38 @@ function cleanAIOutput(content: string): string {
   cleaned = cleaned.trim();
 
   return cleaned;
+
+// Safety net: validate the generated body language and (if mismatch) retry once.
+async function ensureTargetLanguageOrRetry(args: {
+  content: string;
+  lang3: string;
+  targetLanguage: string;
+  callAI: Function;
+  thinker: any;
+  originalPrompt: string;
+}): Promise<string> {
+  const { content, lang3, targetLanguage, callAI, thinker, originalPrompt } = args;
+
+  const text = String(content || '').trim();
+  if (text.length < 40) return content; // too short for reliable detection
+  if (lang3 === 'und') return content; // unknown JD language
+
+  const detected = franc(text);
+  if (detected === 'und' || detected === lang3) return content;
+
+  const fixPrompt = `${originalPrompt}
+
+CRITICAL FIX:
+- The previous output language detection was '${detected}' but the job description language is '${lang3}' which corresponds to ${targetLanguage}.
+- REWRITE the document so that it is 100% in ${targetLanguage}. Do NOT include any other language.
+- Return ONLY the rewritten content.`;
+
+  const retryRaw = await callAI(thinker, fixPrompt);
+  if (!retryRaw || String(retryRaw).startsWith('Error:')) return content;
+
+  return cleanAIOutput(retryRaw);
+}
+
 }
 
 function stripLetterGreetingAndClosing(text: string, isGerman: boolean): string {

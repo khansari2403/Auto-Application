@@ -1,6 +1,9 @@
 import path from 'path';
-import { app } from 'electron';
 import fs from 'fs';
+
+// Handle both Electron and non-Electron (test) environments
+let app: any;
+try { app = require('electron').app; } catch (e) { app = (global as any).electronApp; }
 
 let dbData: any = (global as any).dbData || null;
 

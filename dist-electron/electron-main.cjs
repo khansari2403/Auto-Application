@@ -171,15 +171,19 @@ async function logAction(userId, type, desc, status, success) {
   }
   saveDb();
 }
-var import_path, import_electron, import_fs, dbData, getDbPath, getDefaultData, saveDb, toSnakeCase, mapToSnakeCase;
+var import_path, import_fs, app, dbData, getDbPath, getDefaultData, saveDb, toSnakeCase, mapToSnakeCase;
 var init_database = __esm({
   "src/main/database.ts"() {
     import_path = __toESM(require("path"), 1);
-    import_electron = require("electron");
     import_fs = __toESM(require("fs"), 1);
+    try {
+      app = require("electron").app;
+    } catch (e) {
+      app = global.electronApp;
+    }
     dbData = global.dbData || null;
     getDbPath = () => {
-      const dataDir = import_path.default.join(import_electron.app.getPath("userData"), "data");
+      const dataDir = import_path.default.join(app.getPath("userData"), "data");
       if (!import_fs.default.existsSync(dataDir)) import_fs.default.mkdirSync(dataDir, { recursive: true });
       return import_path.default.join(dataDir, "db.json");
     };
@@ -4191,7 +4195,7 @@ async function submitApplication(jobId, userId, observerModel, callAI2) {
     await logAction(userId, "ai_mouse", `\u{1F5B1}\uFE0F Starting automated submission for ${job.company_name}`, "in_progress");
     const browser = await import_puppeteer4.default.launch({
       headless: false,
-      userDataDir: import_path4.default.join(import_electron3.app.getPath("userData"), "browser_data"),
+      userDataDir: import_path4.default.join(import_electron2.app.getPath("userData"), "browser_data"),
       args: ["--no-sandbox", "--start-maximized"]
     });
     const page = await browser.newPage();
@@ -4209,7 +4213,7 @@ async function submitApplication(jobId, userId, observerModel, callAI2) {
         await executeMouseAction(page, { type: "type", x: coord.x, y: coord.y, text: value });
       } else if (coord.field.includes("upload") && tailoredDoc) {
         const fs7 = require("fs");
-        const tempPath = import_path4.default.join(import_electron3.app.getPath("temp"), `tailored_cv_${jobId}.txt`);
+        const tempPath = import_path4.default.join(import_electron2.app.getPath("temp"), `tailored_cv_${jobId}.txt`);
         fs7.writeFileSync(tempPath, tailoredDoc.content);
         await executeMouseAction(page, { type: "upload", x: coord.x, y: coord.y, filePath: tempPath });
       }
@@ -4230,14 +4234,14 @@ async function submitApplication(jobId, userId, observerModel, callAI2) {
     return { success: false, error: error.message };
   }
 }
-var import_puppeteer4, import_path4, import_electron3;
+var import_puppeteer4, import_path4, import_electron2;
 var init_application_submitter = __esm({
   "src/main/features/application-submitter.ts"() {
     init_database();
     init_scraper_service();
     import_puppeteer4 = __toESM(require("puppeteer"), 1);
     import_path4 = __toESM(require("path"), 1);
-    import_electron3 = require("electron");
+    import_electron2 = require("electron");
   }
 });
 
@@ -5030,20 +5034,20 @@ var init_smart_applicant = __esm({
 });
 
 // electron-main.ts
-var import_electron14 = require("electron");
+var import_electron13 = require("electron");
 var import_path7 = __toESM(require("path"), 1);
 var import_electron_is_dev = __toESM(require("electron-is-dev"), 1);
 init_database();
 
 // src/main/ipc/index.ts
-var import_electron13 = require("electron");
+var import_electron12 = require("electron");
 
 // src/main/ipc/settings-handlers.ts
-var import_electron2 = require("electron");
+var import_electron = require("electron");
 init_database();
 function registerSettingsHandlers() {
   const channels = ["settings:get", "settings:update"];
-  import_electron2.ipcMain.handle("settings:get", async () => {
+  import_electron.ipcMain.handle("settings:get", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM settings");
       return { success: true, data: data[0] || null };
@@ -5051,7 +5055,7 @@ function registerSettingsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron2.ipcMain.handle("settings:update", async (_, data) => {
+  import_electron.ipcMain.handle("settings:update", async (_, data) => {
     try {
       await runQuery("UPDATE settings", data);
       return { success: true };
@@ -5063,7 +5067,7 @@ function registerSettingsHandlers() {
 }
 
 // src/main/ipc/user-handlers.ts
-var import_electron4 = require("electron");
+var import_electron3 = require("electron");
 init_database();
 var app7;
 try {
@@ -5080,7 +5084,7 @@ function registerUserHandlers() {
     "user:save-linkedin-profile",
     "user:open-linkedin-login"
   ];
-  import_electron4.ipcMain.handle("user:get-profile", async () => {
+  import_electron3.ipcMain.handle("user:get-profile", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM user_profile");
       return { success: true, data: data[0] || null };
@@ -5088,7 +5092,7 @@ function registerUserHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron4.ipcMain.handle("user:update-profile", async (_, data) => {
+  import_electron3.ipcMain.handle("user:update-profile", async (_, data) => {
     try {
       const db = getDatabase();
       if (db.user_profile.length > 0) {
@@ -5101,16 +5105,16 @@ function registerUserHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron4.ipcMain.handle("user:open-linkedin", async (_, url) => {
+  import_electron3.ipcMain.handle("user:open-linkedin", async (_, url) => {
     try {
       const linkedinUrl = url || "https://www.linkedin.com/in/";
-      await import_electron4.shell.openExternal(linkedinUrl);
+      await import_electron3.shell.openExternal(linkedinUrl);
       return { success: true };
     } catch (e) {
       return { success: false, error: e.message };
     }
   });
-  import_electron4.ipcMain.handle("user:open-linkedin-login", async (_, data) => {
+  import_electron3.ipcMain.handle("user:open-linkedin-login", async (_, data) => {
     try {
       const LinkedInScraper = (init_linkedin_scraper(), __toCommonJS(linkedin_scraper_exports));
       const userId = (data == null ? void 0 : data.userId) || 1;
@@ -5120,7 +5124,7 @@ function registerUserHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron4.ipcMain.handle("user:capture-linkedin", async (_, data) => {
+  import_electron3.ipcMain.handle("user:capture-linkedin", async (_, data) => {
     try {
       const LinkedInScraper = (init_linkedin_scraper(), __toCommonJS(linkedin_scraper_exports));
       const { getAllQuery: getAllQuery3 } = (init_database(), __toCommonJS(database_exports));
@@ -5159,7 +5163,7 @@ function registerUserHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron4.ipcMain.handle("user:save-linkedin-profile", async (_, data) => {
+  import_electron3.ipcMain.handle("user:save-linkedin-profile", async (_, data) => {
     try {
       const LinkedInScraper = (init_linkedin_scraper(), __toCommonJS(linkedin_scraper_exports));
       return await LinkedInScraper.saveLinkedInProfile(data.userId, data.profileData);
@@ -5171,11 +5175,11 @@ function registerUserHandlers() {
 }
 
 // src/main/ipc/profiles-handlers.ts
-var import_electron5 = require("electron");
+var import_electron4 = require("electron");
 init_database();
 function registerProfilesHandlers() {
   const channels = ["profiles:get-all", "profiles:save", "profiles:update", "profiles:delete"];
-  import_electron5.ipcMain.handle("profiles:get-all", async () => {
+  import_electron4.ipcMain.handle("profiles:get-all", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM search_profiles");
       return { success: true, data };
@@ -5183,7 +5187,7 @@ function registerProfilesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron5.ipcMain.handle("profiles:save", async (_, data) => {
+  import_electron4.ipcMain.handle("profiles:save", async (_, data) => {
     try {
       const result = await runQuery("INSERT INTO search_profiles", [data]);
       return { success: true, id: result.id };
@@ -5191,7 +5195,7 @@ function registerProfilesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron5.ipcMain.handle("profiles:update", async (_, data) => {
+  import_electron4.ipcMain.handle("profiles:update", async (_, data) => {
     try {
       await runQuery("UPDATE search_profiles", data);
       return { success: true };
@@ -5199,7 +5203,7 @@ function registerProfilesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron5.ipcMain.handle("profiles:delete", async (_, id) => {
+  import_electron4.ipcMain.handle("profiles:delete", async (_, id) => {
     try {
       await runQuery("DELETE FROM search_profiles", { id });
       return { success: true };
@@ -5211,7 +5215,7 @@ function registerProfilesHandlers() {
 }
 
 // src/main/ipc/jobs-handlers.ts
-var import_electron6 = require("electron");
+var import_electron5 = require("electron");
 init_database();
 init_ai_service();
 function registerJobsHandlers() {
@@ -5223,7 +5227,7 @@ function registerJobsHandlers() {
     "jobs:archive",
     "jobs:clear-old"
   ];
-  import_electron6.ipcMain.handle("jobs:get-all", async () => {
+  import_electron5.ipcMain.handle("jobs:get-all", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM job_listings");
       return { success: true, data };
@@ -5231,7 +5235,7 @@ function registerJobsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron6.ipcMain.handle("jobs:delete", async (_, id) => {
+  import_electron5.ipcMain.handle("jobs:delete", async (_, id) => {
     try {
       const deleteId = typeof id === "object" ? id.id : id;
       await runQuery("DELETE FROM job_listings", { id: deleteId });
@@ -5240,7 +5244,7 @@ function registerJobsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron6.ipcMain.handle("jobs:add-manual", async (_, data) => {
+  import_electron5.ipcMain.handle("jobs:add-manual", async (_, data) => {
     try {
       const result = await runQuery("INSERT INTO job_listings", {
         ...data,
@@ -5253,7 +5257,7 @@ function registerJobsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron6.ipcMain.handle("jobs:update-doc-confirmation", async (_, data) => {
+  import_electron5.ipcMain.handle("jobs:update-doc-confirmation", async (_, data) => {
     try {
       await runQuery("UPDATE job_listings", {
         id: data.jobId,
@@ -5264,7 +5268,7 @@ function registerJobsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron6.ipcMain.handle("jobs:archive", async (_, data) => {
+  import_electron5.ipcMain.handle("jobs:archive", async (_, data) => {
     try {
       await runQuery("UPDATE job_listings", {
         id: data.jobId,
@@ -5275,7 +5279,7 @@ function registerJobsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron6.ipcMain.handle("jobs:clear-old", async (_, data) => {
+  import_electron5.ipcMain.handle("jobs:clear-old", async (_, data) => {
     try {
       const { daysOld = 14 } = data || {};
       const db = getDatabase();
@@ -5312,7 +5316,7 @@ function registerJobsHandlers() {
 }
 
 // src/main/ipc/ai-handlers.ts
-var import_electron7 = require("electron");
+var import_electron6 = require("electron");
 init_database();
 init_ai_service();
 var import_axios2 = __toESM(require("axios"), 1);
@@ -5338,7 +5342,7 @@ function registerAIHandlers() {
     "auditor:add-question",
     "auditor:get-answered-questions"
   ];
-  import_electron7.ipcMain.handle("ai:test-model", async (_, data) => {
+  import_electron6.ipcMain.handle("ai:test-model", async (_, data) => {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z;
     try {
       const { modelName, apiKey, apiEndpoint } = data;
@@ -5502,7 +5506,7 @@ function registerAIHandlers() {
       return { success: false, message: errorMsg };
     }
   });
-  import_electron7.ipcMain.handle("hunter:start-search", async (_, userId) => {
+  import_electron6.ipcMain.handle("hunter:start-search", async (_, userId) => {
     try {
       const result = await startHunterSearch2(userId);
       return result;
@@ -5511,7 +5515,7 @@ function registerAIHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("hunter:cancel-search", async () => {
+  import_electron6.ipcMain.handle("hunter:cancel-search", async () => {
     try {
       const HunterEngine = (init_Hunter_engine(), __toCommonJS(Hunter_engine_exports));
       HunterEngine.cancelHunterSearch();
@@ -5520,14 +5524,14 @@ function registerAIHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("ai:process-application", async (_, jobId, userId) => {
+  import_electron6.ipcMain.handle("ai:process-application", async (_, jobId, userId) => {
     try {
       return await processApplication(jobId, userId);
     } catch (e) {
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("ai:generate-tailored-docs", async (_, data) => {
+  import_electron6.ipcMain.handle("ai:generate-tailored-docs", async (_, data) => {
     var _a;
     try {
       const { jobId, userId, docOptions } = data;
@@ -5557,7 +5561,7 @@ function registerAIHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("ai:fetch-models", async (_, apiKey, role) => {
+  import_electron6.ipcMain.handle("ai:fetch-models", async (_, apiKey, role) => {
     var _a;
     try {
       let provider = "openrouter";
@@ -5643,7 +5647,7 @@ function registerAIHandlers() {
       return { success: false, error: e.message, data: [], recommendations: { Speed: [], Cost: [], Quality: [] } };
     }
   });
-  import_electron7.ipcMain.handle("ai:ask-custom-question", async (_, data) => {
+  import_electron6.ipcMain.handle("ai:ask-custom-question", async (_, data) => {
     var _a, _b;
     try {
       const { question, jobUrl, userId } = data;
@@ -5711,7 +5715,7 @@ TIPS:
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("ai:generate-interview-prep", async (_, data) => {
+  import_electron6.ipcMain.handle("ai:generate-interview-prep", async (_, data) => {
     var _a, _b, _c, _d, _e, _f, _g, _h;
     try {
       const { jobUrl, userId, generateMore } = data;
@@ -5891,7 +5895,7 @@ Respond ONLY with a valid JSON array in this exact format:
       return { success: false, error: String(e.message || "Unknown error occurred") };
     }
   });
-  import_electron7.ipcMain.handle("ai:smart-apply", async (_, data) => {
+  import_electron6.ipcMain.handle("ai:smart-apply", async (_, data) => {
     try {
       const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
       const models = await getAllQuery("SELECT * FROM ai_models");
@@ -5903,7 +5907,7 @@ Respond ONLY with a valid JSON array in this exact format:
       return { success: false, status: "failed", error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("ai:continue-application", async (_, data) => {
+  import_electron6.ipcMain.handle("ai:continue-application", async (_, data) => {
     try {
       const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
       return await SmartApplicant.continueApplicationWithAnswers(data.jobId, data.userId, data.answers);
@@ -5911,7 +5915,7 @@ Respond ONLY with a valid JSON array in this exact format:
       return { success: false, status: "failed", error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("ai:cancel-application", async (_, jobId) => {
+  import_electron6.ipcMain.handle("ai:cancel-application", async (_, jobId) => {
     try {
       const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
       await SmartApplicant.cancelApplication(jobId);
@@ -5920,7 +5924,7 @@ Respond ONLY with a valid JSON array in this exact format:
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("ai:ask-about-cv", async (_, data) => {
+  import_electron6.ipcMain.handle("ai:ask-about-cv", async (_, data) => {
     var _a, _b;
     try {
       const jobUrl = String((data == null ? void 0 : data.jobUrl) || "");
@@ -6115,7 +6119,7 @@ Respond ONLY with a valid JSON array:
       return { success: false, error: String(e.message || "Unknown error occurred") };
     }
   });
-  import_electron7.ipcMain.handle("auditor:get-pending-questions", async (_, data) => {
+  import_electron6.ipcMain.handle("auditor:get-pending-questions", async (_, data) => {
     try {
       const { userId } = data;
       const db = getDatabase();
@@ -6126,7 +6130,7 @@ Respond ONLY with a valid JSON array:
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("auditor:get-answered-questions", async (_, data) => {
+  import_electron6.ipcMain.handle("auditor:get-answered-questions", async (_, data) => {
     try {
       const { userId } = data;
       const db = getDatabase();
@@ -6145,7 +6149,7 @@ Respond ONLY with a valid JSON array:
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("auditor:get-learned-criteria", async (_, data) => {
+  import_electron6.ipcMain.handle("auditor:get-learned-criteria", async (_, data) => {
     try {
       const { userId } = data;
       const db = getDatabase();
@@ -6156,7 +6160,7 @@ Respond ONLY with a valid JSON array:
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("auditor:save-criteria", async (_, data) => {
+  import_electron6.ipcMain.handle("auditor:save-criteria", async (_, data) => {
     try {
       const { userId, questionId, jobId, criteria, answer } = data;
       const criteriaId = `crit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -6176,7 +6180,7 @@ Respond ONLY with a valid JSON array:
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("auditor:delete-criteria", async (_, data) => {
+  import_electron6.ipcMain.handle("auditor:delete-criteria", async (_, data) => {
     try {
       const { criteriaId } = data;
       await runQuery("DELETE FROM auditor_criteria", { id: criteriaId });
@@ -6185,7 +6189,7 @@ Respond ONLY with a valid JSON array:
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("auditor:update-criteria", async (_, data) => {
+  import_electron6.ipcMain.handle("auditor:update-criteria", async (_, data) => {
     var _a;
     try {
       const { criteriaId, newAnswer } = data;
@@ -6203,7 +6207,7 @@ Respond ONLY with a valid JSON array:
       return { success: false, error: e.message };
     }
   });
-  import_electron7.ipcMain.handle("auditor:add-question", async (_, data) => {
+  import_electron6.ipcMain.handle("auditor:add-question", async (_, data) => {
     try {
       const { userId, jobId, question, criteria } = data;
       const questionId = `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -6225,7 +6229,7 @@ Respond ONLY with a valid JSON array:
 }
 
 // src/main/ipc/docs-handlers.ts
-var import_electron8 = require("electron");
+var import_electron7 = require("electron");
 init_database();
 init_ai_service();
 function registerDocsHandlers() {
@@ -6238,7 +6242,7 @@ function registerDocsHandlers() {
     "docs:convert-all-pdf",
     "docs:reprocess"
   ];
-  import_electron8.ipcMain.handle("docs:get-all", async () => {
+  import_electron7.ipcMain.handle("docs:get-all", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM documents");
       return { success: true, data: data || [] };
@@ -6246,7 +6250,7 @@ function registerDocsHandlers() {
       return { success: false, error: e.message, data: [] };
     }
   });
-  import_electron8.ipcMain.handle("docs:save", async (_, data) => {
+  import_electron7.ipcMain.handle("docs:save", async (_, data) => {
     try {
       const docData = {
         ...data,
@@ -6266,14 +6270,14 @@ function registerDocsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron8.ipcMain.handle("docs:reprocess", async (_, docId, userId) => {
+  import_electron7.ipcMain.handle("docs:reprocess", async (_, docId, userId) => {
     try {
       return await processDocumentWithLibrarian(docId, userId);
     } catch (e) {
       return { success: false, error: e.message };
     }
   });
-  import_electron8.ipcMain.handle("docs:delete", async (_, id) => {
+  import_electron7.ipcMain.handle("docs:delete", async (_, id) => {
     try {
       await runQuery("DELETE FROM documents", { id });
       return { success: true };
@@ -6281,15 +6285,15 @@ function registerDocsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron8.ipcMain.handle("docs:open-file", async (_, filePath) => {
+  import_electron7.ipcMain.handle("docs:open-file", async (_, filePath) => {
     try {
-      await import_electron8.shell.openPath(filePath);
+      await import_electron7.shell.openPath(filePath);
       return { success: true };
     } catch (e) {
       return { success: false, error: e.message };
     }
   });
-  import_electron8.ipcMain.handle("docs:convert-to-pdf", async (_, data) => {
+  import_electron7.ipcMain.handle("docs:convert-to-pdf", async (_, data) => {
     try {
       const PdfExport = (init_pdf_export(), __toCommonJS(pdf_export_exports));
       return await PdfExport.convertHtmlToPdf(data.htmlPath, data.userId);
@@ -6297,7 +6301,7 @@ function registerDocsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron8.ipcMain.handle("docs:convert-all-pdf", async (_, data) => {
+  import_electron7.ipcMain.handle("docs:convert-all-pdf", async (_, data) => {
     try {
       const PdfExport = (init_pdf_export(), __toCommonJS(pdf_export_exports));
       return await PdfExport.convertAllJobDocsToPdf(data.jobId, data.userId);
@@ -6309,11 +6313,11 @@ function registerDocsHandlers() {
 }
 
 // src/main/ipc/websites-handlers.ts
-var import_electron9 = require("electron");
+var import_electron8 = require("electron");
 init_database();
 function registerWebsitesHandlers() {
   const channels = ["websites:get-all", "websites:add", "websites:delete", "websites:toggle-active"];
-  import_electron9.ipcMain.handle("websites:get-all", async () => {
+  import_electron8.ipcMain.handle("websites:get-all", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM job_websites");
       return { success: true, data };
@@ -6321,7 +6325,7 @@ function registerWebsitesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron9.ipcMain.handle("websites:add", async (_, data) => {
+  import_electron8.ipcMain.handle("websites:add", async (_, data) => {
     try {
       const result = await runQuery("INSERT INTO job_websites", [data]);
       return { success: true, id: result.id };
@@ -6329,7 +6333,7 @@ function registerWebsitesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron9.ipcMain.handle("websites:delete", async (_, id) => {
+  import_electron8.ipcMain.handle("websites:delete", async (_, id) => {
     try {
       await runQuery("DELETE FROM job_websites", { id });
       return { success: true };
@@ -6337,7 +6341,7 @@ function registerWebsitesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron9.ipcMain.handle("websites:toggle-active", async (_, data) => {
+  import_electron8.ipcMain.handle("websites:toggle-active", async (_, data) => {
     try {
       await runQuery("UPDATE job_websites", { id: data.id, is_active: data.isActive });
       return { success: true };
@@ -6349,7 +6353,7 @@ function registerWebsitesHandlers() {
 }
 
 // src/main/ipc/ai-models-handlers.ts
-var import_electron10 = require("electron");
+var import_electron9 = require("electron");
 init_database();
 var import_fs3 = __toESM(require("fs"), 1);
 var import_path6 = __toESM(require("path"), 1);
@@ -6361,7 +6365,7 @@ try {
 }
 function registerAIModelsHandlers() {
   const channels = ["ai-models:get-all", "ai-models:add", "ai-models:update", "ai-models:delete"];
-  import_electron10.ipcMain.handle("ai-models:get-all", async () => {
+  import_electron9.ipcMain.handle("ai-models:get-all", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM ai_models");
       return { success: true, data };
@@ -6369,7 +6373,7 @@ function registerAIModelsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron10.ipcMain.handle("ai-models:add", async (_, data) => {
+  import_electron9.ipcMain.handle("ai-models:add", async (_, data) => {
     try {
       const dbData2 = {
         model_name: data.modelName,
@@ -6397,7 +6401,7 @@ function registerAIModelsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron10.ipcMain.handle("ai-models:update", async (_, data) => {
+  import_electron9.ipcMain.handle("ai-models:update", async (_, data) => {
     try {
       const dbData2 = { id: data.id };
       if (data.modelName !== void 0) dbData2.model_name = data.modelName;
@@ -6439,7 +6443,7 @@ function registerAIModelsHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron10.ipcMain.handle("ai-models:delete", async (_, id) => {
+  import_electron9.ipcMain.handle("ai-models:delete", async (_, id) => {
     try {
       await runQuery("DELETE FROM ai_models", { id });
       saveDbToFile();
@@ -6464,7 +6468,7 @@ function saveDbToFile() {
 }
 
 // src/main/ipc/system-handlers.ts
-var import_electron11 = require("electron");
+var import_electron10 = require("electron");
 init_database();
 function registerSystemHandlers() {
   const channels = [
@@ -6477,7 +6481,7 @@ function registerSystemHandlers() {
     "qa:update",
     "qa:delete"
   ];
-  import_electron11.ipcMain.handle("logs:get-recent-actions", async () => {
+  import_electron10.ipcMain.handle("logs:get-recent-actions", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM action_logs");
       return { success: true, data };
@@ -6485,7 +6489,7 @@ function registerSystemHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron11.ipcMain.handle("apps:get-all", async () => {
+  import_electron10.ipcMain.handle("apps:get-all", async () => {
     try {
       const data = await getAllQuery("SELECT * FROM applications");
       return { success: true, data };
@@ -6493,7 +6497,7 @@ function registerSystemHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron11.ipcMain.handle("scheduler:toggle", async (_, data) => {
+  import_electron10.ipcMain.handle("scheduler:toggle", async (_, data) => {
     try {
       const enabled = typeof data === "object" ? data.active : data;
       const { setSchedulerEnabled: setSchedulerEnabled2 } = (init_scheduler(), __toCommonJS(scheduler_exports));
@@ -6505,7 +6509,7 @@ function registerSystemHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron11.ipcMain.handle("scheduler:get-status", async () => {
+  import_electron10.ipcMain.handle("scheduler:get-status", async () => {
     try {
       const db = getDatabase();
       const settings = db.settings[0];
@@ -6517,7 +6521,7 @@ function registerSystemHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron11.ipcMain.handle("hunter:get-status", async () => {
+  import_electron10.ipcMain.handle("hunter:get-status", async () => {
     try {
       const HunterEngine = (init_Hunter_engine(), __toCommonJS(Hunter_engine_exports));
       return {
@@ -6528,7 +6532,7 @@ function registerSystemHandlers() {
       return { success: false, error: e.message, isSearching: false };
     }
   });
-  import_electron11.ipcMain.handle("qa:get-all", async () => {
+  import_electron10.ipcMain.handle("qa:get-all", async () => {
     try {
       const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
       const data = await SmartApplicant.getAllQuestions();
@@ -6537,7 +6541,7 @@ function registerSystemHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron11.ipcMain.handle("qa:update", async (_, data) => {
+  import_electron10.ipcMain.handle("qa:update", async (_, data) => {
     try {
       const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
       return await SmartApplicant.updateQuestionAnswer(data.questionId, data.answer);
@@ -6545,7 +6549,7 @@ function registerSystemHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron11.ipcMain.handle("qa:delete", async (_, questionId) => {
+  import_electron10.ipcMain.handle("qa:delete", async (_, questionId) => {
     try {
       const SmartApplicant = (init_smart_applicant(), __toCommonJS(smart_applicant_exports));
       return await SmartApplicant.deleteQuestion(questionId);
@@ -6557,7 +6561,7 @@ function registerSystemHandlers() {
 }
 
 // src/main/ipc/services-handlers.ts
-var import_electron12 = require("electron");
+var import_electron11 = require("electron");
 
 // src/main/features/email-service.ts
 var import_nodemailer = __toESM(require("nodemailer"), 1);
@@ -6890,21 +6894,21 @@ function registerServicesHandlers() {
     "secretary:get-settings",
     "secretary:update-permissions"
   ];
-  import_electron12.ipcMain.handle("email:test-config", async (_, data) => {
+  import_electron11.ipcMain.handle("email:test-config", async (_, data) => {
     try {
       return await testEmailConfig(data.userId, data.testEmail);
     } catch (e) {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("email:send", async (_, data) => {
+  import_electron11.ipcMain.handle("email:send", async (_, data) => {
     try {
       return await sendEmail(data.options, data.userId);
     } catch (e) {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("email:send-notification", async (_, data) => {
+  import_electron11.ipcMain.handle("email:send-notification", async (_, data) => {
     try {
       const result = await sendNotification(data.userId, data.type, data.details);
       return { success: result };
@@ -6912,7 +6916,7 @@ function registerServicesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("email:test-inbox", async (_, data) => {
+  import_electron11.ipcMain.handle("email:test-inbox", async (_, data) => {
     try {
       const { email, password, provider } = data;
       if (!email || !password) {
@@ -6971,7 +6975,7 @@ function registerServicesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("email:fetch-inbox", async (_, data) => {
+  import_electron11.ipcMain.handle("email:fetch-inbox", async (_, data) => {
     try {
       const { email, password, provider, maxMessages } = data;
       if (!email || !password) {
@@ -7081,7 +7085,7 @@ function registerServicesHandlers() {
   const oauthClients = /* @__PURE__ */ new Map();
   const LOOPBACK_REDIRECT_URI = "http://127.0.0.1";
   let authServerInstance = null;
-  import_electron12.ipcMain.handle("email:oauth-start", async (_, data) => {
+  import_electron11.ipcMain.handle("email:oauth-start", async (_, data) => {
     try {
       const { clientId, clientSecret, email } = data;
       if (!clientId || !clientSecret) {
@@ -7187,7 +7191,7 @@ function registerServicesHandlers() {
         prompt: "consent"
       });
       console.log("OAuth URL generated:", authUrl);
-      await import_electron12.shell.openExternal(authUrl);
+      await import_electron11.shell.openExternal(authUrl);
       try {
         const code = await authCodePromise;
         const { tokens } = await oauth2Client.getToken(code);
@@ -7230,7 +7234,7 @@ function registerServicesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("email:oauth-callback", async (_, data) => {
+  import_electron11.ipcMain.handle("email:oauth-callback", async (_, data) => {
     try {
       const { clientId, clientSecret, code, email } = data;
       if (!code) {
@@ -7288,7 +7292,7 @@ function registerServicesHandlers() {
       return { success: false, error: errorMsg };
     }
   });
-  import_electron12.ipcMain.handle("email:oauth-test", async (_, data) => {
+  import_electron11.ipcMain.handle("email:oauth-test", async (_, data) => {
     var _a, _b, _c, _d, _e;
     try {
       let { clientId, clientSecret, email } = data || {};
@@ -7371,7 +7375,7 @@ function registerServicesHandlers() {
       return { success: false, error: errorMsg };
     }
   });
-  import_electron12.ipcMain.handle("compatibility:calculate", async (_, data) => {
+  import_electron11.ipcMain.handle("compatibility:calculate", async (_, data) => {
     try {
       const result = await calculateCompatibility(data.userId, data.jobId);
       return { success: true, ...result };
@@ -7379,7 +7383,7 @@ function registerServicesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("compatibility:calculate-all", async (_, data) => {
+  import_electron11.ipcMain.handle("compatibility:calculate-all", async (_, data) => {
     try {
       await calculateAllCompatibility(data.userId);
       return { success: true };
@@ -7387,7 +7391,7 @@ function registerServicesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("compatibility:get-by-level", async (_, data) => {
+  import_electron11.ipcMain.handle("compatibility:get-by-level", async (_, data) => {
     try {
       const jobs = await getJobsByCompatibility(data.userId, data.minLevel);
       return { success: true, data: jobs };
@@ -7395,35 +7399,35 @@ function registerServicesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("secretary:setup-pin", async (_, data) => {
+  import_electron11.ipcMain.handle("secretary:setup-pin", async (_, data) => {
     try {
       return await setupSecretaryPin(data.userId, data.pin);
     } catch (e) {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("secretary:verify-pin", async (_, data) => {
+  import_electron11.ipcMain.handle("secretary:verify-pin", async (_, data) => {
     try {
       return await verifySecretaryPin(data.userId, data.pin);
     } catch (e) {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("secretary:change-pin", async (_, data) => {
+  import_electron11.ipcMain.handle("secretary:change-pin", async (_, data) => {
     try {
       return await changeSecretaryPin(data.userId, data.currentPin, data.newPin);
     } catch (e) {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("secretary:reset-pin", async (_, data) => {
+  import_electron11.ipcMain.handle("secretary:reset-pin", async (_, data) => {
     try {
       return await resetSecretaryPin(data.userId);
     } catch (e) {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("secretary:is-pin-set", async (_, data) => {
+  import_electron11.ipcMain.handle("secretary:is-pin-set", async (_, data) => {
     try {
       const isSet = await isSecretaryPinSet(data.userId);
       return { success: true, isSet };
@@ -7431,7 +7435,7 @@ function registerServicesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("secretary:get-settings", async (_, data) => {
+  import_electron11.ipcMain.handle("secretary:get-settings", async (_, data) => {
     try {
       const settings = await getSecretaryAccessSettings(data.userId);
       return { success: true, ...settings };
@@ -7439,7 +7443,7 @@ function registerServicesHandlers() {
       return { success: false, error: e.message };
     }
   });
-  import_electron12.ipcMain.handle("secretary:update-permissions", async (_, data) => {
+  import_electron11.ipcMain.handle("secretary:update-permissions", async (_, data) => {
     try {
       return await updateSecretaryPermissions(data.userId, data.permissions);
     } catch (e) {
@@ -7535,7 +7539,7 @@ function setupIpcHandlers() {
   ];
   knownChannels.forEach((channel) => {
     try {
-      import_electron13.ipcMain.removeHandler(channel);
+      import_electron12.ipcMain.removeHandler(channel);
     } catch (e) {
     }
   });
@@ -7548,14 +7552,14 @@ function setupIpcHandlers() {
 }
 
 // electron-main.ts
-import_electron14.app.disableHardwareAcceleration();
-var gotTheLock = import_electron14.app.requestSingleInstanceLock();
+import_electron13.app.disableHardwareAcceleration();
+var gotTheLock = import_electron13.app.requestSingleInstanceLock();
 if (!gotTheLock) {
-  import_electron14.app.quit();
+  import_electron13.app.quit();
 }
 var mainWindow = null;
 function createWindow() {
-  mainWindow = new import_electron14.BrowserWindow({
+  mainWindow = new import_electron13.BrowserWindow({
     width: 1400,
     height: 900,
     minWidth: 1e3,
@@ -7570,27 +7574,27 @@ function createWindow() {
   mainWindow.loadURL(startUrl);
   if (import_electron_is_dev.default) mainWindow.webContents.openDevTools();
   mainWindow.webContents.on("context-menu", (event, params) => {
-    const menu = new import_electron14.Menu();
-    menu.append(new import_electron14.MenuItem({ label: "Cut", role: "cut", enabled: params.editFlags.canCut }));
-    menu.append(new import_electron14.MenuItem({ label: "Copy", role: "copy", enabled: params.editFlags.canCopy }));
-    menu.append(new import_electron14.MenuItem({ label: "Paste", role: "paste", enabled: params.editFlags.canPaste }));
-    menu.append(new import_electron14.MenuItem({ type: "separator" }));
-    menu.append(new import_electron14.MenuItem({ label: "Select All", role: "selectAll", enabled: params.editFlags.canSelectAll }));
+    const menu = new import_electron13.Menu();
+    menu.append(new import_electron13.MenuItem({ label: "Cut", role: "cut", enabled: params.editFlags.canCut }));
+    menu.append(new import_electron13.MenuItem({ label: "Copy", role: "copy", enabled: params.editFlags.canCopy }));
+    menu.append(new import_electron13.MenuItem({ label: "Paste", role: "paste", enabled: params.editFlags.canPaste }));
+    menu.append(new import_electron13.MenuItem({ type: "separator" }));
+    menu.append(new import_electron13.MenuItem({ label: "Select All", role: "selectAll", enabled: params.editFlags.canSelectAll }));
     menu.popup({ window: mainWindow });
   });
   mainWindow.on("closed", () => {
     mainWindow = null;
   });
 }
-import_electron14.app.on("ready", async () => {
+import_electron13.app.on("ready", async () => {
   await initializeDatabase();
   setupIpcHandlers();
   createWindow();
 });
-import_electron14.app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") import_electron14.app.quit();
+import_electron13.app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") import_electron13.app.quit();
 });
-import_electron14.app.on("second-instance", () => {
+import_electron13.app.on("second-instance", () => {
   if (mainWindow) {
     if (mainWindow.isMinimized()) mainWindow.restore();
     mainWindow.focus();

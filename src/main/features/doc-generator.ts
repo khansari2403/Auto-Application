@@ -1221,7 +1221,8 @@ export async function generateSingleDocument(
 
   // Define language variables ONCE at top-level scope
   const { isGerman, targetLanguage } = detectJobLanguage(job);
-  void targetLanguage; // kept for future call-site usage consistency
+  // (kept for parity with generateTailoredDocs and future type-specific behavior)
+  void targetLanguage;
   void isGerman;
 
   const options: any = {};

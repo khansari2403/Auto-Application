@@ -697,36 +697,6 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
 </body>
 </html>`;
 }
-    <div class="left-column">
-      ${userProfile?.summary ? `
-        <div class="section">
-          <div class="section-title">${l.summary}</div>
-          <div class="summary">${userProfile.summary}</div>
-        </div>
-      ` : ''}
-      
-      ${generateExperiencesHTML(userProfile?.experiences, l)}
-      
-      ${generateEducationsHTML(userProfile?.educations)}
-    </div>
-    
-    <div class="right-column">
-      ${skillsHTML ? `
-        <div class="section">
-          <div class="section-title">${l.skills}</div>
-          ${skillsHTML}
-        </div>
-      ` : ''}
-      
-      ${certsHTML ? `
-        <div class="section">
-          <div class="section-title">${l.certifications}</div>
-          ${certsHTML}
-        </div>
-      ` : ''}
-</body>
-</html>`;
-}
 
 // Save document to file with organized directory structure
 function saveDocumentFile(

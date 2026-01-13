@@ -1000,8 +1000,8 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 6. DO NOT start sentences with "I have..." or "I am..." repeatedly
 7. DO NOT fabricate or hallucinate information - use ONLY data from the provided profile
 8. DO NOT invent company facts not mentioned in the research - if unsure, focus on what's in the job posting
-9. Output ONLY the letter body content. DO NOT include a date, recipient address, salutation (like "Dear..."), or closing (like "Kind regards"). The system will provide these automatically.
-10. MUST end with proper sign-off: "Kind regards," followed by the applicant's full name
+9. Output ONLY the letter BODY (main paragraphs). DO NOT include a date, recipient address, salutation (like "Dear...") or ANY closing/sign-off (like "Kind regards"). The system template will provide those automatically.
+10. If you include any greeting or closing, it will be treated as an error.
 
 HANDLING SKILL GAPS (IMPORTANT):
 - If the candidate's profile doesn't perfectly match all job requirements, DO NOT reject or avoid the task

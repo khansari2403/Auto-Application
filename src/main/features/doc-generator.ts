@@ -493,9 +493,11 @@ function generateDocumentHTML(content: string, docType: string, userProfile: any
 function generateCVHTML(content: string, userProfile: any, job: any, isGerman: boolean): string {
   const experiences = userProfile?.experiences || [];
   const educations = userProfile?.educations || [];
+  // NOTE: userProfile.skills and userProfile.licenses are expected to be PRE-FILTERED
+  // to only the most relevant items (5-7 skills, 3-5 certifications).
   const skills = userProfile?.skills || [];
   const certifications = userProfile?.licenses || [];
-  
+
   let experiencesHTML = '';
   if (Array.isArray(experiences)) {
     experiencesHTML = experiences.map((exp: any) => `

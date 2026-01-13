@@ -1205,40 +1205,42 @@ REMEMBER: You are NOT a gatekeeper. The user chose this job. Help them apply.`;
 
 // Export individual document generator for direct calls
 export async function generateSingleDocument(
-  jobId: number, 
-  userId: number, 
-  docType: string, 
-  thinker: any, 
-  auditor: any, 
+  jobId: number,
+  userId: number,
+  docType: string,
+  thinker: any,
+  auditor: any,
   callAI: Function
 ): Promise<{ success: boolean; filePath?: string; error?: string }> {
   const db = getDatabase();
   const job = db.job_listings?.find((j: any) => String(j.id) === String(jobId));
   const userProfile = db.user_profile?.find((p: any) => p.id === userId) || db.user_profile?.[0];
-  
+
   if (!job) return { success: false, error: 'Job not found' };
   if (!userProfile) return { success: false, error: 'User profile not found' };
-  
+
+  // Define language variables ONCE at top-level scope
+  const { isGerman, targetLanguage } = detectJobLanguage(job);
+  void targetLanguage; // kept for future call-site usage consistency
+  void isGerman;
+
   const options: any = {};
   const typeConfig = DOC_TYPES.find(t => t.key === docType);
   if (typeConfig) {
     options[typeConfig.optionKey] = true;
+  } else {
+    return { success: false, error: `Unknown document type: ${docType}` };
   }
-  
-  // Detect language
-  const jobText = (job.job_title + ' ' + (job.description || '')).toLowerCase();
-  const germanKeywords = ['kenntnisse', 'erfahrung', 'aufgaben', 'profil', 'wir bieten', 'entwickler', 'ingenieur', 'manager', 'abschluss', 'studium', 'bewerbung', 'anschreiben', 'lebenslauf'];
-  const isGerman = germanKeywords.some(k => jobText.includes(k));
 
   await generateTailoredDocs(job, userId, thinker, auditor, options, callAI);
-  
+
   // Refresh job data to get file path
   const updatedJob = db.job_listings?.find((j: any) => String(j.id) === String(jobId));
-  const filePath = updatedJob?.[`${docType}_path`];
-  
+  const filePath = updatedJob?.[`${docType}_pdf_path`] || updatedJob?.[`${docType}_path`];
+
   if (filePath) {
     return { success: true, filePath };
   }
-  
+
   return { success: false, error: 'Document generation failed' };
 }

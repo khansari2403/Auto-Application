@@ -1,98 +1,37 @@
 {
-  "user_profile": [],
-  "email_config": [],
-  "job_preferences": [],
-  "ai_models": [],
-  "job_websites": [],
-  "company_monitoring": [],
+  "settings": [
+    {
+      "id": 1,
+      "storage_path": "/app/User_Data/custom_storage"
+    }
+  ],
+  "user_profile": [
+    {
+      "id": 1,
+      "name": "Max Mustermann",
+      "title": "Software Engineer",
+      "email": "max@example.com",
+      "phone": "+49 111 222",
+      "location": "Berlin",
+      "summary": "Backend engineer with Python and FastAPI experience.",
+      "experiences": "[{\"title\":\"Backend Engineer\",\"company\":\"ACME\",\"startDate\":\"2021\",\"endDate\":\"2024\",\"description\":\"Built APIs with Python/FastAPI and MongoDB.\"}]",
+      "skills": "[\"Python\",\"FastAPI\",\"MongoDB\",\"Kubernetes\",\"Photoshop\",\"Cooking\"]",
+      "licenses": "[\"AWS Certified Cloud Practitioner\",\"Scrum Master\",\"Adobe Certified Expert\"]",
+      "languages": "[\"Deutsch\",\"English\"]"
+    }
+  ],
   "job_listings": [
     {
-      "id": 1767779768,
-      "job_title": "Senior Developer",
-      "company_name": "Test Company",
-      "compatibility_score": 80,
-      "description": "Senior developer position requiring Python and JavaScript",
-      "required_skills": "Python, JavaScript, React",
-      "url": "https://example.com/job/123",
-      "timestamp": 1767779768157
-    },
-    {
-      "id": 1767779965,
-      "job_title": "Senior Python Developer",
-      "company_name": "TechCorp Gold",
-      "compatibility_score": 85,
-      "compatibility_missing_skills": "[\"Docker\"]",
-      "description": "Senior Python developer role",
-      "required_skills": "Python, Django, PostgreSQL",
-      "url": "https://example.com/job/gold",
-      "timestamp": 1767779964206
-    },
-    {
-      "id": 1767779966,
-      "job_title": "Full Stack Developer",
-      "company_name": "StartupCorp Green",
-      "compatibility_score": 65,
-      "compatibility_missing_skills": "[\"React Native\", \"AWS\"]",
-      "description": "Full stack developer position",
-      "required_skills": "JavaScript, React, Node.js",
-      "url": "https://example.com/job/green",
-      "timestamp": 1767779964206
-    },
-    {
-      "id": 1767779967,
-      "job_title": "DevOps Engineer",
-      "company_name": "CloudCorp Yellow",
-      "compatibility_score": 35,
-      "compatibility_missing_skills": "[\"Kubernetes\", \"Terraform\", \"AWS\", \"Docker\"]",
-      "description": "DevOps engineer role",
-      "required_skills": "Kubernetes, Docker, AWS, Terraform",
-      "url": "https://example.com/job/yellow",
-      "timestamp": 1767779964206
+      "id": 123,
+      "job_title": "Backend Entwickler (m/w/d)",
+      "company_name": "Beispiel GmbH",
+      "location": "Berlin",
+      "required_skills": "Python, FastAPI, MongoDB",
+      "description": "Wir suchen einen Backend Entwickler mit Erfahrung in Python, FastAPI und MongoDB. Kenntnisse in Kubernetes sind von Vorteil.",
+      "date_imported": "2026-01-12"
     }
   ],
-  "applications": [],
-  "action_logs": [],
-  "email_alerts": [],
   "documents": [],
-  "search_profiles": [],
-  "settings": [],
-  "questions": [],
-  "auditor_questions": [
-    {
-      "id": "test_q_1767779768",
-      "user_id": 1,
-      "job_id": 123,
-      "question": "Do you have experience with Turkish language?",
-      "criteria": "Turkish language proficiency",
-      "answered": true,
-      "timestamp": 1767779768157
-    },
-    {
-      "id": "q_1767779964",
-      "user_id": 1,
-      "job_id": 1767779964,
-      "question": "Do you have experience with Turkish language for this Istanbul-based role?",
-      "criteria": "Turkish language proficiency",
-      "answered": true,
-      "timestamp": 1767779964206
-    }
-  ],
-  "auditor_criteria": [
-    {
-      "id": "test_crit_1767779768",
-      "user_id": 1,
-      "criteria": "Turkish language proficiency",
-      "userAnswer": "Yes, I am fluent in Turkish",
-      "job_id": 123,
-      "timestamp": 1767779768157
-    },
-    {
-      "id": "crit_1767779964",
-      "user_id": 1,
-      "criteria": "Turkish language proficiency",
-      "userAnswer": "Yes, I am fluent in Turkish and have worked in Turkey for 2 years",
-      "job_id": 1767779964,
-      "timestamp": 1767779964206
-    }
-  ]
+  "action_logs": [],
+  "ai_models": []
 }

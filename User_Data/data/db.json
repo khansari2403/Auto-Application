@@ -15,6 +15,7 @@
       "location": "Berlin",
       "summary": "Backend engineer with Python and FastAPI experience.",
       "experiences": "[{\"title\":\"Backend Engineer\",\"company\":\"ACME\",\"startDate\":\"2021\",\"endDate\":\"2024\",\"description\":\"Built APIs with Python/FastAPI and MongoDB.\"}]",
+      "educations": "[{\"degree\":\"B.Sc. Informatik\",\"school\":\"TU Berlin\",\"startYear\":\"2017\",\"endYear\":\"2021\"}]",
       "skills": "[\"Python\",\"FastAPI\",\"MongoDB\",\"Kubernetes\",\"Photoshop\",\"Cooking\"]",
       "licenses": "[\"AWS Certified Cloud Practitioner\",\"Scrum Master\",\"Adobe Certified Expert\"]",
       "languages": "[\"Deutsch\",\"English\"]"
@@ -31,7 +32,259 @@
       "date_imported": "2026-01-12"
     }
   ],
-  "documents": [],
-  "action_logs": [],
-  "ai_models": []
+  "documents": [
+    {
+      "id": 1768309214265,
+      "job_id": "999",
+      "user_id": 1,
+      "document_type": "cv",
+      "content": "Berufliches Profil\nErfahrener Backend-Entwickler mit Schwerpunkt auf Python, FastAPI und MongoDB.\n\nBerufserfahrung\nBackend Engineer - ACME (2021-2024)\n- Entwicklung von REST-APIs mit FastAPI und MongoDB.\n\nAusbildung\nB.Sc. Informatik - TU Berlin (2017-2021)\n\nKenntnisse\nPython, FastAPI, MongoDB, Kubernetes\n\nZertifizierungen\nAWS Certified Cloud Practitioner",
+      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768309213968.html",
+      "version": 1,
+      "status": "final",
+      "created_at": "2026-01-13T13:00:13.969Z",
+      "is_active": 1,
+      "timestamp": "2026-01-13T13:00:13.969Z"
+    },
+    {
+      "id": 1768309214238,
+      "job_id": "999",
+      "user_id": 1,
+      "document_type": "motivation_letter",
+      "content": "In der ausgeschriebenen Position als Backend Entwickler bei Beispiel GmbH möchte ich meine Erfahrung im Aufbau robuster APIs mit Python und FastAPI einbringen. Besonders überzeugt mich der Fokus auf skalierbare Backend-Services in einem modernen Umfeld.\n\nBei ACME habe ich REST-APIs mit FastAPI entworfen und produktiv betrieben und dabei MongoDB als Datenspeicher integriert. Dadurch konnte ich performante Schnittstellen liefern und die Wartbarkeit der Services verbessern. Zusätzlich habe ich in Teams gearbeitet, in denen CI/CD und Containerisierung wichtig waren, und bringe daher auch Kenntnisse in Kubernetes mit.\n\nGern möchte ich diese Erfahrung nutzen, um Ihre Backend-Landschaft weiterzuentwickeln und die Anforderungen aus dem Jobprofil zuverlässig umzusetzen. Über die Möglichkeit eines Gesprächs freue ich mich.",
+      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768309213985.html",
+      "version": 1,
+      "status": "final",
+      "created_at": "2026-01-13T13:00:13.985Z",
+      "is_active": 1,
+      "timestamp": "2026-01-13T13:00:13.985Z"
+    },
+    {
+      "id": 1768309214952,
+      "job_id": "999",
+      "user_id": 1,
+      "document_type": "cover_letter",
+      "content": "In der ausgeschriebenen Position als Backend Entwickler bei Beispiel GmbH möchte ich meine Erfahrung im Aufbau robuster APIs mit Python und FastAPI einbringen. Besonders überzeugt mich der Fokus auf skalierbare Backend-Services in einem modernen Umfeld.\n\nBei ACME habe ich REST-APIs mit FastAPI entworfen und produktiv betrieben und dabei MongoDB als Datenspeicher integriert. Dadurch konnte ich performante Schnittstellen liefern und die Wartbarkeit der Services verbessern. Zusätzlich habe ich in Teams gearbeitet, in denen CI/CD und Containerisierung wichtig waren, und bringe daher auch Kenntnisse in Kubernetes mit.\n\nGern möchte ich diese Erfahrung nutzen, um Ihre Backend-Landschaft weiterzuentwickeln und die Anforderungen aus dem Jobprofil zuverlässig umzusetzen. Über die Möglichkeit eines Gesprächs freue ich mich.",
+      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768309213994.html",
+      "version": 1,
+      "status": "final",
+      "created_at": "2026-01-13T13:00:13.994Z",
+      "is_active": 1,
+      "timestamp": "2026-01-13T13:00:13.994Z"
+    },
+    {
+      "id": 1768309214042,
+      "job_id": "999",
+      "user_id": 1,
+      "document_type": "portfolio",
+      "content": "In der ausgeschriebenen Position als Backend Entwickler bei Beispiel GmbH möchte ich meine Erfahrung im Aufbau robuster APIs mit Python und FastAPI einbringen. Besonders überzeugt mich der Fokus auf skalierbare Backend-Services in einem modernen Umfeld.\n\nBei ACME habe ich REST-APIs mit FastAPI entworfen und produktiv betrieben und dabei MongoDB als Datenspeicher integriert. Dadurch konnte ich performante Schnittstellen liefern und die Wartbarkeit der Services verbessern. Zusätzlich habe ich in Teams gearbeitet, in denen CI/CD und Containerisierung wichtig waren, und bringe daher auch Kenntnisse in Kubernetes mit.\n\nGern möchte ich diese Erfahrung nutzen, um Ihre Backend-Landschaft weiterzuentwickeln und die Anforderungen aus dem Jobprofil zuverlässig umzusetzen. Über die Möglichkeit eines Gesprächs freue ich mich.",
+      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768309214005.html",
+      "version": 1,
+      "status": "final",
+      "created_at": "2026-01-13T13:00:14.005Z",
+      "is_active": 1,
+      "timestamp": "2026-01-13T13:00:14.005Z"
+    }
+  ],
+  "action_logs": [
+    {
+      "id": 1768309213890,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "🔍 Researching Beispiel GmbH mission and history...",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:00:13.890Z"
+    },
+    {
+      "id": 1768309213891,
+      "user_id": 1,
+      "action_type": "ai_observer",
+      "action_description": "🔍 Researching company: Beispiel GmbH",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:00:13.891Z"
+    },
+    {
+      "id": 1768309213963,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✍️ Generating tailored CV for Beispiel GmbH",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:00:13.963Z"
+    },
+    {
+      "id": 1768309213968,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✅ CV generated successfully",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:00:13.968Z"
+    },
+    {
+      "id": 1768309213970,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "📄 CV saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768309213968.html",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:00:13.970Z"
+    },
+    {
+      "id": 1768309213970,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: cv_job999_1768309213968.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:00:13.970Z"
+    },
+    {
+      "id": 1768309213977,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "❌ PDF conversion failed: Failed to launch the browser process!\n/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell: 1: Syntax error: \"(\" unexpected\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n",
+      "status": "failed",
+      "success": false,
+      "timestamp": "2026-01-13T13:00:13.977Z"
+    },
+    {
+      "id": 1768309213977,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✍️ Generating tailored Motivation Letter for Beispiel GmbH",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:00:13.977Z"
+    },
+    {
+      "id": 1768309213979,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✅ Motivation Letter generated successfully",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:00:13.979Z"
+    },
+    {
+      "id": 1768309213986,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "📄 Motivation Letter saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768309213985.html",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:00:13.986Z"
+    },
+    {
+      "id": 1768309213987,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: motivation_letter_job999_1768309213985.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:00:13.987Z"
+    },
+    {
+      "id": 1768309213992,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "❌ PDF conversion failed: Failed to launch the browser process!\n/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell: 1: Syntax error: \"(\" unexpected\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n",
+      "status": "failed",
+      "success": false,
+      "timestamp": "2026-01-13T13:00:13.992Z"
+    },
+    {
+      "id": 1768309213992,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✍️ Generating tailored Cover Letter for Beispiel GmbH",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:00:13.992Z"
+    },
+    {
+      "id": 1768309213993,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✅ Cover Letter generated successfully",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:00:13.993Z"
+    },
+    {
+      "id": 1768309213994,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "📄 Cover Letter saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768309213994.html",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:00:13.994Z"
+    },
+    {
+      "id": 1768309213995,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: cover_letter_job999_1768309213994.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:00:13.995Z"
+    },
+    {
+      "id": 1768309214003,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "❌ PDF conversion failed: Failed to launch the browser process!\n/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell: 1: Syntax error: \"(\" unexpected\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n",
+      "status": "failed",
+      "success": false,
+      "timestamp": "2026-01-13T13:00:14.003Z"
+    },
+    {
+      "id": 1768309214003,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✍️ Generating tailored Portfolio for Beispiel GmbH",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:00:14.003Z"
+    },
+    {
+      "id": 1768309214004,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✅ Portfolio generated successfully",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:00:14.004Z"
+    },
+    {
+      "id": 1768309214005,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "📄 Portfolio saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768309214005.html",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:00:14.005Z"
+    },
+    {
+      "id": 1768309214006,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: portfolio_job999_1768309214005.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:00:14.006Z"
+    },
+    {
+      "id": 1768309214011,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "❌ PDF conversion failed: Failed to launch the browser process!\n/root/.cache/puppeteer/chrome-headless-shell/linux-121.0.6167.85/chrome-headless-shell-linux64/chrome-headless-shell: 1: Syntax error: \"(\" unexpected\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n",
+      "status": "failed",
+      "success": false,
+      "timestamp": "2026-01-13T13:00:14.011Z"
+    }
+  ],
+  "ai_models": [],
+  "email_config": [],
+  "job_preferences": [],
+  "job_websites": [],
+  "company_monitoring": [],
+  "applications": [],
+  "email_alerts": [],
+  "search_profiles": [],
+  "questions": [],
+  "auditor_questions": [],
+  "auditor_criteria": []
 }

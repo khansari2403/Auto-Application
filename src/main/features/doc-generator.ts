@@ -615,17 +615,12 @@ function generateDocumentHTML(content: string, docType: string, userProfile: any
 }
 
 // Generate CV HTML with full profile - supports multiple languages
+// When targetLanguage is not ENGLISH, we use AI-generated content directly
+// because profile data is typically stored in the user's native language
 function generateCVHTML(content: string, userProfile: any, job: any, isGerman: boolean, targetLanguage?: string): string {
-  const experiences = userProfile?.experiences || [];
-  const educations = userProfile?.educations || [];
-  // NOTE: userProfile.skills and userProfile.licenses are expected to be PRE-FILTERED
-  // to only the most relevant items (5-7 skills, 3-5 certifications).
-  const skills = userProfile?.skills || [];
-  const certifications = userProfile?.licenses || [];
-
-  // Multi-language support for CV section headers
   const lang = (targetLanguage || (isGerman ? 'GERMAN' : 'ENGLISH')).toUpperCase();
   
+  // Multi-language support for CV section headers
   const labels: Record<string, Record<string, string>> = {
     GERMAN: {
       summary: 'Beruflicher Werdegang',
@@ -694,38 +689,13 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
   
   const l = labels[lang] || labels.ENGLISH;
 
-  let experiencesHTML = '';
-  if (Array.isArray(experiences)) {
-    experiencesHTML = experiences.map((exp: any) => `
-      <div class="experience-item">
-        <div class="item-header">
-          <div>
-            <span class="item-title">${exp.title || exp.job_title || exp}</span>
-            ${(exp.company || exp.company_name) ? `<span class="item-company"> - ${exp.company || exp.company_name}</span>` : ''}
-          </div>
-          <span class="item-date">${exp.startDate || exp.start_date || ''} - ${exp.endDate || exp.end_date || l.present}</span>
-        </div>
-        ${(exp.location || exp.city) ? `<div style="color: #666; font-size: 13px;">${exp.location || exp.city}</div>` : ''}
-        ${(exp.description || exp.summary) ? `<div class="item-description">${exp.description || exp.summary}</div>` : ''}
-      </div>
-    `).join('');
-  }
-  
-  let educationsHTML = '';
-  if (Array.isArray(educations)) {
-    educationsHTML = educations.map((edu: any) => `
-      <div class="education-item">
-        <div class="item-header">
-          <div>
-            <span class="item-title">${edu.degree || edu.qualification || edu}</span>
-            ${(edu.field || edu.major) ? `<span class="item-company"> in ${edu.field || edu.major}</span>` : ''}
-          </div>
-          <span class="item-date">${edu.startYear || edu.start_year || edu.startDate || ''} - ${edu.endYear || edu.end_year || edu.endDate || ''}</span>
-        </div>
-        ${(edu.school || edu.university || edu.institution) ? `<div style="color: #666; font-size: 13px;">${edu.school || edu.university || edu.institution}</div>` : ''}
-      </div>
-    `).join('');
-  }
+  // For non-English CVs, use AI-generated content directly (already in target language)
+  // For English CVs, use the structured template with profile data
+  const useAIContent = lang !== 'ENGLISH' && content && content.trim().length > 100;
+
+  // Get skills and certifications for display
+  const skills = userProfile?.skills || [];
+  const certifications = userProfile?.licenses || [];
   
   let skillsHTML = '';
   if (Array.isArray(skills) && skills.length > 0) {
@@ -737,8 +707,18 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
     certsHTML = `<div class="skills-list">${certifications.map((c: string) => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${c}</span>`).join('')}</div>`;
   }
 
+  // Format AI content for display (convert plain text sections to HTML)
+  const formatAIContent = (text: string): string => {
+    return text
+      .replace(/\n{3,}/g, '\n\n')  // Normalize multiple newlines
+      .replace(/\n\n/g, '</p><p>')  // Paragraph breaks
+      .replace(/\n/g, '<br>')       // Line breaks
+      .replace(/^/, '<p>')          // Start paragraph
+      .replace(/$/, '</p>');        // End paragraph
+  };
+
   return `<!DOCTYPE html>
-<html lang="${isGerman ? 'de' : 'en'}">
+<html lang="${lang === 'GERMAN' ? 'de' : lang === 'FRENCH' ? 'fr' : lang === 'SPANISH' ? 'es' : 'en'}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -815,6 +795,13 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
       font-weight: 500;
     }
     
+    .ai-content {
+      font-size: 14px;
+      line-height: 1.7;
+      color: #333;
+    }
+    .ai-content p { margin-bottom: 12px; }
+    
     @media print {
       body { padding: 15px; font-size: 12px; }
       .section-title { font-size: 11px; }
@@ -836,6 +823,29 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
     </div>
   </div>
   
+  ${useAIContent ? `
+  <!-- AI-generated CV content in ${lang} -->
+  <div class="main" style="display: block;">
+    <div class="ai-content">
+      ${formatAIContent(content)}
+    </div>
+    
+    ${skillsHTML ? `
+    <div class="section" style="margin-top: 20px;">
+      <div class="section-title">${l.skills}</div>
+      ${skillsHTML}
+    </div>
+    ` : ''}
+    
+    ${certsHTML ? `
+    <div class="section">
+      <div class="section-title">${l.certifications}</div>
+      ${certsHTML}
+    </div>
+    ` : ''}
+  </div>
+  ` : `
+  <!-- Structured CV template -->
   <div class="main">
     <div class="left-column">
       ${userProfile?.summary ? `
@@ -845,19 +855,9 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
         </div>
       ` : ''}
       
-      ${experiencesHTML ? `
-        <div class="section">
-          <div class="section-title">${l.experience}</div>
-          ${experiencesHTML}
-        </div>
-      ` : ''}
+      ${generateExperiencesHTML(userProfile?.experiences, l)}
       
-      ${educationsHTML ? `
-        <div class="section">
-          <div class="section-title">${l.education}</div>
-          ${educationsHTML}
-        </div>
-      ` : ''}
+      ${generateEducationsHTML(userProfile?.educations)}
     </div>
     
     <div class="right-column">
@@ -875,18 +875,75 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
         </div>
       ` : ''}
       
-      ${userProfile?.languages?.length > 0 ? `
-        <div class="section">
-          <div class="section-title">${l.languages}</div>
-          <div class="skills-list">
-            ${userProfile.languages.map((lng: string) => `<span class="skill-tag" style="background: #e8f5e9; color: #388e3c;">${lng}</span>`).join('')}
-          </div>
-        </div>
-      ` : ''}
+      ${generateLanguagesHTML(userProfile?.languages, l)}
     </div>
   </div>
+  `}
 </body>
 </html>`;
+}
+
+// Helper functions for structured CV
+function generateExperiencesHTML(experiences: any, labels: any): string {
+  if (!experiences || !Array.isArray(experiences) || experiences.length === 0) return '';
+  
+  const items = experiences.map((exp: any) => `
+    <div class="experience-item">
+      <div class="item-header">
+        <div>
+          <span class="item-title">${exp.title || exp.job_title || exp}</span>
+          ${(exp.company || exp.company_name) ? `<span class="item-company"> - ${exp.company || exp.company_name}</span>` : ''}
+        </div>
+        <span class="item-date">${exp.startDate || exp.start_date || ''} - ${exp.endDate || exp.end_date || labels.present}</span>
+      </div>
+      ${(exp.location || exp.city) ? `<div style="color: #666; font-size: 13px;">${exp.location || exp.city}</div>` : ''}
+      ${(exp.description || exp.summary) ? `<div class="item-description">${exp.description || exp.summary}</div>` : ''}
+    </div>
+  `).join('');
+  
+  return `
+    <div class="section">
+      <div class="section-title">${labels.experience}</div>
+      ${items}
+    </div>
+  `;
+}
+
+function generateEducationsHTML(educations: any): string {
+  if (!educations || !Array.isArray(educations) || educations.length === 0) return '';
+  
+  const items = educations.map((edu: any) => `
+    <div class="education-item">
+      <div class="item-header">
+        <div>
+          <span class="item-title">${edu.degree || edu.qualification || edu}</span>
+          ${(edu.field || edu.major) ? `<span class="item-company"> - ${edu.field || edu.major}</span>` : ''}
+        </div>
+        <span class="item-date">${edu.startYear || edu.start_year || edu.startDate || ''} - ${edu.endYear || edu.end_year || edu.endDate || ''}</span>
+      </div>
+      ${(edu.school || edu.university || edu.institution) ? `<div style="color: #666; font-size: 13px;">${edu.school || edu.university || edu.institution}</div>` : ''}
+    </div>
+  `).join('');
+  
+  return `
+    <div class="section">
+      <div class="section-title">Education</div>
+      ${items}
+    </div>
+  `;
+}
+
+function generateLanguagesHTML(languages: any, labels: any): string {
+  if (!languages || !Array.isArray(languages) || languages.length === 0) return '';
+  
+  return `
+    <div class="section">
+      <div class="section-title">${labels.languages}</div>
+      <div class="skills-list">
+        ${languages.map((lng: string) => `<span class="skill-tag" style="background: #e8f5e9; color: #388e3c;">${lng}</span>`).join('')}
+      </div>
+    </div>
+  `;
 }
 
 // Save document to file with organized directory structure

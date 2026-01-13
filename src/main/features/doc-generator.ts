@@ -237,7 +237,7 @@ function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage: strin
   }
 
   const isGerman = targetLanguage === 'GERMAN';
-  return { isGerman, targetLanguage };
+  return { isGerman, targetLanguage, lang3 };
 }
 
 function getJobDateFolder(job: any, isGerman: boolean): string {

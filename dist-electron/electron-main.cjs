@@ -3143,7 +3143,7 @@ function detectJobLanguage(job) {
     targetLanguage = "GERMAN";
   }
   const isGerman = targetLanguage === "GERMAN";
-  return { isGerman, targetLanguage };
+  return { isGerman, targetLanguage, lang3 };
 }
 function getJobDateFolder(job, isGerman) {
   const raw = (job == null ? void 0 : job.date_imported) || (job == null ? void 0 : job.dateImported) || (job == null ? void 0 : job.date_scraped) || (job == null ? void 0 : job.dateScraped);

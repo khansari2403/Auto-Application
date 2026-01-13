@@ -8,255 +8,117 @@
   "user_profile": [
     {
       "id": 1,
-      "name": "Jane Doe",
-      "title": "Data Analyst",
-      "email": "jane@example.com",
-      "phone": "+1 222 333",
-      "location": "London",
-      "summary": "Data analyst with SQL and Python skills.",
-      "experiences": "[{\"title\":\"Data Analyst\",\"company\":\"ACME\",\"startDate\":\"2022\",\"endDate\":\"2025\",\"description\":\"Built dashboards and ETL.\"}]",
-      "educations": "[{\"degree\":\"B.Sc. Statistics\",\"school\":\"UCL\",\"startYear\":\"2018\",\"endYear\":\"2022\"}]",
-      "skills": "[\"SQL\",\"Python\",\"Tableau\",\"Public speaking\",\"Cooking\",\"Photoshop\"]",
-      "licenses": "[\"Google Data Analytics Certificate\",\"Scrum Master\",\"AWS Cloud Practitioner\"]",
-      "languages": "[\"English\"]"
+      "name": "Jean Dupont",
+      "title": "Développeur Backend",
+      "email": "jean@example.com",
+      "phone": "+33 1 23 45 67 89",
+      "location": "Paris",
+      "summary": "Développeur backend spécialisé en Python et API.",
+      "experiences": "[{\"title\":\"Développeur Backend\",\"company\":\"ACME\",\"startDate\":\"2021\",\"endDate\":\"2024\",\"description\":\"Développement d’API REST.\"}]",
+      "educations": "[{\"degree\":\"Licence Informatique\",\"school\":\"Sorbonne\",\"startYear\":\"2017\",\"endYear\":\"2020\"}]",
+      "skills": "[\"Python\",\"FastAPI\",\"MongoDB\",\"Kubernetes\",\"Photoshop\"]",
+      "licenses": "[\"AWS Certified Cloud Practitioner\",\"Scrum Master\"]",
+      "languages": "[\"Français\",\"Anglais\"]"
     }
   ],
   "job_listings": [
     {
-      "id": 1001,
-      "job_title": "Senior Data Analyst",
-      "company_name": "Example Ltd",
-      "location": "London",
-      "required_skills": "SQL, Python, Tableau",
-      "description": "We are looking for a Senior Data Analyst with strong SQL and Python, experience with Tableau, and stakeholder management.",
+      "id": 2001,
+      "job_title": "Développeur Backend",
+      "company_name": "Exemple SAS",
+      "location": "Paris",
+      "required_skills": "Python, API, MongoDB",
+      "description": "Nous recherchons un développeur backend avec une solide expérience en Python et en conception d’API. Connaissance de MongoDB appréciée.",
       "date_imported": "2026-01-12",
-      "cv_status": "auditor_done",
-      "cv_rejection_reason": null,
-      "cv_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768310835256.html",
-      "cv_pdf_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768310835256.pdf",
-      "motivation_letter_status": "auditor_done",
-      "motivation_letter_rejection_reason": null,
-      "motivation_letter_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768310838050.html",
-      "motivation_letter_pdf_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768310838050.pdf",
       "cover_letter_status": "auditor_done",
       "cover_letter_rejection_reason": null,
-      "cover_letter_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768310840656.html",
-      "cover_letter_pdf_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768310840656.pdf"
+      "cover_letter_path": "/app/User_Data/custom_storage/Exemple SAS/Développeur Backend/2026-01-12/cover_letter_job2001_1768311182276.html",
+      "cover_letter_pdf_path": "/app/User_Data/custom_storage/Exemple SAS/Développeur Backend/2026-01-12/cover_letter_job2001_1768311182276.pdf"
     }
   ],
   "documents": [
     {
-      "id": 1768310835726,
-      "job_id": "1001",
-      "user_id": 1,
-      "document_type": "cv",
-      "content": "Professional Summary\nData analyst skilled in SQL, Python, and Tableau.\n\nExperience\nData Analyst - ACME (2022-2025)\n- Built ETL pipelines and dashboards.\n\nEducation\nB.Sc. Statistics - UCL (2018-2022)\n\nSkills\nSQL, Python, Tableau\n\nCertifications\nGoogle Data Analytics Certificate",
-      "file_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768310835256.pdf",
-      "version": 1,
-      "status": "final",
-      "created_at": "2026-01-13T13:27:15.257Z",
-      "is_active": 1,
-      "timestamp": "2026-01-13T13:27:15.257Z"
-    },
-    {
-      "id": 1768310838237,
-      "job_id": "1001",
-      "user_id": 1,
-      "document_type": "motivation_letter",
-      "content": "I am applying for the Senior Data Analyst role at Example Ltd. I bring hands-on experience delivering analytics using SQL and Python, and building stakeholder-facing Tableau dashboards.\n\nAt ACME, I built ETL workflows and automated reporting, improving data reliability and speeding up decision-making. I am confident I can translate your requirements into actionable insights and scalable reporting.\n\nThank you for your time and consideration. I would welcome the opportunity to discuss how I can contribute.",
-      "file_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768310838050.pdf",
-      "version": 1,
-      "status": "final",
-      "created_at": "2026-01-13T13:27:18.050Z",
-      "is_active": 1,
-      "timestamp": "2026-01-13T13:27:18.050Z"
-    },
-    {
-      "id": 1768310841385,
-      "job_id": "1001",
+      "id": 1768311182326,
+      "job_id": "2001",
       "user_id": 1,
       "document_type": "cover_letter",
-      "content": "I am applying for the Senior Data Analyst role at Example Ltd. I bring hands-on experience delivering analytics using SQL and Python, and building stakeholder-facing Tableau dashboards.\n\nAt ACME, I built ETL workflows and automated reporting, improving data reliability and speeding up decision-making. I am confident I can translate your requirements into actionable insights and scalable reporting.\n\nThank you for your time and consideration. I would welcome the opportunity to discuss how I can contribute.",
-      "file_path": "/app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768310840656.pdf",
+      "content": "Je souhaite rejoindre Exemple SAS en tant que Développeur Backend afin de contribuer au développement d’API robustes en Python.\n\nChez ACME, j’ai conçu et maintenu des services backend et intégré MongoDB pour des besoins de persistance.\n\nJe serais ravi d’échanger avec vous sur ma candidature.",
+      "file_path": "/app/User_Data/custom_storage/Exemple SAS/Développeur Backend/2026-01-12/cover_letter_job2001_1768311182276.pdf",
       "version": 1,
       "status": "final",
-      "created_at": "2026-01-13T13:27:20.656Z",
+      "created_at": "2026-01-13T13:33:02.276Z",
       "is_active": 1,
-      "timestamp": "2026-01-13T13:27:20.656Z"
+      "timestamp": "2026-01-13T13:33:02.276Z"
     }
   ],
   "action_logs": [
     {
-      "id": 1768310828526,
+      "id": 1768311176354,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "🔍 Researching Example Ltd mission and history...",
+      "action_description": "🔍 Researching Exemple SAS mission and history...",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:27:08.526Z"
+      "timestamp": "2026-01-13T13:32:56.354Z"
     },
     {
-      "id": 1768310828527,
+      "id": 1768311176355,
       "user_id": 1,
       "action_type": "ai_observer",
-      "action_description": "🔍 Researching company: Example Ltd",
+      "action_description": "🔍 Researching company: Exemple SAS",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:27:08.527Z"
+      "timestamp": "2026-01-13T13:32:56.355Z"
     },
     {
-      "id": 1768310835250,
+      "id": 1768311182267,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "✍️ Generating tailored CV for Example Ltd",
+      "action_description": "✍️ Generating tailored Cover Letter for Exemple SAS",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:27:15.250Z"
+      "timestamp": "2026-01-13T13:33:02.267Z"
     },
     {
-      "id": 1768310835255,
-      "user_id": 1,
-      "action_type": "ai_thinker",
-      "action_description": "✅ CV generated successfully",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:27:15.255Z"
-    },
-    {
-      "id": 1768310835258,
-      "user_id": 1,
-      "action_type": "ai_thinker",
-      "action_description": "📄 CV saved (HTML): /app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cv_job1001_1768310835256.html",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:27:15.258Z"
-    },
-    {
-      "id": 1768310835259,
-      "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "📄 Converting to PDF: cv_job1001_1768310835256.html",
-      "status": "in_progress",
-      "timestamp": "2026-01-13T13:27:15.259Z"
-    },
-    {
-      "id": 1768310838020,
-      "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "✅ PDF created: cv_job1001_1768310835256.pdf",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:27:18.020Z"
-    },
-    {
-      "id": 1768310838022,
-      "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "✅ PDF created: cv_job1001_1768310835256.pdf",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:27:18.022Z"
-    },
-    {
-      "id": 1768310838022,
-      "user_id": 1,
-      "action_type": "ai_thinker",
-      "action_description": "✍️ Generating tailored Motivation Letter for Example Ltd",
-      "status": "in_progress",
-      "timestamp": "2026-01-13T13:27:18.022Z"
-    },
-    {
-      "id": 1768310838024,
-      "user_id": 1,
-      "action_type": "ai_thinker",
-      "action_description": "✅ Motivation Letter generated successfully",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:27:18.024Z"
-    },
-    {
-      "id": 1768310838051,
-      "user_id": 1,
-      "action_type": "ai_thinker",
-      "action_description": "📄 Motivation Letter saved (HTML): /app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/motivation_letter_job1001_1768310838050.html",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:27:18.051Z"
-    },
-    {
-      "id": 1768310838052,
-      "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "📄 Converting to PDF: motivation_letter_job1001_1768310838050.html",
-      "status": "in_progress",
-      "timestamp": "2026-01-13T13:27:18.052Z"
-    },
-    {
-      "id": 1768310840652,
-      "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "✅ PDF created: motivation_letter_job1001_1768310838050.pdf",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:27:20.652Z"
-    },
-    {
-      "id": 1768310840654,
-      "user_id": 1,
-      "action_type": "pdf",
-      "action_description": "✅ PDF created: motivation_letter_job1001_1768310838050.pdf",
-      "status": "completed",
-      "success": true,
-      "timestamp": "2026-01-13T13:27:20.654Z"
-    },
-    {
-      "id": 1768310840654,
-      "user_id": 1,
-      "action_type": "ai_thinker",
-      "action_description": "✍️ Generating tailored Cover Letter for Example Ltd",
-      "status": "in_progress",
-      "timestamp": "2026-01-13T13:27:20.654Z"
-    },
-    {
-      "id": 1768310840656,
+      "id": 1768311182269,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✅ Cover Letter generated successfully",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:27:20.656Z"
+      "timestamp": "2026-01-13T13:33:02.269Z"
     },
     {
-      "id": 1768310840657,
+      "id": 1768311182277,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "📄 Cover Letter saved (HTML): /app/User_Data/custom_storage/Example Ltd/Senior Data Analyst/2026-01-12/cover_letter_job1001_1768310840656.html",
+      "action_description": "📄 Cover Letter saved (HTML): /app/User_Data/custom_storage/Exemple SAS/Développeur Backend/2026-01-12/cover_letter_job2001_1768311182276.html",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:27:20.657Z"
+      "timestamp": "2026-01-13T13:33:02.277Z"
     },
     {
-      "id": 1768310840658,
+      "id": 1768311182278,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "📄 Converting to PDF: cover_letter_job1001_1768310840656.html",
+      "action_description": "📄 Converting to PDF: cover_letter_job2001_1768311182276.html",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:27:20.658Z"
+      "timestamp": "2026-01-13T13:33:02.278Z"
     },
     {
-      "id": 1768310843247,
+      "id": 1768311184875,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "✅ PDF created: cover_letter_job1001_1768310840656.pdf",
+      "action_description": "✅ PDF created: cover_letter_job2001_1768311182276.pdf",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:27:23.247Z"
+      "timestamp": "2026-01-13T13:33:04.875Z"
     },
     {
-      "id": 1768310843248,
+      "id": 1768311184877,
       "user_id": 1,
       "action_type": "pdf",
-      "action_description": "✅ PDF created: cover_letter_job1001_1768310840656.pdf",
+      "action_description": "✅ PDF created: cover_letter_job2001_1768311182276.pdf",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:27:23.248Z"
+      "timestamp": "2026-01-13T13:33:04.877Z"
     }
   ],
   "ai_models": [],

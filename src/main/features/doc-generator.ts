@@ -324,27 +324,25 @@ const DOC_TYPES = [
 function generateDocumentHTML(content: string, docType: string, userProfile: any, job: any, isGerman: boolean): string {
   const title = `${docType} - ${userProfile?.name || 'Applicant'} - ${job?.company_name || 'Company'}`;
   const isLetter = docType.toLowerCase().includes('letter');
-  
 
-
-  const currentDate = new Date().toLocaleDateString(isGerman ? 'de-DE' : 'en-US', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const currentDate = new Date().toLocaleDateString(isGerman ? 'de-DE' : 'en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   });
-  
+
+  // Template owns greeting/closing to avoid doubles.
+  const salutation = isGerman ? 'Sehr geehrte Damen und Herren,' : 'Dear Hiring Manager,';
+  const closing = isGerman ? 'Mit freundlichen Grüßen' : 'Kind regards,';
+
   // Ensure content doesn't have redundant headers if AI generated them
   let cleanContent = content;
   if (isLetter) {
-    // Remove common AI-generated headers that we already provide in the template
-    cleanContent = cleanContent.replace(/^(Dear|To|Attention)[^,:]*[,:]/i, '').trim();
-    // If it still starts with a date or address, try to strip it
-    cleanContent = cleanContent.replace(/^\d{1,2}\s+[A-Z][a-z]+\s+\d{4}/, '').trim();
-    cleanContent = cleanContent.replace(/^[A-Z][a-z]+,\s+[A-Z][a-z]+\s+\d{4}/, '').trim();
+    cleanContent = stripLetterGreetingAndClosing(cleanContent, isGerman);
   }
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${isGerman ? 'de' : 'en'}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

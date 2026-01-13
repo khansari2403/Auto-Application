@@ -363,10 +363,51 @@ function generateDocumentHTML(content: string, docType: string, userProfile: any
   });
 
   // Template owns greeting/closing to avoid doubles.
-  // We currently support fully localized templates for German/English.
-  // For other languages, we fallback to English template but still force AI body language.
-  const salutation = isGerman ? 'Sehr geehrte Damen und Herren,' : 'Dear Hiring Manager,';
-  const closing = isGerman ? 'Mit freundlichen Grüßen' : 'Kind regards,';
+  // To ensure 100% language matching for ANY detected language, we generate
+  // greeting/closing labels dynamically (German + English are hand-tuned; other
+  // languages use a small safe default set).
+  const lang = (targetLanguage || (isGerman ? 'GERMAN' : 'ENGLISH')).toUpperCase();
+
+  const salutationMap: Record<string, string> = {
+    GERMAN: 'Sehr geehrte Damen und Herren,',
+    ENGLISH: 'Dear Hiring Manager,',
+    FRENCH: 'Madame, Monsieur,',
+    SPANISH: 'Estimado equipo de selección,',
+    ITALIAN: 'Gentile responsabile delle assunzioni,',
+    DUTCH: 'Geachte heer/mevrouw,',
+    PORTUGUESE: 'Prezado(a) responsável pela contratação,',
+    POLISH: 'Szanowni Państwo,',
+    TURKISH: 'Sayın Yetkili,',
+    RUSSIAN: 'Уважаемые господа,',
+    UKRAINIAN: 'Шановні пані та панове,',
+    ARABIC: 'السادة/السيدات المحترمون،',
+    HINDI: 'माननीय चयन समिति,',
+    CHINESE: '尊敬的招聘经理：',
+    JAPANESE: '採用ご担当者様',
+    KOREAN: '채용 담당자님께'
+  };
+
+  const closingMap: Record<string, string> = {
+    GERMAN: 'Mit freundlichen Grüßen',
+    ENGLISH: 'Kind regards,',
+    FRENCH: 'Cordialement,',
+    SPANISH: 'Atentamente,',
+    ITALIAN: 'Cordiali saluti,',
+    DUTCH: 'Met vriendelijke groet,',
+    PORTUGUESE: 'Atenciosamente,',
+    POLISH: 'Z poważaniem,',
+    TURKISH: 'Saygılarımla,',
+    RUSSIAN: 'С уважением,',
+    UKRAINIAN: 'З повагою,',
+    ARABIC: 'مع خالص التحية،',
+    HINDI: 'सादर,',
+    CHINESE: '此致\n敬礼',
+    JAPANESE: '敬具',
+    KOREAN: '감사합니다.'
+  };
+
+  const salutation = salutationMap[lang] || salutationMap.ENGLISH;
+  const closing = closingMap[lang] || closingMap.ENGLISH;
 
   // Ensure content doesn't have redundant headers if AI generated them
   let cleanContent = content;

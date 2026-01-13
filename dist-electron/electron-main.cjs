@@ -3230,8 +3230,45 @@ function generateDocumentHTML(content, docType, userProfile, job, isGerman, targ
     month: "long",
     day: "numeric"
   });
-  const salutation = isGerman ? "Sehr geehrte Damen und Herren," : "Dear Hiring Manager,";
-  const closing = isGerman ? "Mit freundlichen Gr\xFC\xDFen" : "Kind regards,";
+  const lang = (targetLanguage || (isGerman ? "GERMAN" : "ENGLISH")).toUpperCase();
+  const salutationMap = {
+    GERMAN: "Sehr geehrte Damen und Herren,",
+    ENGLISH: "Dear Hiring Manager,",
+    FRENCH: "Madame, Monsieur,",
+    SPANISH: "Estimado equipo de selecci\xF3n,",
+    ITALIAN: "Gentile responsabile delle assunzioni,",
+    DUTCH: "Geachte heer/mevrouw,",
+    PORTUGUESE: "Prezado(a) respons\xE1vel pela contrata\xE7\xE3o,",
+    POLISH: "Szanowni Pa\u0144stwo,",
+    TURKISH: "Say\u0131n Yetkili,",
+    RUSSIAN: "\u0423\u0432\u0430\u0436\u0430\u0435\u043C\u044B\u0435 \u0433\u043E\u0441\u043F\u043E\u0434\u0430,",
+    UKRAINIAN: "\u0428\u0430\u043D\u043E\u0432\u043D\u0456 \u043F\u0430\u043D\u0456 \u0442\u0430 \u043F\u0430\u043D\u043E\u0432\u0435,",
+    ARABIC: "\u0627\u0644\u0633\u0627\u062F\u0629/\u0627\u0644\u0633\u064A\u062F\u0627\u062A \u0627\u0644\u0645\u062D\u062A\u0631\u0645\u0648\u0646\u060C",
+    HINDI: "\u092E\u093E\u0928\u0928\u0940\u092F \u091A\u092F\u0928 \u0938\u092E\u093F\u0924\u093F,",
+    CHINESE: "\u5C0A\u656C\u7684\u62DB\u8058\u7ECF\u7406\uFF1A",
+    JAPANESE: "\u63A1\u7528\u3054\u62C5\u5F53\u8005\u69D8",
+    KOREAN: "\uCC44\uC6A9 \uB2F4\uB2F9\uC790\uB2D8\uAED8"
+  };
+  const closingMap = {
+    GERMAN: "Mit freundlichen Gr\xFC\xDFen",
+    ENGLISH: "Kind regards,",
+    FRENCH: "Cordialement,",
+    SPANISH: "Atentamente,",
+    ITALIAN: "Cordiali saluti,",
+    DUTCH: "Met vriendelijke groet,",
+    PORTUGUESE: "Atenciosamente,",
+    POLISH: "Z powa\u017Caniem,",
+    TURKISH: "Sayg\u0131lar\u0131mla,",
+    RUSSIAN: "\u0421 \u0443\u0432\u0430\u0436\u0435\u043D\u0438\u0435\u043C,",
+    UKRAINIAN: "\u0417 \u043F\u043E\u0432\u0430\u0433\u043E\u044E,",
+    ARABIC: "\u0645\u0639 \u062E\u0627\u0644\u0635 \u0627\u0644\u062A\u062D\u064A\u0629\u060C",
+    HINDI: "\u0938\u093E\u0926\u0930,",
+    CHINESE: "\u6B64\u81F4\n\u656C\u793C",
+    JAPANESE: "\u656C\u5177",
+    KOREAN: "\uAC10\uC0AC\uD569\uB2C8\uB2E4."
+  };
+  const salutation = salutationMap[lang] || salutationMap.ENGLISH;
+  const closing = closingMap[lang] || closingMap.ENGLISH;
   let cleanContent = content;
   if (isLetter) {
     cleanContent = stripLetterGreetingAndClosing(cleanContent, isGerman);

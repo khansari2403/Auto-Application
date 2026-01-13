@@ -32,192 +32,300 @@
       "date_imported": "2026-01-12",
       "cv_status": "auditor_done",
       "cv_rejection_reason": null,
-      "cv_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768310338053.html",
+      "cv_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768310473371.html",
+      "cv_pdf_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768310473371.pdf",
       "motivation_letter_status": "auditor_done",
       "motivation_letter_rejection_reason": null,
-      "motivation_letter_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768310338064.html",
+      "motivation_letter_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768310475998.html",
+      "motivation_letter_pdf_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768310475998.pdf",
       "cover_letter_status": "auditor_done",
       "cover_letter_rejection_reason": null,
-      "cover_letter_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768310338067.html",
+      "cover_letter_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768310478605.html",
+      "cover_letter_pdf_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768310478605.pdf",
       "portfolio_status": "auditor_done",
       "portfolio_rejection_reason": null,
-      "portfolio_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768310338071.html"
+      "portfolio_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768310481234.html",
+      "portfolio_pdf_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768310481234.pdf"
     }
   ],
   "documents": [
     {
-      "id": 1768310338697,
+      "id": 1768310473702,
       "job_id": "999",
       "user_id": 1,
       "document_type": "cv",
       "content": "Berufliches Profil\nErfahrener Backend-Entwickler mit Schwerpunkt auf Python, FastAPI und MongoDB.\n\nBerufserfahrung\nBackend Engineer - ACME (2021-2024)\n- Entwicklung von REST-APIs mit FastAPI und MongoDB.\n\nAusbildung\nB.Sc. Informatik - TU Berlin (2017-2021)\n\nKenntnisse\nPython, FastAPI, MongoDB, Kubernetes\n\nZertifizierungen\nAWS Certified Cloud Practitioner",
-      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768310338053.html",
+      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768310473371.pdf",
       "version": 1,
       "status": "final",
-      "created_at": "2026-01-13T13:18:58.053Z",
+      "created_at": "2026-01-13T13:21:13.371Z",
       "is_active": 1,
-      "timestamp": "2026-01-13T13:18:58.053Z"
+      "timestamp": "2026-01-13T13:21:13.371Z"
     },
     {
-      "id": 1768310338219,
+      "id": 1768310476503,
       "job_id": "999",
       "user_id": 1,
       "document_type": "motivation_letter",
       "content": "In der ausgeschriebenen Position als Backend Entwickler bei Beispiel GmbH möchte ich meine Erfahrung im Aufbau robuster APIs mit Python und FastAPI einbringen.\n\nBei ACME habe ich REST-APIs mit FastAPI entworfen und produktiv betrieben und dabei MongoDB als Datenspeicher integriert. Zusätzlich bringe ich Kenntnisse in Kubernetes mit.\n\nGern möchte ich diese Erfahrung nutzen, um Ihre Backend-Landschaft weiterzuentwickeln. Über die Möglichkeit eines Gesprächs freue ich mich.",
-      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768310338064.html",
+      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768310475998.pdf",
       "version": 1,
       "status": "final",
-      "created_at": "2026-01-13T13:18:58.064Z",
+      "created_at": "2026-01-13T13:21:15.999Z",
       "is_active": 1,
-      "timestamp": "2026-01-13T13:18:58.064Z"
+      "timestamp": "2026-01-13T13:21:15.999Z"
     },
     {
-      "id": 1768310338975,
+      "id": 1768310478702,
       "job_id": "999",
       "user_id": 1,
       "document_type": "cover_letter",
       "content": "In der ausgeschriebenen Position als Backend Entwickler bei Beispiel GmbH möchte ich meine Erfahrung im Aufbau robuster APIs mit Python und FastAPI einbringen.\n\nBei ACME habe ich REST-APIs mit FastAPI entworfen und produktiv betrieben und dabei MongoDB als Datenspeicher integriert. Zusätzlich bringe ich Kenntnisse in Kubernetes mit.\n\nGern möchte ich diese Erfahrung nutzen, um Ihre Backend-Landschaft weiterzuentwickeln. Über die Möglichkeit eines Gesprächs freue ich mich.",
-      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768310338067.html",
+      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768310478605.pdf",
       "version": 1,
       "status": "final",
-      "created_at": "2026-01-13T13:18:58.067Z",
+      "created_at": "2026-01-13T13:21:18.605Z",
       "is_active": 1,
-      "timestamp": "2026-01-13T13:18:58.067Z"
+      "timestamp": "2026-01-13T13:21:18.605Z"
     },
     {
-      "id": 1768310338520,
+      "id": 1768310481446,
       "job_id": "999",
       "user_id": 1,
       "document_type": "portfolio",
       "content": "In der ausgeschriebenen Position als Backend Entwickler bei Beispiel GmbH möchte ich meine Erfahrung im Aufbau robuster APIs mit Python und FastAPI einbringen.\n\nBei ACME habe ich REST-APIs mit FastAPI entworfen und produktiv betrieben und dabei MongoDB als Datenspeicher integriert. Zusätzlich bringe ich Kenntnisse in Kubernetes mit.\n\nGern möchte ich diese Erfahrung nutzen, um Ihre Backend-Landschaft weiterzuentwickeln. Über die Möglichkeit eines Gesprächs freue ich mich.",
-      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768310338071.html",
+      "file_path": "/app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768310481234.pdf",
       "version": 1,
       "status": "final",
-      "created_at": "2026-01-13T13:18:58.071Z",
+      "created_at": "2026-01-13T13:21:21.234Z",
       "is_active": 1,
-      "timestamp": "2026-01-13T13:18:58.071Z"
+      "timestamp": "2026-01-13T13:21:21.234Z"
     }
   ],
   "action_logs": [
     {
-      "id": 1768310329933,
+      "id": 1768310468429,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "🔍 Researching Beispiel GmbH mission and history...",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:18:49.933Z"
+      "timestamp": "2026-01-13T13:21:08.429Z"
     },
     {
-      "id": 1768310329934,
+      "id": 1768310468431,
       "user_id": 1,
       "action_type": "ai_observer",
       "action_description": "🔍 Researching company: Beispiel GmbH",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:18:49.934Z"
+      "timestamp": "2026-01-13T13:21:08.431Z"
     },
     {
-      "id": 1768310338049,
+      "id": 1768310473368,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✍️ Generating tailored CV for Beispiel GmbH",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:18:58.049Z"
+      "timestamp": "2026-01-13T13:21:13.368Z"
     },
     {
-      "id": 1768310338052,
+      "id": 1768310473370,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✅ CV generated successfully",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:18:58.052Z"
+      "timestamp": "2026-01-13T13:21:13.370Z"
     },
     {
-      "id": 1768310338054,
+      "id": 1768310473372,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "📄 CV saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768310338053.html",
+      "action_description": "📄 CV saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cv_job999_1768310473371.html",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:18:58.054Z"
+      "timestamp": "2026-01-13T13:21:13.372Z"
     },
     {
-      "id": 1768310338056,
+      "id": 1768310473373,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: cv_job999_1768310473371.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:21:13.373Z"
+    },
+    {
+      "id": 1768310475988,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cv_job999_1768310473371.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:21:15.988Z"
+    },
+    {
+      "id": 1768310475990,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cv_job999_1768310473371.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:21:15.990Z"
+    },
+    {
+      "id": 1768310475991,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✍️ Generating tailored Motivation Letter for Beispiel GmbH",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:18:58.056Z"
+      "timestamp": "2026-01-13T13:21:15.991Z"
     },
     {
-      "id": 1768310338057,
+      "id": 1768310475992,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✅ Motivation Letter generated successfully",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:18:58.057Z"
+      "timestamp": "2026-01-13T13:21:15.992Z"
     },
     {
-      "id": 1768310338065,
+      "id": 1768310475999,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "📄 Motivation Letter saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768310338064.html",
+      "action_description": "📄 Motivation Letter saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/motivation_letter_job999_1768310475998.html",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:18:58.065Z"
+      "timestamp": "2026-01-13T13:21:15.999Z"
     },
     {
-      "id": 1768310338066,
+      "id": 1768310476001,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: motivation_letter_job999_1768310475998.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:21:16.001Z"
+    },
+    {
+      "id": 1768310478600,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: motivation_letter_job999_1768310475998.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:21:18.600Z"
+    },
+    {
+      "id": 1768310478602,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: motivation_letter_job999_1768310475998.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:21:18.602Z"
+    },
+    {
+      "id": 1768310478603,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✍️ Generating tailored Cover Letter for Beispiel GmbH",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:18:58.066Z"
+      "timestamp": "2026-01-13T13:21:18.603Z"
     },
     {
-      "id": 1768310338066,
+      "id": 1768310478604,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✅ Cover Letter generated successfully",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:18:58.066Z"
+      "timestamp": "2026-01-13T13:21:18.604Z"
     },
     {
-      "id": 1768310338068,
+      "id": 1768310478606,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "📄 Cover Letter saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768310338067.html",
+      "action_description": "📄 Cover Letter saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/cover_letter_job999_1768310478605.html",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:18:58.068Z"
+      "timestamp": "2026-01-13T13:21:18.606Z"
     },
     {
-      "id": 1768310338069,
+      "id": 1768310478606,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: cover_letter_job999_1768310478605.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:21:18.606Z"
+    },
+    {
+      "id": 1768310481230,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cover_letter_job999_1768310478605.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:21:21.230Z"
+    },
+    {
+      "id": 1768310481231,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: cover_letter_job999_1768310478605.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:21:21.231Z"
+    },
+    {
+      "id": 1768310481232,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✍️ Generating tailored Portfolio for Beispiel GmbH",
       "status": "in_progress",
-      "timestamp": "2026-01-13T13:18:58.069Z"
+      "timestamp": "2026-01-13T13:21:21.232Z"
     },
     {
-      "id": 1768310338070,
+      "id": 1768310481233,
       "user_id": 1,
       "action_type": "ai_thinker",
       "action_description": "✅ Portfolio generated successfully",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:18:58.070Z"
+      "timestamp": "2026-01-13T13:21:21.233Z"
     },
     {
-      "id": 1768310338072,
+      "id": 1768310481235,
       "user_id": 1,
       "action_type": "ai_thinker",
-      "action_description": "📄 Portfolio saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768310338071.html",
+      "action_description": "📄 Portfolio saved (HTML): /app/User_Data/custom_storage/Beispiel GmbH/Backend Entwickler (m_w_d)/2026-01-12/portfolio_job999_1768310481234.html",
       "status": "completed",
       "success": true,
-      "timestamp": "2026-01-13T13:18:58.072Z"
+      "timestamp": "2026-01-13T13:21:21.235Z"
+    },
+    {
+      "id": 1768310481236,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: portfolio_job999_1768310481234.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-13T13:21:21.236Z"
+    },
+    {
+      "id": 1768310483800,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: portfolio_job999_1768310481234.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:21:23.800Z"
+    },
+    {
+      "id": 1768310483801,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "✅ PDF created: portfolio_job999_1768310481234.pdf",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-13T13:21:23.801Z"
     }
   ],
   "ai_models": [],

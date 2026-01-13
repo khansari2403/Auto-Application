@@ -1,2 +1,3 @@
-2026/01/13-13:18:51.138 264e Creating DB /app/User_Data/browser_data/Default/shared_proto_db since it was missing.
-2026/01/13-13:18:51.144 264e Reusing MANIFEST /app/User_Data/browser_data/Default/shared_proto_db/MANIFEST-000001
+2026/01/13-13:21:08.757 293d Reusing MANIFEST /app/User_Data/browser_data/Default/shared_proto_db/MANIFEST-000001
+2026/01/13-13:21:08.757 293d Recovering log #3
+2026/01/13-13:21:08.757 293d Reusing old log /app/User_Data/browser_data/Default/shared_proto_db/000003.log 

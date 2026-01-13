@@ -614,14 +614,85 @@ function generateDocumentHTML(content: string, docType: string, userProfile: any
 </html>`;
 }
 
-// Generate CV HTML with full profile
-function generateCVHTML(content: string, userProfile: any, job: any, isGerman: boolean): string {
+// Generate CV HTML with full profile - supports multiple languages
+function generateCVHTML(content: string, userProfile: any, job: any, isGerman: boolean, targetLanguage?: string): string {
   const experiences = userProfile?.experiences || [];
   const educations = userProfile?.educations || [];
   // NOTE: userProfile.skills and userProfile.licenses are expected to be PRE-FILTERED
   // to only the most relevant items (5-7 skills, 3-5 certifications).
   const skills = userProfile?.skills || [];
   const certifications = userProfile?.licenses || [];
+
+  // Multi-language support for CV section headers
+  const lang = (targetLanguage || (isGerman ? 'GERMAN' : 'ENGLISH')).toUpperCase();
+  
+  const labels: Record<string, Record<string, string>> = {
+    GERMAN: {
+      summary: 'Beruflicher Werdegang',
+      experience: 'Berufserfahrung',
+      education: 'Ausbildung',
+      skills: 'Kenntnisse',
+      certifications: 'Zertifizierungen',
+      languages: 'Sprachen',
+      present: 'Heute'
+    },
+    ENGLISH: {
+      summary: 'Professional Summary',
+      experience: 'Work Experience',
+      education: 'Education',
+      skills: 'Skills',
+      certifications: 'Certifications',
+      languages: 'Languages',
+      present: 'Present'
+    },
+    FRENCH: {
+      summary: 'Résumé Professionnel',
+      experience: 'Expérience Professionnelle',
+      education: 'Formation',
+      skills: 'Compétences',
+      certifications: 'Certifications',
+      languages: 'Langues',
+      present: 'Présent'
+    },
+    SPANISH: {
+      summary: 'Resumen Profesional',
+      experience: 'Experiencia Laboral',
+      education: 'Educación',
+      skills: 'Habilidades',
+      certifications: 'Certificaciones',
+      languages: 'Idiomas',
+      present: 'Presente'
+    },
+    ITALIAN: {
+      summary: 'Profilo Professionale',
+      experience: 'Esperienza Lavorativa',
+      education: 'Formazione',
+      skills: 'Competenze',
+      certifications: 'Certificazioni',
+      languages: 'Lingue',
+      present: 'Presente'
+    },
+    DUTCH: {
+      summary: 'Professionele Samenvatting',
+      experience: 'Werkervaring',
+      education: 'Opleiding',
+      skills: 'Vaardigheden',
+      certifications: 'Certificeringen',
+      languages: 'Talen',
+      present: 'Heden'
+    },
+    PORTUGUESE: {
+      summary: 'Resumo Profissional',
+      experience: 'Experiência Profissional',
+      education: 'Educação',
+      skills: 'Habilidades',
+      certifications: 'Certificações',
+      languages: 'Idiomas',
+      present: 'Presente'
+    }
+  };
+  
+  const l = labels[lang] || labels.ENGLISH;
 
   let experiencesHTML = '';
   if (Array.isArray(experiences)) {
@@ -630,9 +701,9 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
         <div class="item-header">
           <div>
             <span class="item-title">${exp.title || exp.job_title || exp}</span>
-            ${(exp.company || exp.company_name) ? `<span class="item-company"> at ${exp.company || exp.company_name}</span>` : ''}
+            ${(exp.company || exp.company_name) ? `<span class="item-company"> - ${exp.company || exp.company_name}</span>` : ''}
           </div>
-          <span class="item-date">${exp.startDate || exp.start_date || ''} - ${exp.endDate || exp.end_date || 'Present'}</span>
+          <span class="item-date">${exp.startDate || exp.start_date || ''} - ${exp.endDate || exp.end_date || l.present}</span>
         </div>
         ${(exp.location || exp.city) ? `<div style="color: #666; font-size: 13px;">${exp.location || exp.city}</div>` : ''}
         ${(exp.description || exp.summary) ? `<div class="item-description">${exp.description || exp.summary}</div>` : ''}

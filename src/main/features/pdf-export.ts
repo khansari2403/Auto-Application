@@ -201,13 +201,18 @@ export async function generatePdfFromContent(
 </body>
 </html>`;
     
-    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
 
-    browser = await puppeteer.launch({
+    const launchOptions: any = {
       headless: true,
-      executablePath,
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
-    });
+    };
+    
+    if (executablePath) {
+      launchOptions.executablePath = executablePath;
+    }
+
+    browser = await puppeteer.launch(launchOptions);
     
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });

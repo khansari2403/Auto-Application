@@ -542,7 +542,7 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
   }
 
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${isGerman ? 'de' : 'en'}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">

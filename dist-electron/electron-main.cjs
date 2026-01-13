@@ -1616,13 +1616,14 @@ async function calculateCompatibility(userId, jobId) {
     console.log(`Compatibility: Found ${skillsScore.missing.length} missing skills after checking learned criteria`);
     const skillsToAsk = skillsScore.missing.filter((skill) => {
       const criteriaKey = `tool_${skill.toLowerCase().replace(/\s+/g, "_")}`;
-      return !alreadyAnswered.includes(criteriaKey) && !existingQuestions.some((q) => q.criteria === criteriaKey);
+      return !alreadyAnswered.includes(criteriaKey) && !existingQuestions.some((q) => q.criteria === criteriaKey) && !learnedCriteria.some((c) => c.criteria === criteriaKey);
     }).slice(0, 5);
-    if (skillsToAsk.length > 0) {
+    const validSkillsToAsk = skillsToAsk.filter((s) => s && s.toLowerCase() !== "not specified" && s.toLowerCase() !== "n/a");
+    if (validSkillsToAsk.length > 0) {
       console.log(`Compatibility: Generating ${skillsToAsk.length} questions BEFORE finalizing score...`);
-      for (const skill of skillsToAsk) {
+      for (const skill of validSkillsToAsk) {
         const criteriaKey = `tool_${skill.toLowerCase().replace(/\s+/g, "_")}`;
-        const questionText = `Do you have experience working with ${skill}?`;
+        const questionText = `Do you have experience working with ${skill}? (Please confirm if this is part of your skillset)`;
         const questionId = `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         try {
           await runQuery("INSERT INTO auditor_questions", {
@@ -2460,7 +2461,7 @@ async function generateAuditorQuestions(userId, jobId, jobData, compatResult) {
         if (!criteriaExists(criteria)) {
           const langCapitalized = lang.charAt(0).toUpperCase() + lang.slice(1);
           questionsToAdd.push({
-            question: `Do you speak ${langCapitalized}?`,
+            question: `Are you proficient in ${langCapitalized}? (Required for this position)`,
             criteria,
             category: "language"
           });
@@ -2491,7 +2492,7 @@ async function generateAuditorQuestions(userId, jobId, jobData, compatResult) {
           const criteria = `cert_${name.toLowerCase().replace(/[^a-z0-9]/g, "_")}`;
           if (!criteriaExists(criteria)) {
             questionsToAdd.push({
-              question: `Do you have ${name}?`,
+              question: `Do you hold a valid ${name}? (This certification is mentioned in the job description)`,
               criteria,
               category: "certification"
             });
@@ -2558,6 +2559,7 @@ async function generateAuditorQuestions(userId, jobId, jobData, compatResult) {
     }
     const questionsToInsert = questionsToAdd.slice(0, 5);
     for (const { question, criteria, category } of questionsToInsert) {
+      if (!criteria || criteria.toLowerCase().includes("not_specified")) continue;
       const questionId = `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       await runQuery("INSERT INTO auditor_questions", {
         id: questionId,
@@ -2817,6 +2819,192 @@ var init_Hunter_engine = __esm({
   }
 });
 
+// src/main/features/pdf-export.ts
+var pdf_export_exports = {};
+__export(pdf_export_exports, {
+  convertAllJobDocsToPdf: () => convertAllJobDocsToPdf,
+  convertHtmlToPdf: () => convertHtmlToPdf,
+  generatePdfFromContent: () => generatePdfFromContent
+});
+async function convertHtmlToPdf(htmlPath, userId) {
+  let browser = null;
+  try {
+    await logAction(userId, "pdf", `\u{1F4C4} Converting to PDF: ${path4.basename(htmlPath)}`, "in_progress");
+    if (!fs3.existsSync(htmlPath)) {
+      return { success: false, error: "HTML file not found" };
+    }
+    const htmlContent = fs3.readFileSync(htmlPath, "utf-8");
+    browser = await import_puppeteer3.default.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    await page.evaluateHandle("document.fonts.ready");
+    const pdfPath = htmlPath.replace(".html", ".pdf");
+    await page.pdf({
+      path: pdfPath,
+      format: "A4",
+      printBackground: true,
+      margin: {
+        top: "20mm",
+        right: "15mm",
+        bottom: "20mm",
+        left: "15mm"
+      }
+    });
+    await browser.close();
+    await logAction(userId, "pdf", `\u2705 PDF created: ${path4.basename(pdfPath)}`, "completed", true);
+    return { success: true, pdfPath };
+  } catch (error) {
+    console.error("PDF conversion error:", error);
+    if (browser) await browser.close();
+    await logAction(userId, "pdf", `\u274C PDF conversion failed: ${error.message}`, "failed", false);
+    return { success: false, error: error.message };
+  }
+}
+async function convertAllJobDocsToPdf(jobId, userId) {
+  var _a;
+  const db = getDatabase();
+  const job = (_a = db.job_listings) == null ? void 0 : _a.find((j) => j.id === jobId);
+  if (!job) {
+    return { success: false, pdfs: [], errors: ["Job not found"] };
+  }
+  const docTypes = ["cv", "motivation_letter", "cover_letter", "portfolio", "proposal"];
+  const pdfs = [];
+  const errors = [];
+  for (const docType of docTypes) {
+    const htmlPath = job[`${docType}_path`];
+    if (htmlPath && fs3.existsSync(htmlPath)) {
+      const result = await convertHtmlToPdf(htmlPath, userId);
+      if (result.success && result.pdfPath) {
+        pdfs.push(result.pdfPath);
+      } else if (result.error) {
+        errors.push(`${docType}: ${result.error}`);
+      }
+    }
+  }
+  return { success: pdfs.length > 0, pdfs, errors };
+}
+async function generatePdfFromContent(content, fileName, userId, options) {
+  let browser = null;
+  try {
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${(options == null ? void 0 : options.title) || "Document"}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.6;
+      color: #1a1a1a;
+      padding: 0;
+      background: #fff;
+    }
+    
+    .header {
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #0077b5;
+    }
+    
+    .name {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0077b5;
+      margin-bottom: 3px;
+    }
+    
+    .title {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 5px;
+    }
+    
+    .contact {
+      font-size: 11px;
+      color: #444;
+    }
+    
+    .content {
+      font-size: 12px;
+      text-align: justify;
+      white-space: pre-wrap;
+      line-height: 1.7;
+    }
+    
+    .content p {
+      margin-bottom: 10px;
+    }
+    
+    @page {
+      size: A4;
+      margin: 20mm 15mm;
+    }
+  </style>
+</head>
+<body>
+  ${(options == null ? void 0 : options.headerName) ? `
+  <div class="header">
+    <div class="name">${options.headerName}</div>
+    ${options.headerTitle ? `<div class="title">${options.headerTitle}</div>` : ""}
+    ${options.headerContact ? `<div class="contact">${options.headerContact}</div>` : ""}
+  </div>
+  ` : ""}
+  
+  <div class="content">${content.replace(/\n/g, "<br>")}</div>
+</body>
+</html>`;
+    browser = await import_puppeteer3.default.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    });
+    const page = await browser.newPage();
+    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
+    await page.evaluateHandle("document.fonts.ready");
+    const pdfPath = path4.join(getDocsDir(), `${fileName}.pdf`);
+    await page.pdf({
+      path: pdfPath,
+      format: "A4",
+      printBackground: true,
+      margin: { top: "20mm", right: "15mm", bottom: "20mm", left: "15mm" }
+    });
+    await browser.close();
+    await logAction(userId, "pdf", `\u2705 PDF generated: ${fileName}.pdf`, "completed", true);
+    return { success: true, pdfPath };
+  } catch (error) {
+    if (browser) await browser.close();
+    return { success: false, error: error.message };
+  }
+}
+var import_puppeteer3, fs3, path4, app4, getDocsDir;
+var init_pdf_export = __esm({
+  "src/main/features/pdf-export.ts"() {
+    import_puppeteer3 = __toESM(require("puppeteer"), 1);
+    fs3 = __toESM(require("fs"), 1);
+    path4 = __toESM(require("path"), 1);
+    init_database();
+    try {
+      app4 = require("electron").app;
+    } catch (e) {
+      app4 = global.electronApp;
+    }
+    getDocsDir = () => {
+      const docsPath = path4.join(app4.getPath("userData"), "generated_docs");
+      if (!fs3.existsSync(docsPath)) {
+        fs3.mkdirSync(docsPath, { recursive: true });
+      }
+      return docsPath;
+    };
+  }
+});
+
 // src/main/features/doc-generator.ts
 var doc_generator_exports = {};
 __export(doc_generator_exports, {
@@ -2857,12 +3045,12 @@ async function getProfileByThinkerSource(userId, thinker) {
   return selectedProfile;
 }
 function cleanAIOutput(content) {
-  let cleaned = content;
-  cleaned = cleaned.replace(/^\s*\{\s*"(coverLetter|motivationLetter|cv|letter)"\s*:\s*"/i, "");
+  let cleaned = content || "";
+  cleaned = cleaned.replace(/^\s*\{\s*"(coverLetter|motivationLetter|cv|letter|portfolio|proposal)"\s*:\s*"/i, "");
   cleaned = cleaned.replace(/"\s*\}\s*$/i, "");
   cleaned = cleaned.replace(/```[a-z]*\n?/gi, "");
   cleaned = cleaned.replace(/```/g, "");
-  cleaned = cleaned.replace(/^Here is (the|your|a) (motivation letter|cover letter|CV|resume)[:\s]*/i, "");
+  cleaned = cleaned.replace(/^Here is (the|your|a) (motivation letter|cover letter|CV|resume|portfolio|proposal)[:\s]*/i, "");
   cleaned = cleaned.replace(/^(Below is|I've created|I have written)[^.]*\.\s*/i, "");
   cleaned = cleaned.replace(/—/g, "-");
   cleaned = cleaned.replace(/–/g, "-");
@@ -2873,10 +3061,155 @@ function cleanAIOutput(content) {
   cleaned = cleaned.trim();
   return cleaned;
 }
-function generateDocumentHTML(content, docType, userProfile, job) {
+function stripLetterGreetingAndClosing(text, isGerman) {
+  let out = (text || "").trim();
+  const greetingPatterns = isGerman ? [
+    /^\s*(sehr\s+geehrte[rn]?|liebe[rn]?|hallo)\b[^\n]*\n+/i,
+    /^\s*\b(guten\s+tag|guten\s+morgen|guten\s+abend)\b[^\n]*\n+/i
+  ] : [
+    /^\s*dear\b[^\n]*\n+/i,
+    /^\s*to\s+the\s+hiring\s+manager\b[^\n]*\n+/i,
+    /^\s*hello\b[^\n]*\n+/i
+  ];
+  for (const re of greetingPatterns) {
+    out = out.replace(re, "").trim();
+  }
+  const closingPatterns = isGerman ? [
+    /\n\s*(mit\s+freundlichen\s+gr\u00fc\u00dfen|freundliche\s+gr\u00fc\u00dfe|beste\s+gr\u00fc\u00dfe|hochachtungsvoll)[^\n]*$/i
+  ] : [
+    /\n\s*(kind\s+regards|best\s+regards|sincerely|yours\s+sincerely|yours\s+faithfully)[^\n]*$/i
+  ];
+  for (const re of closingPatterns) {
+    out = out.replace(re, "").trim();
+  }
+  out = out.replace(/\n\s*[A-Z][A-Za-z\-\s]{2,}\s*$/i, "").trim();
+  return out;
+}
+function detectJobLanguage(job) {
+  const jobText = `${(job == null ? void 0 : job.job_title) || ""} ${(job == null ? void 0 : job.required_skills) || ""} ${(job == null ? void 0 : job.description) || ""}`.toLowerCase();
+  const germanSignals = [
+    "kenntnisse",
+    "erfahrung",
+    "aufgaben",
+    "profil",
+    "wir bieten",
+    "bewerbung",
+    "anschreiben",
+    "lebenslauf",
+    "m/w/d",
+    "ihr profil",
+    "ihre aufgaben",
+    "anforderungen",
+    "qualifikation",
+    "teamf\xE4higkeit",
+    "selbst\xE4ndig",
+    "unbefristet",
+    "vollzeit",
+    "teilzeit",
+    "standort",
+    "deutsch",
+    "entwickler",
+    "ingenieur",
+    "manager",
+    "studium",
+    "abschluss"
+  ];
+  const isGerman = germanSignals.some((k) => jobText.includes(k));
+  return { isGerman, targetLanguage: isGerman ? "GERMAN" : "ENGLISH" };
+}
+function getJobDateFolder(job, isGerman) {
+  const raw = (job == null ? void 0 : job.date_imported) || (job == null ? void 0 : job.dateImported) || (job == null ? void 0 : job.date_scraped) || (job == null ? void 0 : job.dateScraped);
+  let d;
+  if (raw) {
+    const parsed = new Date(raw);
+    d = isNaN(parsed.getTime()) ? /* @__PURE__ */ new Date() : parsed;
+  } else {
+    d = /* @__PURE__ */ new Date();
+  }
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+function normalizeProfileArrays(profile) {
+  const parseField = (field) => {
+    if (!field) return [];
+    if (Array.isArray(field)) return field;
+    if (typeof field === "string") {
+      try {
+        return JSON.parse(field);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  };
+  return {
+    ...profile,
+    experiences: parseField(profile.experiences),
+    educations: parseField(profile.educations),
+    skills: parseField(profile.skills),
+    licenses: parseField(profile.licenses),
+    languages: parseField(profile.languages)
+  };
+}
+function tokenize(text) {
+  return String(text || "").toLowerCase().replace(/[^a-z\u00c0-\u017F0-9\+\#\.\-\s]/g, " ").split(/\s+/).map((t) => t.trim()).filter((t) => t.length >= 2);
+}
+function computeRelevanceScore(itemText, jobTokens) {
+  const tokens = tokenize(itemText);
+  let score = 0;
+  for (const t of tokens) {
+    if (jobTokens.has(t)) score += 3;
+  }
+  const lower = String(itemText || "").toLowerCase();
+  for (const jt of Array.from(jobTokens)) {
+    if (jt.length >= 4 && lower.includes(jt)) score += 1;
+  }
+  return score;
+}
+function filterProfileForJob(userProfile, job) {
+  const jobText = `${(job == null ? void 0 : job.job_title) || ""} ${(job == null ? void 0 : job.required_skills) || ""} ${(job == null ? void 0 : job.description) || ""}`;
+  const jobTokens = new Set(tokenize(jobText));
+  const skillsRaw = Array.isArray(userProfile == null ? void 0 : userProfile.skills) ? userProfile.skills : [];
+  const certsRaw = Array.isArray(userProfile == null ? void 0 : userProfile.licenses) ? userProfile.licenses : [];
+  const skillStrings = skillsRaw.map((s) => {
+    if (typeof s === "string") return s;
+    return (s == null ? void 0 : s.name) || (s == null ? void 0 : s.title) || JSON.stringify(s);
+  });
+  const certStrings = certsRaw.map((c) => {
+    if (typeof c === "string") return c;
+    return (c == null ? void 0 : c.name) || (c == null ? void 0 : c.title) || (c == null ? void 0 : c.issuer) || JSON.stringify(c);
+  });
+  const scoredSkills = skillStrings.map((s) => ({ s, score: computeRelevanceScore(s, jobTokens) })).sort((a, b) => b.score - a.score || a.s.localeCompare(b.s));
+  const scoredCerts = certStrings.map((s) => ({ s, score: computeRelevanceScore(s, jobTokens) })).sort((a, b) => b.score - a.score || a.s.localeCompare(b.s));
+  const relevantSkills = scoredSkills.filter((x) => x.score > 0).slice(0, 7).map((x) => x.s);
+  const relevantCerts = scoredCerts.filter((x) => x.score > 0).slice(0, 5).map((x) => x.s);
+  const finalSkills = relevantSkills.length > 0 ? relevantSkills : skillStrings.slice(0, 5);
+  const finalCerts = relevantCerts.length > 0 ? relevantCerts : certStrings.slice(0, 3);
+  const filteredProfile = {
+    ...userProfile,
+    skills: finalSkills,
+    licenses: finalCerts
+  };
+  return { profile: filteredProfile, relevantSkills: finalSkills, relevantCerts: finalCerts };
+}
+function generateDocumentHTML(content, docType, userProfile, job, isGerman) {
   const title = `${docType} - ${(userProfile == null ? void 0 : userProfile.name) || "Applicant"} - ${(job == null ? void 0 : job.company_name) || "Company"}`;
+  const isLetter = docType.toLowerCase().includes("letter");
+  const currentDate = (/* @__PURE__ */ new Date()).toLocaleDateString(isGerman ? "de-DE" : "en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric"
+  });
+  const salutation = isGerman ? "Sehr geehrte Damen und Herren," : "Dear Hiring Manager,";
+  const closing = isGerman ? "Mit freundlichen Gr\xFC\xDFen" : "Kind regards,";
+  let cleanContent = content;
+  if (isLetter) {
+    cleanContent = stripLetterGreetingAndClosing(cleanContent, isGerman);
+  }
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${isGerman ? "de" : "en"}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2884,145 +3217,145 @@ function generateDocumentHTML(content, docType, userProfile, job) {
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       line-height: 1.6;
-      color: #1a1a1a;
+      color: #333;
       max-width: 800px;
       margin: 0 auto;
-      padding: 40px;
+      padding: 60px 80px;
       background: #fff;
     }
     
-    .header {
-      margin-bottom: 30px;
+    .letterhead {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 50px;
+      border-bottom: 1px solid #eee;
       padding-bottom: 20px;
-      border-bottom: 2px solid #0077b5;
     }
     
-    .name {
-      font-size: 28px;
+    .applicant-info {
+      text-align: left;
+    }
+    
+    .applicant-name {
+      font-size: 24px;
       font-weight: 700;
       color: #0077b5;
       margin-bottom: 5px;
-    }
-    
-    .title {
-      font-size: 16px;
-      color: #666;
-      margin-bottom: 10px;
-    }
-    
-    .contact {
-      font-size: 13px;
-      color: #444;
-    }
-    
-    .contact span {
-      margin-right: 15px;
-    }
-    
-    .section {
-      margin-bottom: 25px;
-    }
-    
-    .section-title {
-      font-size: 14px;
-      font-weight: 600;
-      color: #0077b5;
       text-transform: uppercase;
       letter-spacing: 1px;
-      margin-bottom: 10px;
-      padding-bottom: 5px;
-      border-bottom: 1px solid #e0e0e0;
     }
     
-    .content {
+    .applicant-contact {
+      font-size: 13px;
+      color: #666;
+    }
+    
+    .applicant-contact p { margin: 1px 0; }
+    
+    .date-section {
+      text-align: right;
       font-size: 14px;
-      text-align: justify;
-      white-space: pre-wrap;
+      color: #444;
+      margin-bottom: 30px;
     }
     
-    .content p {
-      margin-bottom: 12px;
+    .recipient-info {
+      margin-bottom: 35px;
+      font-size: 14px;
+      color: #222;
+      line-height: 1.5;
     }
     
-    .experience-item, .education-item {
-      margin-bottom: 15px;
-    }
+    .recipient-info p { margin: 2px 0; }
     
-    .item-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-    }
-    
-    .item-title {
+    .salutation {
+      margin-bottom: 20px;
       font-weight: 600;
       font-size: 15px;
     }
     
-    .item-company {
-      color: #666;
-      font-size: 14px;
+    .content {
+      font-size: 15px;
+      text-align: justify;
+      white-space: pre-wrap;
+      margin-bottom: 40px;
     }
     
-    .item-date {
-      color: #888;
-      font-size: 13px;
+    .signature {
+      margin-top: 40px;
     }
     
-    .item-description {
-      font-size: 13px;
-      color: #444;
-      margin-top: 5px;
+    .closing {
+      margin-bottom: 30px;
+      font-size: 15px;
     }
     
-    .skills-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    
-    .skill-tag {
-      background: #e3f2fd;
+    .signature-name {
+      font-weight: 700;
+      font-size: 16px;
       color: #0077b5;
-      padding: 4px 12px;
-      border-radius: 15px;
-      font-size: 12px;
     }
-    
+
     @media print {
-      body {
-        padding: 20px;
-      }
+      body { padding: 40px; }
+      .letterhead { margin-bottom: 30px; }
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="name">${(userProfile == null ? void 0 : userProfile.name) || "Your Name"}</div>
-    <div class="title">${(userProfile == null ? void 0 : userProfile.title) || "Professional Title"}</div>
-    <div class="contact">
+  ${isLetter ? `
+  <div class="letterhead">
+    <div class="applicant-info">
+      <div class="applicant-name">${(userProfile == null ? void 0 : userProfile.name) || "Your Name"}</div>
+      <div class="applicant-contact">
+        ${(userProfile == null ? void 0 : userProfile.email) ? `<p>${userProfile.email}</p>` : ""}
+        ${(userProfile == null ? void 0 : userProfile.phone) ? `<p>${userProfile.phone}</p>` : ""}
+        ${(userProfile == null ? void 0 : userProfile.location) ? `<p>${userProfile.location}</p>` : ""}
+      </div>
+    </div>
+    <div style="text-align: right; font-size: 12px; color: #999;">
+      ${docType.toUpperCase()}
+    </div>
+  </div>
+  
+  <div class="date-section">${currentDate}</div>
+  
+  <div class="recipient-info">
+    <p><strong>To: Hiring Manager</strong></p>
+    <p>${(job == null ? void 0 : job.company_name) || "Company Name"}</p>
+    ${(job == null ? void 0 : job.location) ? `<p>${job.location}</p>` : ""}
+  </div>
+  
+  <div class="salutation">${salutation}</div>
+  ` : `
+  <div class="header" style="margin-bottom: 40px; padding-bottom: 20px; border-bottom: 2px solid #0077b5;">
+    <div style="font-size: 32px; font-weight: 700; color: #0077b5; margin-bottom: 5px;">${(userProfile == null ? void 0 : userProfile.name) || "Your Name"}</div>
+    <div style="font-size: 18px; color: #555; margin-bottom: 15px;">${(userProfile == null ? void 0 : userProfile.title) || "Professional Title"}</div>
+    <div style="font-size: 14px; color: #666; display: flex; gap: 20px;">
       ${(userProfile == null ? void 0 : userProfile.email) ? `<span>\u{1F4E7} ${userProfile.email}</span>` : ""}
       ${(userProfile == null ? void 0 : userProfile.phone) ? `<span>\u{1F4F1} ${userProfile.phone}</span>` : ""}
       ${(userProfile == null ? void 0 : userProfile.location) ? `<span>\u{1F4CD} ${userProfile.location}</span>` : ""}
     </div>
   </div>
+  `}
   
-  <div class="section">
-    <div class="content">${content.replace(/\n/g, "<br>")}</div>
+  <div class="content">${cleanContent.replace(/\n/g, "<br>")}</div>
+  
+  ${isLetter ? `
+  <div class="signature">
+    <div class="closing">${closing}</div>
+    <div class="signature-name">${(userProfile == null ? void 0 : userProfile.name) || "Your Name"}</div>
   </div>
+  ` : ""}
 </body>
 </html>`;
 }
-function generateCVHTML(content, userProfile, job) {
+function generateCVHTML(content, userProfile, job, isGerman) {
   var _a;
   const experiences = (userProfile == null ? void 0 : userProfile.experiences) || [];
   const educations = (userProfile == null ? void 0 : userProfile.educations) || [];
@@ -3034,13 +3367,13 @@ function generateCVHTML(content, userProfile, job) {
       <div class="experience-item">
         <div class="item-header">
           <div>
-            <span class="item-title">${exp.title || exp}</span>
-            ${exp.company ? `<span class="item-company"> at ${exp.company}</span>` : ""}
+            <span class="item-title">${exp.title || exp.job_title || exp}</span>
+            ${exp.company || exp.company_name ? `<span class="item-company"> at ${exp.company || exp.company_name}</span>` : ""}
           </div>
-          <span class="item-date">${exp.startDate || ""} - ${exp.endDate || "Present"}</span>
+          <span class="item-date">${exp.startDate || exp.start_date || ""} - ${exp.endDate || exp.end_date || "Present"}</span>
         </div>
-        ${exp.location ? `<div style="color: #666; font-size: 13px;">${exp.location}</div>` : ""}
-        ${exp.description ? `<div class="item-description">${exp.description}</div>` : ""}
+        ${exp.location || exp.city ? `<div style="color: #666; font-size: 13px;">${exp.location || exp.city}</div>` : ""}
+        ${exp.description || exp.summary ? `<div class="item-description">${exp.description || exp.summary}</div>` : ""}
       </div>
     `).join("");
   }
@@ -3050,12 +3383,12 @@ function generateCVHTML(content, userProfile, job) {
       <div class="education-item">
         <div class="item-header">
           <div>
-            <span class="item-title">${edu.degree || edu}</span>
-            ${edu.field ? `<span class="item-company"> in ${edu.field}</span>` : ""}
+            <span class="item-title">${edu.degree || edu.qualification || edu}</span>
+            ${edu.field || edu.major ? `<span class="item-company"> in ${edu.field || edu.major}</span>` : ""}
           </div>
-          <span class="item-date">${edu.startYear || ""} - ${edu.endYear || ""}</span>
+          <span class="item-date">${edu.startYear || edu.start_year || edu.startDate || ""} - ${edu.endYear || edu.end_year || edu.endDate || ""}</span>
         </div>
-        ${edu.school ? `<div style="color: #666; font-size: 13px;">${edu.school}</div>` : ""}
+        ${edu.school || edu.university || edu.institution ? `<div style="color: #666; font-size: 13px;">${edu.school || edu.university || edu.institution}</div>` : ""}
       </div>
     `).join("");
   }
@@ -3068,7 +3401,7 @@ function generateCVHTML(content, userProfile, job) {
     certsHTML = `<div class="skills-list">${certifications.map((c) => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${c}</span>`).join("")}</div>`;
   }
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${isGerman ? "de" : "en"}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3170,21 +3503,21 @@ function generateCVHTML(content, userProfile, job) {
     <div class="left-column">
       ${(userProfile == null ? void 0 : userProfile.summary) ? `
         <div class="section">
-          <div class="section-title">Professional Summary</div>
+          <div class="section-title">${isGerman ? "Beruflicher Werdegang" : "Professional Summary"}</div>
           <div class="summary">${userProfile.summary}</div>
         </div>
       ` : ""}
       
       ${experiencesHTML ? `
         <div class="section">
-          <div class="section-title">Work Experience</div>
+          <div class="section-title">${isGerman ? "Berufserfahrung" : "Work Experience"}</div>
           ${experiencesHTML}
         </div>
       ` : ""}
       
       ${educationsHTML ? `
         <div class="section">
-          <div class="section-title">Education</div>
+          <div class="section-title">${isGerman ? "Ausbildung" : "Education"}</div>
           ${educationsHTML}
         </div>
       ` : ""}
@@ -3193,21 +3526,21 @@ function generateCVHTML(content, userProfile, job) {
     <div class="right-column">
       ${skillsHTML ? `
         <div class="section">
-          <div class="section-title">Skills</div>
+          <div class="section-title">${isGerman ? "Kenntnisse" : "Skills"}</div>
           ${skillsHTML}
         </div>
       ` : ""}
       
       ${certsHTML ? `
         <div class="section">
-          <div class="section-title">Certifications</div>
+          <div class="section-title">${isGerman ? "Zertifizierungen" : "Certifications"}</div>
           ${certsHTML}
         </div>
       ` : ""}
       
       ${((_a = userProfile == null ? void 0 : userProfile.languages) == null ? void 0 : _a.length) > 0 ? `
         <div class="section">
-          <div class="section-title">Languages</div>
+          <div class="section-title">${isGerman ? "Sprachen" : "Languages"}</div>
           <div class="skills-list">
             ${userProfile.languages.map((l) => `<span class="skill-tag" style="background: #e8f5e9; color: #388e3c;">${l}</span>`).join("")}
           </div>
@@ -3218,24 +3551,31 @@ function generateCVHTML(content, userProfile, job) {
 </body>
 </html>`;
 }
-function saveDocumentFile(content, jobId, docType, format = "html", companyName, position) {
-  const docsDir = companyName && position ? getOrganizedDocsDir(companyName, position) : getDocsDir();
+function saveDocumentFile(content, jobId, docType, format = "html", companyName, position, dateFolder) {
+  const docsDir = companyName && position ? getOrganizedDocsDir(companyName, position, dateFolder || "Unknown_Date") : getDocsDir2();
   const timestamp = Date.now();
   const fileName = `${docType}_job${jobId}_${timestamp}.${format}`;
-  const filePath = path4.join(docsDir, fileName);
-  fs3.writeFileSync(filePath, content, "utf-8");
+  const filePath = path5.join(docsDir, fileName);
+  console.log(`Saving document to: ${filePath}`);
+  fs4.writeFileSync(filePath, content, "utf-8");
   console.log(`Document saved: ${filePath}`);
   return filePath;
 }
 async function generateTailoredDocs(job, userId, thinker, auditor, options, callAI2) {
   const db = getDatabase();
-  const userProfile = await getProfileByThinkerSource(userId, thinker);
+  const { isGerman, targetLanguage } = detectJobLanguage(job);
+  const dateFolder = getJobDateFolder(job, isGerman);
+  let userProfile = await getProfileByThinkerSource(userId, thinker);
   if (!userProfile) {
     await logAction(userId, "ai_thinker", "\u274C No user profile found. Please create your profile first.", "failed", false);
     return;
   }
+  userProfile = normalizeProfileArrays(userProfile);
+  const filtered = filterProfileForJob(userProfile, job);
+  const filteredProfile = filtered.profile;
   const motivationLetterWordLimit = (thinker == null ? void 0 : thinker.motivation_letter_word_limit) || "450";
   const coverLetterWordLimit = (thinker == null ? void 0 : thinker.cover_letter_word_limit) || "280";
+  const cvPageLimit = (thinker == null ? void 0 : thinker.cv_page_limit) || "2";
   let companyResearch = "";
   try {
     await logAction(userId, "ai_thinker", `\u{1F50D} Researching ${job.company_name} mission and history...`, "in_progress");
@@ -3245,66 +3585,116 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
     companyResearch = "Research unavailable.";
   }
   for (const type of DOC_TYPES) {
-    if (options[type.optionKey]) {
-      try {
-        await logAction(userId, "ai_thinker", `\u270D\uFE0F Generating tailored ${type.label} for ${job.company_name}`, "in_progress");
-        await runQuery("UPDATE job_listings", { id: job.id, [`${type.key}_status`]: "generating" });
-        await logAction(userId, "ai_thinker", `\u270D\uFE0F Generating ${type.label} (Auditor disabled - user choice respected)`, "in_progress");
-        const thinkerPrompt = buildThinkerPrompt(
-          type.key,
-          type.label,
-          userProfile,
-          job,
-          companyResearch,
-          "",
-          // No feedback needed since no retry loop
-          { motivationLetterWordLimit, coverLetterWordLimit }
-        );
-        let rawContent = await callAI2(thinker, thinkerPrompt);
-        const content = cleanAIOutput(rawContent);
-        const approved = true;
-        await logAction(userId, "ai_thinker", `\u2705 ${type.label} generated successfully`, "completed", true);
-        if (approved) {
-          let htmlContent;
-          if (type.key === "cv") {
-            htmlContent = generateCVHTML(content, userProfile, job);
-          } else {
-            htmlContent = generateDocumentHTML(content, type.label, userProfile, job);
-          }
-          const filePath = saveDocumentFile(htmlContent, job.id, type.key, "html", job.company_name, job.job_title);
-          const docId = Date.now() + Math.floor(Math.random() * 1e3);
-          await runQuery("INSERT INTO documents", {
-            id: docId,
-            job_id: job.id,
-            user_id: userId,
-            document_type: type.key,
-            content,
-            file_path: filePath,
-            version: 1,
-            status: "final",
-            created_at: (/* @__PURE__ */ new Date()).toISOString()
-          });
-          await runQuery("UPDATE job_listings", {
-            id: job.id,
-            [`${type.key}_status`]: "completed",
-            [`${type.key}_path`]: filePath,
-            [`${type.key}_rejection_reason`]: null
-          });
-          await logAction(userId, "ai_thinker", `\u{1F4C4} ${type.label} saved to: ${filePath}`, "completed", true);
+    if (!(options == null ? void 0 : options[type.optionKey])) continue;
+    try {
+      await logAction(userId, "ai_thinker", `\u270D\uFE0F Generating tailored ${type.label} for ${job.company_name}`, "in_progress");
+      await runQuery("UPDATE job_listings", {
+        id: String(job.id),
+        [`${type.key}_status`]: "generating",
+        [`${type.key}_rejection_reason`]: null
+      });
+      const thinkerPrompt = buildThinkerPrompt({
+        docKey: type.key,
+        docLabel: type.label,
+        userProfile: filteredProfile,
+        job,
+        companyResearch,
+        feedback: "",
+        constraints: {
+          motivationLetterWordLimit,
+          coverLetterWordLimit,
+          cvPageLimit,
+          targetLanguage,
+          isGerman
         }
-      } catch (e) {
-        console.error(`Error generating ${type.key}:`, e);
-        await runQuery("UPDATE job_listings", { id: job.id, [`${type.key}_status`]: "failed" });
-        await logAction(userId, "ai_thinker", `\u274C Error: ${e.message}`, "failed", false);
+      });
+      const rawContent = await callAI2(thinker, thinkerPrompt);
+      if (!rawContent || String(rawContent).startsWith("Error:")) {
+        throw new Error(rawContent || "AI returned empty content");
       }
+      let content = cleanAIOutput(rawContent);
+      if (type.key !== "cv") {
+        content = stripLetterGreetingAndClosing(content, isGerman);
+      }
+      await logAction(userId, "ai_thinker", `\u2705 ${type.label} generated successfully`, "completed", true);
+      const htmlContent = type.key === "cv" ? generateCVHTML(content, filteredProfile, job, isGerman) : generateDocumentHTML(content, type.label, filteredProfile, job, isGerman);
+      const htmlPath = saveDocumentFile(
+        htmlContent,
+        job.id,
+        type.key,
+        "html",
+        job.company_name,
+        job.job_title,
+        dateFolder
+      );
+      const docId = Date.now() + Math.floor(Math.random() * 1e3);
+      await runQuery("INSERT INTO documents", {
+        id: docId,
+        job_id: String(job.id),
+        user_id: userId,
+        document_type: type.key,
+        content,
+        file_path: htmlPath,
+        version: 1,
+        status: "final",
+        created_at: (/* @__PURE__ */ new Date()).toISOString()
+      });
+      await runQuery("UPDATE job_listings", {
+        id: String(job.id),
+        [`${type.key}_status`]: "auditor_done",
+        [`${type.key}_path`]: htmlPath,
+        [`${type.key}_rejection_reason`]: null
+      });
+      await logAction(userId, "ai_thinker", `\u{1F4C4} ${type.label} saved (HTML): ${htmlPath}`, "completed", true);
+      try {
+        const { convertHtmlToPdf: convertHtmlToPdf2 } = (init_pdf_export(), __toCommonJS(pdf_export_exports));
+        const pdfResult = await convertHtmlToPdf2(htmlPath, userId);
+        if (pdfResult.success && pdfResult.pdfPath) {
+          await runQuery("UPDATE job_listings", {
+            id: String(job.id),
+            [`${type.key}_pdf_path`]: pdfResult.pdfPath
+          });
+          await runQuery("UPDATE documents", {
+            id: docId,
+            file_path: pdfResult.pdfPath
+          });
+          await logAction(userId, "pdf", `\u2705 PDF created: ${path5.basename(pdfResult.pdfPath)}`, "completed", true);
+        }
+      } catch (pdfErr) {
+        console.error("Auto-PDF conversion failed:", pdfErr);
+      }
+    } catch (e) {
+      console.error(`Error generating ${type.key}:`, e);
+      await runQuery("UPDATE job_listings", {
+        id: String(job.id),
+        [`${type.key}_status`]: "failed"
+      });
+      await logAction(userId, "ai_thinker", `\u274C Error: ${e.message}`, "failed", false);
     }
   }
 }
-function buildThinkerPrompt(docKey, docLabel, userProfile, job, companyResearch, feedback, wordLimits) {
-  const motivationWordLimit = (wordLimits == null ? void 0 : wordLimits.motivationLetterWordLimit) || "450";
-  const coverWordLimit = (wordLimits == null ? void 0 : wordLimits.coverLetterWordLimit) || "280";
+function buildThinkerPrompt(args) {
+  const {
+    docKey,
+    docLabel,
+    userProfile,
+    job,
+    companyResearch,
+    feedback,
+    constraints
+  } = args;
+  const motivationWordLimit = constraints.motivationLetterWordLimit || "450";
+  const coverWordLimit = constraints.coverLetterWordLimit || "280";
+  const cvPageLimit = constraints.cvPageLimit || "2";
+  const targetLanguage = constraints.targetLanguage;
+  const isGerman = constraints.isGerman;
+  const languageHardRule = isGerman ? `ABSOLUTE LANGUAGE RULE: Output MUST be 100% German. ZERO English words, phrases, headings, salutations, or closings. If you output any English, the document is INVALID.` : `LANGUAGE RULE: Output MUST be 100% English. Do not use German.`;
   const baseContext = `
-USER PROFILE:
+${languageHardRule}
+
+PAGE LIMIT: ${cvPageLimit} A4 pages maximum (applies to ALL documents).
+
+USER PROFILE (FILTERED FOR RELEVANCE - DO NOT ADD OTHER SKILLS/CERTS):
 Name: ${(userProfile == null ? void 0 : userProfile.name) || "N/A"}
 Title: ${(userProfile == null ? void 0 : userProfile.title) || "N/A"}
 Location: ${(userProfile == null ? void 0 : userProfile.location) || "N/A"}
@@ -3312,9 +3702,9 @@ Email: ${(userProfile == null ? void 0 : userProfile.email) || "N/A"}
 Phone: ${(userProfile == null ? void 0 : userProfile.phone) || "N/A"}
 Summary: ${(userProfile == null ? void 0 : userProfile.summary) || "N/A"}
 Experiences: ${JSON.stringify((userProfile == null ? void 0 : userProfile.experiences) || [])}
-Skills: ${JSON.stringify((userProfile == null ? void 0 : userProfile.skills) || [])}
+Skills (ONLY these 5-7): ${JSON.stringify((userProfile == null ? void 0 : userProfile.skills) || [])}
 Education: ${JSON.stringify((userProfile == null ? void 0 : userProfile.educations) || [])}
-Certifications: ${JSON.stringify((userProfile == null ? void 0 : userProfile.licenses) || [])}
+Certifications (ONLY these 3-5): ${JSON.stringify((userProfile == null ? void 0 : userProfile.licenses) || [])}
 Languages: ${JSON.stringify((userProfile == null ? void 0 : userProfile.languages) || [])}
 
 JOB DETAILS:
@@ -3334,7 +3724,16 @@ Please fix these issues in the new version.` : ""}
   const prompts = {
     cv: `You are a professional CV/Resume writer. Create a tailored CV for this job application.
 
+${languageHardRule}
+
+CRITICAL LANGUAGE REQUIREMENT: You MUST write the entire CV in ${targetLanguage}. This includes all section headings, job descriptions, and summaries.
+
 ${baseContext}
+
+RELEVANCE RULE:
+- Include ONLY skills and certifications that are DIRECTLY RELEVANT to this specific job.
+- If a certification or skill has no connection to the job requirements, OMIT IT.
+- Quality over quantity. A focused CV is better than a long list of irrelevant items.
 
 CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 1. DO NOT fabricate or hallucinate any information - use ONLY data from the provided profile
@@ -3342,15 +3741,20 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 3. DO NOT include any JSON formatting or markdown code blocks
 4. DO NOT add meta-commentary like "Here is your CV"
 
-NOTE: CV generation is NOT subject to word limits. Use the full profile data.
+NOTE: CV generation is NOT subject to word limits.
+
+PAGE LIMIT REQUIREMENT:
+- Keep the CV within ${cvPageLimit} A4 pages.
+- If you must shorten, keep only the most relevant experiences and the TOP 5-7 skills and TOP 3-5 certifications (already provided above).
 
 REQUIREMENTS:
-1. Tailor the CV specifically to the job requirements
-2. Highlight relevant experiences and skills that match the job description - but ONLY from the provided profile
+1. Tailor the CV specifically to the job requirements.
+2. RELEVANCE FILTER: Your profile contains many skills and certifications. You MUST ONLY include those that are DIRECTLY RELEVANT to this specific position. If a skill or certification is not mentioned or implied as useful in the job description, DO NOT include it. A concise, relevant CV is mandatory. DO NOT list more than 5-7 key skills and 3-5 relevant certifications.
+3. Highlight relevant experiences and skills that match the job description - but ONLY from the provided profile.
 3. Use action verbs and quantify achievements where the data exists in the profile
 4. Keep it ATS-friendly (no tables, columns, graphics)
 5. Include contact information at the top (from the profile)
-6. Language: Match the job description language
+6. LANGUAGE: You MUST write the entire document in the SAME LANGUAGE as the job description provided above. If the job is in German, write in German. If in English, write in English.
 7. Structure: Contact Info, Professional Summary, Work Experience, Education, Skills, Certifications, Languages
 
 ATS OPTIMIZATION:
@@ -3384,8 +3788,8 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 6. DO NOT start sentences with "I have..." or "I am..." repeatedly
 7. DO NOT fabricate or hallucinate information - use ONLY data from the provided profile
 8. DO NOT invent company facts not mentioned in the research - if unsure, focus on what's in the job posting
-9. Output ONLY the letter content, starting with the date and recipient
-10. MUST end with proper sign-off: "Kind regards," followed by the applicant's full name
+9. Output ONLY the letter BODY (main paragraphs). DO NOT include a date, recipient address, salutation (like "Dear...") or ANY closing/sign-off (like "Kind regards"). The system template will provide those automatically.
+10. If you include any greeting or closing, it will be treated as an error.
 
 HANDLING SKILL GAPS (IMPORTANT):
 - If the candidate's profile doesn't perfectly match all job requirements, DO NOT reject or avoid the task
@@ -3395,15 +3799,15 @@ HANDLING SKILL GAPS (IMPORTANT):
 - Frame any gaps as growth opportunities, not weaknesses
 
 STRUCTURE (follow exactly):
-1. HEADER: Date, Company Address, "Dear Hiring Manager,"
-2. OPENING (1 paragraph): State who you are, what position, and ONE compelling reason why this company
-3. COMPANY CONNECTION (1 paragraph): Reference something specific about the company - their products, services, recent news, or values. If research is limited, focus on what's clear from the job posting
-4. YOUR VALUE (2 paragraphs): 
+1. OPENING (1 paragraph): State who you are, what position, and ONE compelling reason why this company
+2. COMPANY CONNECTION (1 paragraph): Reference something specific about the company - their products, services, recent news, or values. If research is limited, focus on what's clear from the job posting
+3. YOUR VALUE (2 paragraphs):
    - First: Your most relevant experience with SPECIFIC metrics/achievements FROM YOUR ACTUAL PROFILE
    - Second: How your skills directly solve their needs OR how your transferable skills and eagerness to learn make you a strong candidate
-5. WHY THIS ROLE (1 paragraph): Personal motivation - career goals, growth opportunity, alignment. EXPRESS ENTHUSIASM to learn any skills you may be developing.
-6. CLOSING: Thank them, express enthusiasm for an interview
-7. SIGN-OFF: "Kind regards," + new line + "${(userProfile == null ? void 0 : userProfile.name) || "[Your Name]"}"
+4. WHY THIS ROLE (1 paragraph): Personal motivation - career goals, growth opportunity, alignment.
+5. CLOSING (1 paragraph): Thank them, express enthusiasm for an interview
+
+IMPORTANT: Do NOT include a greeting/salutation or any closing/sign-off.
 
 MUST INCLUDE:
 - At least 2 specific achievements with numbers/metrics FROM THE PROVIDED PROFILE
@@ -3414,9 +3818,9 @@ MUST INCLUDE:
 - If skill gaps exist: Express enthusiasm to learn and adapt
 
 Length: Approximately ${motivationWordLimit} words. This is a formal document.
-Language: Match the job description language.
+LANGUAGE: You MUST write the entire document in the SAME LANGUAGE as the job description provided above. If the job is in German, write in German. If in English, write in English.
 
-Return ONLY the motivation letter content, starting directly with the date and ending with the sign-off.`,
+Return ONLY the motivation letter BODY (paragraphs). Start directly with the first paragraph and end with the final paragraph. No greeting, no sign-off, no date, no address.`,
     cover_letter: `You are an expert Cover Letter writer. Create a concise, professional cover letter.
 
 ${baseContext}
@@ -3428,7 +3832,7 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 2. DO NOT start with meta-text like "Here is the cover letter:"
 3. DO NOT use long em-dashes (\u2014), use regular dashes (-) only
 4. DO NOT fabricate or hallucinate information not provided in the profile
-5. Output ONLY the letter content, starting with "Dear Hiring Manager" or similar
+5. Output ONLY the letter body content. DO NOT include a salutation (like "Dear...") or closing (like "Kind regards"). The system will provide these automatically.
 
 HANDLING SKILL GAPS:
 - If there are gaps between the job requirements and the candidate's profile, highlight transferable skills
@@ -3442,16 +3846,15 @@ REQUIREMENTS:
 4. Show enthusiasm for the specific role AND for learning/growing
 5. Include a clear call to action
 6. No clich\xE9s or AI-sounding phrases
-7. Language: Match the job description
-8. MUST end with proper sign-off: "Kind regards," followed by the applicant's full name
+7. LANGUAGE: You MUST write the entire document in the SAME LANGUAGE as the job description provided above. If the job is in German, write in German. If in English, write in English.
+8. Do NOT include any greeting/salutation or any closing/sign-off. The system template adds those.
 
 STRUCTURE:
-- Opening: "Dear Hiring Manager," then state the position and express interest (1-2 sentences)
-- Middle (2 paragraphs): Your relevant qualifications and why you're a great fit
-- Closing: Thank them, suggest next steps
-- Sign-off: "Kind regards," + new line + "${(userProfile == null ? void 0 : userProfile.name) || "[Your Name]"}"
+- Opening paragraph: state the position and express interest (1-2 sentences)
+- Middle (2 paragraphs): your relevant qualifications and why you're a great fit
+- Closing paragraph: thank them, suggest next steps
 
-Return ONLY the cover letter content, starting with "Dear Hiring Manager," and ending with the sign-off.`,
+Return ONLY the cover letter BODY (paragraphs). No greeting, no sign-off.`,
     portfolio: `You are a Portfolio Description writer. Create a portfolio summary for this job application.
 
 ${baseContext}
@@ -3485,55 +3888,68 @@ Return ONLY the proposal content.`
 async function generateSingleDocument(jobId, userId, docType, thinker, auditor, callAI2) {
   var _a, _b, _c, _d;
   const db = getDatabase();
-  const job = (_a = db.job_listings) == null ? void 0 : _a.find((j) => j.id === jobId);
+  const job = (_a = db.job_listings) == null ? void 0 : _a.find((j) => String(j.id) === String(jobId));
   const userProfile = ((_b = db.user_profile) == null ? void 0 : _b.find((p) => p.id === userId)) || ((_c = db.user_profile) == null ? void 0 : _c[0]);
   if (!job) return { success: false, error: "Job not found" };
   if (!userProfile) return { success: false, error: "User profile not found" };
+  const { isGerman, targetLanguage } = detectJobLanguage(job);
+  void targetLanguage;
+  void isGerman;
   const options = {};
   const typeConfig = DOC_TYPES.find((t) => t.key === docType);
   if (typeConfig) {
     options[typeConfig.optionKey] = true;
+  } else {
+    return { success: false, error: `Unknown document type: ${docType}` };
   }
   await generateTailoredDocs(job, userId, thinker, auditor, options, callAI2);
-  const updatedJob = (_d = db.job_listings) == null ? void 0 : _d.find((j) => j.id === jobId);
-  const filePath = updatedJob == null ? void 0 : updatedJob[`${docType}_path`];
+  const updatedJob = (_d = db.job_listings) == null ? void 0 : _d.find((j) => String(j.id) === String(jobId));
+  const filePath = (updatedJob == null ? void 0 : updatedJob[`${docType}_pdf_path`]) || (updatedJob == null ? void 0 : updatedJob[`${docType}_path`]);
   if (filePath) {
     return { success: true, filePath };
   }
   return { success: false, error: "Document generation failed" };
 }
-var fs3, path4, app4, getBaseDocsDir, getOrganizedDocsDir, getDocsDir, DOC_TYPES;
+var fs4, path5, app5, getBaseDocsDir, getOrganizedDocsDir, getDocsDir2, DOC_TYPES;
 var init_doc_generator = __esm({
   "src/main/features/doc-generator.ts"() {
     init_database();
     init_scraper_service();
-    fs3 = __toESM(require("fs"), 1);
-    path4 = __toESM(require("path"), 1);
+    fs4 = __toESM(require("fs"), 1);
+    path5 = __toESM(require("path"), 1);
     try {
-      app4 = require("electron").app;
+      app5 = require("electron").app;
     } catch (e) {
-      app4 = global.electronApp;
+      app5 = global.electronApp;
     }
     getBaseDocsDir = () => {
-      const docsPath = path4.join(app4.getPath("userData"), "generated_docs");
-      if (!fs3.existsSync(docsPath)) {
-        fs3.mkdirSync(docsPath, { recursive: true });
+      try {
+        const db = getDatabase();
+        const settings = (db.settings || [])[0] || {};
+        const configuredRoot = settings.storage_path || settings.storagePath;
+        const root = configuredRoot && String(configuredRoot).trim().length > 0 ? String(configuredRoot).trim() : path5.join(app5.getPath("userData"), "generated_docs");
+        if (!fs4.existsSync(root)) {
+          fs4.mkdirSync(root, { recursive: true });
+        }
+        return root;
+      } catch {
+        const fallback = path5.join(app5.getPath("userData"), "generated_docs");
+        if (!fs4.existsSync(fallback)) fs4.mkdirSync(fallback, { recursive: true });
+        return fallback;
       }
-      return docsPath;
     };
-    getOrganizedDocsDir = (companyName, position) => {
-      const sanitize = (str) => str.replace(/[<>:"/\\|?*]/g, "_").trim().substring(0, 50);
+    getOrganizedDocsDir = (companyName, position, dateFolder) => {
+      const sanitize = (str) => String(str || "").replace(/[<>:"/\\|?*]/g, "_").trim().substring(0, 50);
       const company = sanitize(companyName || "Unknown_Company");
       const pos = sanitize(position || "Unknown_Position");
-      const docsPath = path4.join(getBaseDocsDir(), company, pos);
-      if (!fs3.existsSync(docsPath)) {
-        fs3.mkdirSync(docsPath, { recursive: true });
+      const date = sanitize(dateFolder || "Unknown_Date");
+      const docsPath = path5.join(getBaseDocsDir(), company, pos, date);
+      if (!fs4.existsSync(docsPath)) {
+        fs4.mkdirSync(docsPath, { recursive: true });
       }
       return docsPath;
     };
-    getDocsDir = () => {
-      return getBaseDocsDir();
-    };
+    getDocsDir2 = () => getBaseDocsDir();
     DOC_TYPES = [
       { key: "cv", label: "CV", optionKey: "cv" },
       { key: "motivation_letter", label: "Motivation Letter", optionKey: "motivationLetter" },
@@ -3682,7 +4098,7 @@ async function submitApplication(jobId, userId, observerModel, callAI2) {
       throw new Error("Job or application URL not found");
     }
     await logAction(userId, "ai_mouse", `\u{1F5B1}\uFE0F Starting automated submission for ${job.company_name}`, "in_progress");
-    const browser = await import_puppeteer3.default.launch({
+    const browser = await import_puppeteer4.default.launch({
       headless: false,
       userDataDir: import_path4.default.join(import_electron3.app.getPath("userData"), "browser_data"),
       args: ["--no-sandbox", "--start-maximized"]
@@ -3723,12 +4139,12 @@ async function submitApplication(jobId, userId, observerModel, callAI2) {
     return { success: false, error: error.message };
   }
 }
-var import_puppeteer3, import_path4, import_electron3;
+var import_puppeteer4, import_path4, import_electron3;
 var init_application_submitter = __esm({
   "src/main/features/application-submitter.ts"() {
     init_database();
     init_scraper_service();
-    import_puppeteer3 = __toESM(require("puppeteer"), 1);
+    import_puppeteer4 = __toESM(require("puppeteer"), 1);
     import_path4 = __toESM(require("path"), 1);
     import_electron3 = require("electron");
   }
@@ -4224,7 +4640,7 @@ async function submitApplication3(jobId, userId, observerModel, callAI2) {
       pendingQuestions: []
     };
     activeApplications.set(jobId, appState);
-    browser = await import_puppeteer4.default.launch({
+    browser = await import_puppeteer5.default.launch({
       headless: false,
       userDataDir: getUserDataDir3(),
       args: ["--no-sandbox", "--start-maximized", "--disable-blink-features=AutomationControlled"]
@@ -4474,9 +4890,9 @@ async function handleFileUpload(page, field, jobId, userId) {
     } else if (label.includes("portfolio")) {
       docPath = job == null ? void 0 : job.portfolio_path;
     }
-    if (!docPath || !fs4.existsSync(docPath)) {
+    if (!docPath || !fs5.existsSync(docPath)) {
       const pdfPath = docPath == null ? void 0 : docPath.replace(".html", ".pdf");
-      if (pdfPath && fs4.existsSync(pdfPath)) {
+      if (pdfPath && fs5.existsSync(pdfPath)) {
         docPath = pdfPath;
       } else {
         return { success: false, error: `Document not found: ${label}` };
@@ -4504,207 +4920,21 @@ async function cancelApplication(jobId) {
   }
   activeApplications.delete(jobId);
 }
-var import_puppeteer4, import_path5, fs4, app7, getUserDataDir3, activeApplications;
+var import_puppeteer5, import_path5, fs5, app8, getUserDataDir3, activeApplications;
 var init_smart_applicant = __esm({
   "src/main/features/smart-applicant.ts"() {
     init_database();
-    import_puppeteer4 = __toESM(require("puppeteer"), 1);
-    import_path5 = __toESM(require("path"), 1);
-    fs4 = __toESM(require("fs"), 1);
-    init_secretary_service();
-    try {
-      app7 = require("electron").app;
-    } catch (e) {
-      app7 = global.electronApp;
-    }
-    getUserDataDir3 = () => import_path5.default.join(app7.getPath("userData"), "browser_data");
-    activeApplications = /* @__PURE__ */ new Map();
-  }
-});
-
-// src/main/features/pdf-export.ts
-var pdf_export_exports = {};
-__export(pdf_export_exports, {
-  convertAllJobDocsToPdf: () => convertAllJobDocsToPdf,
-  convertHtmlToPdf: () => convertHtmlToPdf,
-  generatePdfFromContent: () => generatePdfFromContent
-});
-async function convertHtmlToPdf(htmlPath, userId) {
-  let browser = null;
-  try {
-    await logAction(userId, "pdf", `\u{1F4C4} Converting to PDF: ${path7.basename(htmlPath)}`, "in_progress");
-    if (!fs5.existsSync(htmlPath)) {
-      return { success: false, error: "HTML file not found" };
-    }
-    const htmlContent = fs5.readFileSync(htmlPath, "utf-8");
-    browser = await import_puppeteer5.default.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
-    });
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-    await page.evaluateHandle("document.fonts.ready");
-    const pdfPath = htmlPath.replace(".html", ".pdf");
-    await page.pdf({
-      path: pdfPath,
-      format: "A4",
-      printBackground: true,
-      margin: {
-        top: "20mm",
-        right: "15mm",
-        bottom: "20mm",
-        left: "15mm"
-      }
-    });
-    await browser.close();
-    await logAction(userId, "pdf", `\u2705 PDF created: ${path7.basename(pdfPath)}`, "completed", true);
-    return { success: true, pdfPath };
-  } catch (error) {
-    console.error("PDF conversion error:", error);
-    if (browser) await browser.close();
-    await logAction(userId, "pdf", `\u274C PDF conversion failed: ${error.message}`, "failed", false);
-    return { success: false, error: error.message };
-  }
-}
-async function convertAllJobDocsToPdf(jobId, userId) {
-  var _a;
-  const db = getDatabase();
-  const job = (_a = db.job_listings) == null ? void 0 : _a.find((j) => j.id === jobId);
-  if (!job) {
-    return { success: false, pdfs: [], errors: ["Job not found"] };
-  }
-  const docTypes = ["cv", "motivation_letter", "cover_letter", "portfolio", "proposal"];
-  const pdfs = [];
-  const errors = [];
-  for (const docType of docTypes) {
-    const htmlPath = job[`${docType}_path`];
-    if (htmlPath && fs5.existsSync(htmlPath)) {
-      const result = await convertHtmlToPdf(htmlPath, userId);
-      if (result.success && result.pdfPath) {
-        pdfs.push(result.pdfPath);
-      } else if (result.error) {
-        errors.push(`${docType}: ${result.error}`);
-      }
-    }
-  }
-  return { success: pdfs.length > 0, pdfs, errors };
-}
-async function generatePdfFromContent(content, fileName, userId, options) {
-  let browser = null;
-  try {
-    const htmlContent = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${(options == null ? void 0 : options.title) || "Document"}</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      line-height: 1.6;
-      color: #1a1a1a;
-      padding: 0;
-      background: #fff;
-    }
-    
-    .header {
-      margin-bottom: 25px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid #0077b5;
-    }
-    
-    .name {
-      font-size: 24px;
-      font-weight: 700;
-      color: #0077b5;
-      margin-bottom: 3px;
-    }
-    
-    .title {
-      font-size: 14px;
-      color: #666;
-      margin-bottom: 5px;
-    }
-    
-    .contact {
-      font-size: 11px;
-      color: #444;
-    }
-    
-    .content {
-      font-size: 12px;
-      text-align: justify;
-      white-space: pre-wrap;
-      line-height: 1.7;
-    }
-    
-    .content p {
-      margin-bottom: 10px;
-    }
-    
-    @page {
-      size: A4;
-      margin: 20mm 15mm;
-    }
-  </style>
-</head>
-<body>
-  ${(options == null ? void 0 : options.headerName) ? `
-  <div class="header">
-    <div class="name">${options.headerName}</div>
-    ${options.headerTitle ? `<div class="title">${options.headerTitle}</div>` : ""}
-    ${options.headerContact ? `<div class="contact">${options.headerContact}</div>` : ""}
-  </div>
-  ` : ""}
-  
-  <div class="content">${content.replace(/\n/g, "<br>")}</div>
-</body>
-</html>`;
-    browser = await import_puppeteer5.default.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
-    });
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: "networkidle0" });
-    await page.evaluateHandle("document.fonts.ready");
-    const pdfPath = path7.join(getDocsDir2(), `${fileName}.pdf`);
-    await page.pdf({
-      path: pdfPath,
-      format: "A4",
-      printBackground: true,
-      margin: { top: "20mm", right: "15mm", bottom: "20mm", left: "15mm" }
-    });
-    await browser.close();
-    await logAction(userId, "pdf", `\u2705 PDF generated: ${fileName}.pdf`, "completed", true);
-    return { success: true, pdfPath };
-  } catch (error) {
-    if (browser) await browser.close();
-    return { success: false, error: error.message };
-  }
-}
-var import_puppeteer5, fs5, path7, app8, getDocsDir2;
-var init_pdf_export = __esm({
-  "src/main/features/pdf-export.ts"() {
     import_puppeteer5 = __toESM(require("puppeteer"), 1);
+    import_path5 = __toESM(require("path"), 1);
     fs5 = __toESM(require("fs"), 1);
-    path7 = __toESM(require("path"), 1);
-    init_database();
+    init_secretary_service();
     try {
       app8 = require("electron").app;
     } catch (e) {
       app8 = global.electronApp;
     }
-    getDocsDir2 = () => {
-      const docsPath = path7.join(app8.getPath("userData"), "generated_docs");
-      if (!fs5.existsSync(docsPath)) {
-        fs5.mkdirSync(docsPath, { recursive: true });
-      }
-      return docsPath;
-    };
+    getUserDataDir3 = () => import_path5.default.join(app8.getPath("userData"), "browser_data");
+    activeApplications = /* @__PURE__ */ new Map();
   }
 });
 
@@ -4744,11 +4974,11 @@ function registerSettingsHandlers() {
 // src/main/ipc/user-handlers.ts
 var import_electron4 = require("electron");
 init_database();
-var app6;
+var app7;
 try {
-  app6 = require("electron").app;
+  app7 = require("electron").app;
 } catch (e) {
-  app6 = global.electronApp;
+  app7 = global.electronApp;
 }
 function registerUserHandlers() {
   const channels = [
@@ -5014,7 +5244,8 @@ function registerAIHandlers() {
     "auditor:save-criteria",
     "auditor:delete-criteria",
     "auditor:update-criteria",
-    "auditor:add-question"
+    "auditor:add-question",
+    "auditor:get-answered-questions"
   ];
   import_electron7.ipcMain.handle("ai:test-model", async (_, data) => {
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z;
@@ -5210,7 +5441,7 @@ function registerAIHandlers() {
     try {
       const { jobId, userId, docOptions } = data;
       const db = getDatabase();
-      const job = (_a = db.job_listings) == null ? void 0 : _a.find((j) => j.id === jobId);
+      const job = (_a = db.job_listings) == null ? void 0 : _a.find((j) => String(j.id) === String(jobId));
       if (!job) {
         return { success: false, error: "Job not found" };
       }
@@ -5744,7 +5975,7 @@ Respond ONLY with a valid JSON array:
 [
   {
     "question": "This job requires [X from job]. Your CV shows [Y from CV]. How would you...",
-    "answer": "A strong answer would...",
+    "answer": "A comprehensive suggested answer. IMPORTANT: Include a specific, imaginary example of a situation from the candidate's past (based on their CV) that they can use to prove this skill. Make it sound natural and professional.",
     "difficulty": "easy|medium|hard"
   }
 ]`;
@@ -5804,13 +6035,32 @@ Respond ONLY with a valid JSON array:
       return { success: false, error: e.message };
     }
   });
+  import_electron7.ipcMain.handle("auditor:get-answered-questions", async (_, data) => {
+    try {
+      const { userId } = data;
+      const db = getDatabase();
+      const questions = db.auditor_questions || [];
+      const answered = questions.filter((q) => q.user_id === userId && q.answered);
+      const criteria = db.auditor_criteria || [];
+      const questionsWithAnswers = answered.map((q) => {
+        const crit = criteria.find((c) => c.criteria === q.criteria && c.user_id === userId);
+        return {
+          question: q,
+          answer: crit ? crit.user_answer || crit.userAnswer : "yes"
+        };
+      });
+      return { success: true, answered: questionsWithAnswers };
+    } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
   import_electron7.ipcMain.handle("auditor:get-learned-criteria", async (_, data) => {
     try {
       const { userId } = data;
       const db = getDatabase();
       const criteria = db.auditor_criteria || [];
       const userCriteria = criteria.filter((c) => c.user_id === userId);
-      return { success: true, criteria: userCriteria };
+      return { success: true, criteria: userCriteria.map((c) => ({ ...c, userAnswer: c.user_answer || c.userAnswer })) };
     } catch (e) {
       return { success: false, error: e.message };
     }
@@ -5828,7 +6078,7 @@ Respond ONLY with a valid JSON array:
         timestamp: Date.now()
       });
       if (questionId) {
-        await runQuery("UPDATE auditor_questions SET answered = true WHERE id = ?", [questionId]);
+        await runQuery("UPDATE auditor_questions", { id: questionId, answered: true });
       }
       return { success: true, criteriaId };
     } catch (e) {
@@ -5838,7 +6088,7 @@ Respond ONLY with a valid JSON array:
   import_electron7.ipcMain.handle("auditor:delete-criteria", async (_, data) => {
     try {
       const { criteriaId } = data;
-      await runQuery("DELETE FROM auditor_criteria WHERE id = ?", [criteriaId]);
+      await runQuery("DELETE FROM auditor_criteria", { id: criteriaId });
       return { success: true };
     } catch (e) {
       return { success: false, error: e.message };
@@ -6045,6 +6295,7 @@ function registerAIModelsHandlers() {
         thinker_source: data.thinkerSource,
         motivation_letter_word_limit: data.motivationLetterWordLimit,
         cover_letter_word_limit: data.coverLetterWordLimit,
+        cv_page_limit: data.cvPageLimit,
         status: "active",
         user_id: data.userId || 1
       };
@@ -6084,6 +6335,8 @@ function registerAIModelsHandlers() {
       if (data.motivation_letter_word_limit !== void 0) dbData2.motivation_letter_word_limit = data.motivation_letter_word_limit;
       if (data.coverLetterWordLimit !== void 0) dbData2.cover_letter_word_limit = data.coverLetterWordLimit;
       if (data.cover_letter_word_limit !== void 0) dbData2.cover_letter_word_limit = data.cover_letter_word_limit;
+      if (data.cvPageLimit !== void 0) dbData2.cv_page_limit = data.cvPageLimit;
+      if (data.cv_page_limit !== void 0) dbData2.cv_page_limit = data.cv_page_limit;
       if (data.status !== void 0) dbData2.status = data.status;
       if (data.last_test_status !== void 0) dbData2.last_test_status = data.last_test_status;
       if (data.last_test_message !== void 0) dbData2.last_test_message = data.last_test_message;

@@ -1011,15 +1011,15 @@ HANDLING SKILL GAPS (IMPORTANT):
 - Frame any gaps as growth opportunities, not weaknesses
 
 STRUCTURE (follow exactly):
-1. HEADER: Date, Company Address, "Dear Hiring Manager,"
-2. OPENING (1 paragraph): State who you are, what position, and ONE compelling reason why this company
-3. COMPANY CONNECTION (1 paragraph): Reference something specific about the company - their products, services, recent news, or values. If research is limited, focus on what's clear from the job posting
-4. YOUR VALUE (2 paragraphs): 
+1. OPENING (1 paragraph): State who you are, what position, and ONE compelling reason why this company
+2. COMPANY CONNECTION (1 paragraph): Reference something specific about the company - their products, services, recent news, or values. If research is limited, focus on what's clear from the job posting
+3. YOUR VALUE (2 paragraphs):
    - First: Your most relevant experience with SPECIFIC metrics/achievements FROM YOUR ACTUAL PROFILE
    - Second: How your skills directly solve their needs OR how your transferable skills and eagerness to learn make you a strong candidate
-5. WHY THIS ROLE (1 paragraph): Personal motivation - career goals, growth opportunity, alignment. EXPRESS ENTHUSIASM to learn any skills you may be developing.
-6. CLOSING: Thank them, express enthusiasm for an interview
-7. SIGN-OFF: "Kind regards," + new line + "${userProfile?.name || '[Your Name]'}"
+4. WHY THIS ROLE (1 paragraph): Personal motivation - career goals, growth opportunity, alignment.
+5. CLOSING (1 paragraph): Thank them, express enthusiasm for an interview
+
+IMPORTANT: Do NOT include a greeting/salutation or any closing/sign-off.
 
 MUST INCLUDE:
 - At least 2 specific achievements with numbers/metrics FROM THE PROVIDED PROFILE

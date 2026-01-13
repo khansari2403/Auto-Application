@@ -29,10 +29,15 @@ export async function convertHtmlToPdf(htmlPath: string, userId: number): Promis
     
     const htmlContent = fs.readFileSync(htmlPath, 'utf-8');
     
-    // Launch browser for PDF generation
+    // Launch browser for PDF generation.
+    // IMPORTANT: This environment is ARM64; Puppeteer may download an x86_64 Chrome binary.
+    // Use system Chromium when available.
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium';
+
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      executablePath,
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
     
     const page = await browser.newPage();

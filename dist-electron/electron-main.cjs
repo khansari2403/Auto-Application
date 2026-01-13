@@ -2834,9 +2834,11 @@ async function convertHtmlToPdf(htmlPath, userId) {
       return { success: false, error: "HTML file not found" };
     }
     const htmlContent = fs3.readFileSync(htmlPath, "utf-8");
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
     browser = await import_puppeteer3.default.launch({
       headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      executablePath,
+      args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     });
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });

@@ -3092,7 +3092,28 @@ function stripLetterGreetingAndClosing(text, isGerman) {
   return out;
 }
 function detectJobLanguage(job) {
-  const jobText = `${(job == null ? void 0 : job.job_title) || ""} ${(job == null ? void 0 : job.required_skills) || ""} ${(job == null ? void 0 : job.description) || ""}`.toLowerCase();
+  const raw = `${(job == null ? void 0 : job.job_title) || ""} ${(job == null ? void 0 : job.required_skills) || ""} ${(job == null ? void 0 : job.description) || ""}`.trim();
+  const jobText = raw.toLowerCase();
+  const lang3 = (0, import_franc_min.franc)(raw || "");
+  const iso6393ToLanguageName = {
+    deu: "GERMAN",
+    eng: "ENGLISH",
+    fra: "FRENCH",
+    spa: "SPANISH",
+    ita: "ITALIAN",
+    nld: "DUTCH",
+    por: "PORTUGUESE",
+    rus: "RUSSIAN",
+    ukr: "UKRAINIAN",
+    pol: "POLISH",
+    tur: "TURKISH",
+    ara: "ARABIC",
+    hin: "HINDI",
+    zho: "CHINESE",
+    jpn: "JAPANESE",
+    kor: "KOREAN"
+  };
+  let targetLanguage = iso6393ToLanguageName[lang3] || "ENGLISH";
   const germanSignals = [
     "kenntnisse",
     "erfahrung",
@@ -3116,12 +3137,13 @@ function detectJobLanguage(job) {
     "deutsch",
     "entwickler",
     "ingenieur",
-    "manager",
-    "studium",
     "abschluss"
   ];
-  const isGerman = germanSignals.some((k) => jobText.includes(k));
-  return { isGerman, targetLanguage: isGerman ? "GERMAN" : "ENGLISH" };
+  if (lang3 === "und" && germanSignals.some((k) => jobText.includes(k))) {
+    targetLanguage = "GERMAN";
+  }
+  const isGerman = targetLanguage === "GERMAN";
+  return { isGerman, targetLanguage };
 }
 function getJobDateFolder(job, isGerman) {
   const raw = (job == null ? void 0 : job.date_imported) || (job == null ? void 0 : job.dateImported) || (job == null ? void 0 : job.date_scraped) || (job == null ? void 0 : job.dateScraped);
@@ -3916,11 +3938,12 @@ async function generateSingleDocument(jobId, userId, docType, thinker, auditor, 
   }
   return { success: false, error: "Document generation failed" };
 }
-var fs4, path5, app5, getBaseDocsDir, getOrganizedDocsDir, getDocsDir2, DOC_TYPES;
+var import_franc_min, fs4, path5, app5, getBaseDocsDir, getOrganizedDocsDir, getDocsDir2, DOC_TYPES;
 var init_doc_generator = __esm({
   "src/main/features/doc-generator.ts"() {
     init_database();
     init_scraper_service();
+    import_franc_min = require("franc-min");
     fs4 = __toESM(require("fs"), 1);
     path5 = __toESM(require("path"), 1);
     try {

@@ -197,17 +197,47 @@ function stripLetterGreetingAndClosing(text: string, isGerman: boolean): string 
   return out;
 }
 
-function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage: 'GERMAN' | 'ENGLISH' } {
-  const jobText = `${job?.job_title || ''} ${job?.required_skills || ''} ${job?.description || ''}`.toLowerCase();
-  // German-specific signals (keep fast and simple, but better than a tiny list)
+function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage: string } {
+  const raw = `${job?.job_title || ''} ${job?.required_skills || ''} ${job?.description || ''}`.trim();
+  const jobText = raw.toLowerCase();
+
+  // 1) Robust language detection via franc (supports many languages)
+  // franc returns ISO-639-3 (e.g., deu, eng, fra). If it cannot detect, returns 'und'.
+  const lang3 = franc(raw || '');
+  const iso6393ToLanguageName: Record<string, string> = {
+    deu: 'GERMAN',
+    eng: 'ENGLISH',
+    fra: 'FRENCH',
+    spa: 'SPANISH',
+    ita: 'ITALIAN',
+    nld: 'DUTCH',
+    por: 'PORTUGUESE',
+    rus: 'RUSSIAN',
+    ukr: 'UKRAINIAN',
+    pol: 'POLISH',
+    tur: 'TURKISH',
+    ara: 'ARABIC',
+    hin: 'HINDI',
+    zho: 'CHINESE',
+    jpn: 'JAPANESE',
+    kor: 'KOREAN'
+  };
+
+  let targetLanguage = iso6393ToLanguageName[lang3] || 'ENGLISH';
+
+  // 2) Heuristic fallback for German in case text is too short for franc
   const germanSignals = [
     'kenntnisse', 'erfahrung', 'aufgaben', 'profil', 'wir bieten', 'bewerbung', 'anschreiben', 'lebenslauf',
-    'm/w/d', 'ihr profil', 'ihre aufgaben', 'anforderungen', 'qualifikation', 'teamf\u00e4higkeit', 'selbst\u00e4ndig',
+    'm/w/d', 'ihr profil', 'ihre aufgaben', 'anforderungen', 'qualifikation', 'teamfähigkeit', 'selbständig',
     'unbefristet', 'vollzeit', 'teilzeit', 'standort', 'deutsch',
-    'entwickler', 'ingenieur', 'manager', 'studium', 'abschluss'
+    'entwickler', 'ingenieur', 'abschluss'
   ];
-  const isGerman = germanSignals.some(k => jobText.includes(k));
-  return { isGerman, targetLanguage: isGerman ? 'GERMAN' : 'ENGLISH' };
+  if (lang3 === 'und' && germanSignals.some(k => jobText.includes(k))) {
+    targetLanguage = 'GERMAN';
+  }
+
+  const isGerman = targetLanguage === 'GERMAN';
+  return { isGerman, targetLanguage };
 }
 
 function getJobDateFolder(job: any, isGerman: boolean): string {

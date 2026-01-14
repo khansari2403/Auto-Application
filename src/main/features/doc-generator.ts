@@ -636,6 +636,46 @@ function generateDocumentHTML(content: string, docType: string, userProfile: any
 </html>`;
 }
 
+// Helper: normalize "code-like" CV outputs into readable sections.
+// Some models return CVs in a JSON-ish format like:
+// "CONTACT": { "Name": "...", ... }
+// This makes the PDF look like a string of code. We detect this pattern and
+// rewrite it into a clean, human-readable layout before injecting into HTML.
+function normalizeCvText(content: string, isGerman: boolean): string {
+  let text = String(content || '');
+
+  // Only touch content that clearly looks like the JSON-style CV the user
+  // reported (starts with CONTACT / PROFESSIONAL SUMMARY etc.).
+  if (!/"CONTACT"\s*:\s*\{/i.test(text) && !/"PROFESSIONAL SUMMARY"\s*:/i.test(text)) {
+    return text;
+  }
+
+  // Introduce simple section breaks and then strip JSON punctuation.
+  text = text.replace(/"CONTACT"\s*:\s*\{/gi, 'CONTACT\n');
+  text = text.replace(/"PROFESSIONAL SUMMARY"\s*:\s*/gi, '\n\nPROFESSIONAL SUMMARY\n');
+  text = text.replace(/"WORK EXPERIENCE"\s*:\s*\[/gi, '\n\nWORK EXPERIENCE\n- ');
+  text = text.replace(/"EDUCATION"\s*:\s*\[/gi, '\n\nEDUCATION\n- ');
+  text = text.replace(/"SKILLS"\s*:\s*\[/gi, '\n\nSKILLS\n- ');
+  text = text.replace(/"CERTIFICATIONS"\s*:\s*\[/gi, '\n\nCERTIFICATIONS\n- ');
+  text = text.replace(/\}/g, '');
+  text = text.replace(/\[/g, '');
+  text = text.replace(/\]/g, '');
+  text = text.replace(/"/g, '');
+  text = text.replace(/,\s*\n/g, '\n');
+
+  // Localize the section labels for German CVs so headings are not English.
+  if (isGerman) {
+    text = text.replace(/^CONTACT$/gim, 'Kontakt');
+    text = text.replace(/^PROFESSIONAL SUMMARY$/gim, 'Berufsprofil');
+    text = text.replace(/^WORK EXPERIENCE$/gim, 'Berufserfahrung');
+    text = text.replace(/^EDUCATION$/gim, 'Ausbildung');
+    text = text.replace/^SKILLS$/gim, 'Kenntnisse');
+    text = text.replace(/^CERTIFICATIONS$/gim, 'Zertifizierungen');
+  }
+
+  return text.trim();
+}
+
 // Generate CV HTML with full profile - supports multiple languages
 function generateCVHTML(content: string, userProfile: any, job: any, isGerman: boolean, targetLanguage?: string): string {
   const lang = (targetLanguage || (isGerman ? 'GERMAN' : 'ENGLISH')).toUpperCase();
@@ -649,8 +689,8 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
   };
   const l = labels[lang] || labels.ENGLISH;
 
-  // For non-English CVs, use AI-generated content directly (it's already in target language)
-  const useAIContent = lang !== 'ENGLISH' && content && content.trim().length > 100;
+  // Normalize JSON-ish CV outputs into readable text when necessary
+  let normalizedContent = normalizeCvText(content, lang === 'GERMAN');
 
   const skills = userProfile?.skills || [];
   const certifications = userProfile?.licenses || [];
@@ -700,7 +740,7 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
   </div>
   
   <div class="content">
-    ${formatContent(content)}
+    ${formatContent(normalizedContent)}
   </div>
   
   ${skillsHTML ? `

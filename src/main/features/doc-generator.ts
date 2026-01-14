@@ -255,7 +255,7 @@ function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage: strin
 
   // 1) Robust language detection via franc (supports many languages)
   // franc returns ISO-639-3 (e.g., deu, eng, fra). If it cannot detect, returns 'und'.
-  const lang3 = franc(raw || '');
+  const lang3 = francModule.franc(raw || '');
   const iso6393ToLanguageName: Record<string, string> = {
     deu: 'GERMAN',
     eng: 'ENGLISH',

@@ -67,10 +67,10 @@
       "date_imported": "2026-01-20",
       "cv_status": "auditor_done",
       "cv_rejection_reason": null,
-      "cv_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cv_job4001_1768391724478.html",
+      "cv_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cv_job4001_1768424590134.html",
       "cover_letter_status": "auditor_done",
       "cover_letter_rejection_reason": null,
-      "cover_letter_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cover_letter_job4001_1768391724507.html"
+      "cover_letter_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cover_letter_job4001_1768424590189.html"
     }
   ],
   "documents": [
@@ -216,6 +216,32 @@
       "created_at": "2026-01-14T11:55:24.508Z",
       "is_active": 1,
       "timestamp": "2026-01-14T11:55:24.508Z"
+    },
+    {
+      "id": 1768424590463,
+      "job_id": "4001",
+      "user_id": 1,
+      "document_type": "cv",
+      "content": "BERUFSPROFIL\n\nAls erfahrener Backend-Entwickler bringe ich fundierte Kenntnisse in Python, Django und API-Entwicklung mit.\n\nBERUFSERFAHRUNG\n- Backend-Entwickler bei ACME (2021-2024): Entwicklung von REST-APIs\n\nFÄHIGKEITEN\n- Python, FastAPI, MongoDB",
+      "file_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cv_job4001_1768424590134.html",
+      "version": 1,
+      "status": "final",
+      "created_at": "2026-01-14T21:03:10.134Z",
+      "is_active": 1,
+      "timestamp": "2026-01-14T21:03:10.134Z"
+    },
+    {
+      "id": 1768424590873,
+      "job_id": "4001",
+      "user_id": 1,
+      "document_type": "cover_letter",
+      "content": "Ich möchte mein Interesse an der Position bekunden.\n\nMit meiner Erfahrung in Python bin ich überzeugt, einen Beitrag leisten zu können.",
+      "file_path": "/app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cover_letter_job4001_1768424590189.html",
+      "version": 1,
+      "status": "final",
+      "created_at": "2026-01-14T21:03:10.189Z",
+      "is_active": 1,
+      "timestamp": "2026-01-14T21:03:10.189Z"
     }
   ],
   "action_logs": [
@@ -893,6 +919,126 @@
       "status": "failed",
       "success": false,
       "timestamp": "2026-01-14T11:55:24.518Z"
+    },
+    {
+      "id": 1768424590093,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "🔍 Researching Deutsche Tech GmbH mission and history...",
+      "status": "in_progress",
+      "timestamp": "2026-01-14T21:03:10.093Z"
+    },
+    {
+      "id": 1768424590096,
+      "user_id": 1,
+      "action_type": "ai_observer",
+      "action_description": "🔍 Researching company: Deutsche Tech GmbH",
+      "status": "in_progress",
+      "timestamp": "2026-01-14T21:03:10.096Z"
+    },
+    {
+      "id": 1768424590129,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✍️ Generating tailored CV for Deutsche Tech GmbH",
+      "status": "in_progress",
+      "timestamp": "2026-01-14T21:03:10.129Z"
+    },
+    {
+      "id": 1768424590133,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✅ CV generated successfully",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-14T21:03:10.133Z"
+    },
+    {
+      "id": 1768424590137,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "📄 CV saved (HTML): /app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cv_job4001_1768424590134.html",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-14T21:03:10.137Z"
+    },
+    {
+      "id": 1768424590147,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: cv_job4001_1768424590134.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-14T21:03:10.147Z"
+    },
+    {
+      "id": 1768424590166,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "❌ PDF conversion failed: Failed to launch the browser process!\n/root/.cache/puppeteer/chrome/linux-121.0.6167.85/chrome-linux64/chrome: 1: Syntax error: \")\" unexpected\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n",
+      "status": "failed",
+      "success": false,
+      "timestamp": "2026-01-14T21:03:10.166Z"
+    },
+    {
+      "id": 1768424590166,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "⚠️ PDF conversion failed: Failed to launch the browser process!\n/root/.cache/puppeteer/chrome/linux-121.0.6167.85/chrome-linux64/chrome: 1: Syntax error: \")\" unexpected\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n",
+      "status": "failed",
+      "success": false,
+      "timestamp": "2026-01-14T21:03:10.166Z"
+    },
+    {
+      "id": 1768424590168,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✍️ Generating tailored Cover Letter for Deutsche Tech GmbH",
+      "status": "in_progress",
+      "timestamp": "2026-01-14T21:03:10.168Z"
+    },
+    {
+      "id": 1768424590174,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "✅ Cover Letter generated successfully",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-14T21:03:10.174Z"
+    },
+    {
+      "id": 1768424590192,
+      "user_id": 1,
+      "action_type": "ai_thinker",
+      "action_description": "📄 Cover Letter saved (HTML): /app/User_Data/custom_storage/Deutsche Tech GmbH/Backend-Entwickler/2026-01-20/cover_letter_job4001_1768424590189.html",
+      "status": "completed",
+      "success": true,
+      "timestamp": "2026-01-14T21:03:10.192Z"
+    },
+    {
+      "id": 1768424590195,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "📄 Converting to PDF: cover_letter_job4001_1768424590189.html",
+      "status": "in_progress",
+      "timestamp": "2026-01-14T21:03:10.195Z"
+    },
+    {
+      "id": 1768424590202,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "❌ PDF conversion failed: Failed to launch the browser process!\n/root/.cache/puppeteer/chrome/linux-121.0.6167.85/chrome-linux64/chrome: 1: Syntax error: \")\" unexpected\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n",
+      "status": "failed",
+      "success": false,
+      "timestamp": "2026-01-14T21:03:10.202Z"
+    },
+    {
+      "id": 1768424590202,
+      "user_id": 1,
+      "action_type": "pdf",
+      "action_description": "⚠️ PDF conversion failed: Failed to launch the browser process!\n/root/.cache/puppeteer/chrome/linux-121.0.6167.85/chrome-linux64/chrome: 1: Syntax error: \")\" unexpected\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n",
+      "status": "failed",
+      "success": false,
+      "timestamp": "2026-01-14T21:03:10.202Z"
     }
   ],
   "ai_models": [],

@@ -177,7 +177,7 @@ async function ensureTargetLanguageOrRetry(args: {
   if (lang3 === 'und') return content; // unknown JD language
 
   // Detect language of the generated text
-  const detected = franc(text);
+  const detected = francModule.franc(text);
   if (detected === 'und' || detected === lang3) return content;
 
   // Second attempt: explicitly rewrite/translate the EXISTING document into the

@@ -1036,12 +1036,32 @@ ${feedback ? `PREVIOUS FEEDBACK FROM AUDITOR: ${feedback}
 Please fix these issues in the new version.` : ''}
 `;
 
+  // Style-specific guidance for CV personas
+  const cvStyleGuidance = (() => {
+    const persona = cvStylePersona.toLowerCase();
+    if (persona === 'modern') {
+      return `STYLE: Use a modern, achievement-focused CV style. Short, impactful bullet points, clear section headings, and emphasis on measurable results.`;
+    }
+    if (persona === 'academic') {
+      return `STYLE: Use an academic CV style. Emphasize education, research projects, publications, and teaching experience. Use clear section headings like "Forschung", "Projekte", "Publikationen" when appropriate.`;
+    }
+    if (persona === 'minimalist') {
+      return `STYLE: Use a minimalist CV style. Very clean, concise bullets, no redundant phrases, no decorative language. Focus on clarity and readability.`;
+    }
+    if (persona === 'mimic my cv') {
+      return `STYLE: Mimic the user's existing CV layout as closely as possible. Use the same section order, heading labels, and general tone as their reference CV (ID: ${referenceCvId || 'unknown'}), but update the content for this specific job and keep everything in ${targetLanguage}.`;
+    }
+    return `STYLE: Use a classic, professional CV layout similar to a traditional Word document. Clear sections, bullet points, and conservative formatting.`;
+  })();
+
   const prompts: Record<string, string> = {
     cv: `You are a professional CV/Resume writer. Create a tailored CV for this job application.
 
 ${languageHardRule}
 
-CRITICAL LANGUAGE REQUIREMENT: You MUST write the entire CV in ${targetLanguage}. This includes all section headings, job descriptions, and summaries.
+CRITICAL LANGUAGE REQUIREMENT: You MUST write the entire CV in ${targetLanguage}. This includes all section headings, job descriptions, and summaries. You may keep original English job titles or technical terms in parentheses after their translation (e.g., "Projektmanager (Project Manager)"), but the main sentence language must remain ${targetLanguage}.
+
+${cvStyleGuidance}
 
 ${baseContext}
 

@@ -645,24 +645,32 @@ function generateDocumentHTML(content: string, docType: string, userProfile: any
 function normalizeCvText(content: string, isGerman: boolean): string {
   let text = String(content || '');
 
-  // Only touch content that clearly looks like the JSON-style CV the user
-  // reported (starts with CONTACT / PROFESSIONAL SUMMARY etc.).
-  if (!/"CONTACT"\s*:\s*\{/i.test(text) && !/"PROFESSIONAL SUMMARY"\s*:/i.test(text)) {
-    return text;
+  // If the text clearly looks like JSON/structured output, rewrite it into a
+  // simple, human-readable layout. We intentionally accept being a bit
+  // aggressive here because CVs should never contain curly braces or JSON
+  // fragments for the user.
+  const looksLikeJsonCv = /"CONTACT"\s*:\s*\{/i.test(text) ||
+    /"PROFESSIONAL SUMMARY"\s*:/i.test(text) ||
+    /\{\s*"Name"\s*:\s*"/i.test(text);
+
+  if (looksLikeJsonCv) {
+    // Introduce section breaks around known keys
+    text = text.replace(/"CONTACT"\s*:\s*\{/gi, 'CONTACT\n');
+    text = text.replace(/"PROFESSIONAL SUMMARY"\s*:\s*/gi, '\n\nPROFESSIONAL SUMMARY\n');
+    text = text.replace(/"WORK EXPERIENCE"\s*:\s*\[/gi, '\n\nWORK EXPERIENCE\n- ');
+    text = text.replace(/"EDUCATION"\s*:\s*\[/gi, '\n\nEDUCATION\n- ');
+    text = text.replace(/"SKILLS"\s*:\s*\[/gi, '\n\nSKILLS\n- ');
+    text = text.replace(/"CERTIFICATIONS"\s*:\s*\[/gi, '\n\nCERTIFICATIONS\n- ');
+
+    // Remove JSON structural characters globally – they should never appear
+    // in the final CV presented to the user.
+    text = text.replace(/[\{\}\[\]"]/g, '');
+    text = text.replace(/,\s*\n/g, '\n');
   }
 
-  // Introduce simple section breaks and then strip JSON punctuation.
-  text = text.replace(/"CONTACT"\s*:\s*\{/gi, 'CONTACT\n');
-  text = text.replace(/"PROFESSIONAL SUMMARY"\s*:\s*/gi, '\n\nPROFESSIONAL SUMMARY\n');
-  text = text.replace(/"WORK EXPERIENCE"\s*:\s*\[/gi, '\n\nWORK EXPERIENCE\n- ');
-  text = text.replace(/"EDUCATION"\s*:\s*\[/gi, '\n\nEDUCATION\n- ');
-  text = text.replace(/"SKILLS"\s*:\s*\[/gi, '\n\nSKILLS\n- ');
-  text = text.replace(/"CERTIFICATIONS"\s*:\s*\[/gi, '\n\nCERTIFICATIONS\n- ');
-  text = text.replace(/\}/g, '');
-  text = text.replace(/\[/g, '');
-  text = text.replace(/\]/g, '');
-  text = text.replace(/"/g, '');
-  text = text.replace(/,\s*\n/g, '\n');
+  // As a final safety net, strip any remaining stray curly braces which might
+  // have slipped through other formats.
+  text = text.replace(/[\{\}]/g, '');
 
   // Localize the section labels for German CVs so headings are not English.
   if (isGerman) {

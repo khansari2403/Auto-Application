@@ -462,16 +462,19 @@ Tip: You can "Force Generate" to create the document anyway, but review it caref
 
   const renderDocIcon = (job: any, type: string, label: string, shortLabel: string) => {
     const status = job[`${type}_status`];
-    const path = job[`${type}_path`];
+    const htmlPath = job[`${type}_path`];
+    const pdfPath = job[`${type}_pdf_path`];
+    // Prefer PDF for user-facing actions; fall back to HTML if no PDF exists.
+    const openPath = pdfPath || htmlPath;
     const rejectionReason = job[`${type}_rejection_reason`];
 
     const handleDocClick = (e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
       
-      if (status === 'auditor_done' && path) {
-        // Open the completed document
-        (window as any).electron.invoke('docs:open-file', path);
+      if (status === 'auditor_done' && openPath) {
+        // Open the completed document (prefer PDF when available)
+        (window as any).electron.invoke('docs:open-file', openPath);
       } else if (status === 'rejected' && rejectionReason) {
         // Format the rejection reason for readability
         const formattedReason = formatRejectionReason(rejectionReason);

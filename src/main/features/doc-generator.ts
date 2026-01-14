@@ -256,7 +256,7 @@ function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage: strin
 
   // 1) Robust language detection via franc (supports many languages)
   // franc returns ISO-639-3 (e.g., deu, eng, fra). If it cannot detect, returns 'und'.
-  const lang3 = franc(raw || '');
+  let lang3 = franc(raw || '');
   const iso6393ToLanguageName: Record<string, string> = {
     deu: 'GERMAN',
     eng: 'ENGLISH',
@@ -278,14 +278,19 @@ function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage: strin
 
   let targetLanguage = iso6393ToLanguageName[lang3] || 'ENGLISH';
 
-  // 2) Heuristic fallback for German in case text is too short for franc
+  // 2) Heuristic override for German job ads.
+  // Many German postings contain English terms ("Backend Developer", tech stack, etc.)
+  // which can trick franc into returning 'eng'. If we see strong German signals in the
+  // text, we force the language to German regardless of franc's guess.
   const germanSignals = [
     'kenntnisse', 'erfahrung', 'aufgaben', 'profil', 'wir bieten', 'bewerbung', 'anschreiben', 'lebenslauf',
     'm/w/d', 'ihr profil', 'ihre aufgaben', 'anforderungen', 'qualifikation', 'teamfähigkeit', 'selbständig',
     'unbefristet', 'vollzeit', 'teilzeit', 'standort', 'deutsch',
-    'entwickler', 'ingenieur', 'abschluss'
+    'entwickler', 'ingenieur', 'abschluss', 'wir suchen', 'festanstellung'
   ];
-  if (lang3 === 'und' && germanSignals.some(k => jobText.includes(k))) {
+
+  if (germanSignals.some(k => jobText.includes(k))) {
+    lang3 = 'deu';
     targetLanguage = 'GERMAN';
   }
 

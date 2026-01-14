@@ -1107,7 +1107,7 @@ STRUCTURE:
 - CERTIFICATIONS: List certifications from profile
 - LANGUAGES: List languages from profile
 
-OUTPUT FORMAT: Return ONLY the CV content in clean text format. Use clear section headings.`,
+OUTPUT FORMAT: Return ONLY the CV content in clean text format. Use clear section headings. NEVER use JSON, code blocks, or curly braces.`,
 
     motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter.
 

@@ -976,6 +976,8 @@ function buildThinkerPrompt(args: {
     cvPageLimit: string;
     targetLanguage: string;
     isGerman: boolean;
+    cvStylePersona?: string;
+    referenceCvId?: string | number;
   };
 }): string {
   const {

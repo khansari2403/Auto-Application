@@ -3084,7 +3084,7 @@ async function ensureTargetLanguageOrRetry(args) {
   const text = String(content || "").trim();
   if (text.length < 40) return content;
   if (lang3 === "und") return content;
-  const detected = (0, import_franc_min.default)(text);
+  const detected = (0, import_franc_min.franc)(text);
   if (detected === "und" || detected === lang3) return content;
   const fixPrompt = `${originalPrompt}
 
@@ -3123,7 +3123,7 @@ function stripLetterGreetingAndClosing(text, isGerman) {
 function detectJobLanguage(job) {
   const raw = `${(job == null ? void 0 : job.job_title) || ""} ${(job == null ? void 0 : job.required_skills) || ""} ${(job == null ? void 0 : job.description) || ""}`.trim();
   const jobText = raw.toLowerCase();
-  const lang3 = (0, import_franc_min.default)(raw || "");
+  const lang3 = (0, import_franc_min.franc)(raw || "");
   const iso6393ToLanguageName = {
     deu: "GERMAN",
     eng: "ENGLISH",
@@ -3918,7 +3918,7 @@ var init_doc_generator = __esm({
   "src/main/features/doc-generator.ts"() {
     init_database();
     init_scraper_service();
-    import_franc_min = __toESM(require("franc-min"), 1);
+    import_franc_min = require("franc-min");
     fs4 = __toESM(require("fs"), 1);
     path5 = __toESM(require("path"), 1);
     try {

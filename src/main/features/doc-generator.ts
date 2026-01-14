@@ -1003,6 +1003,9 @@ function buildThinkerPrompt(args: {
   const baseContext = `
 ${languageHardRule}
 
+CV STYLE PERSONA: ${cvStylePersona}
+${referenceCvId ? `REFERENCE CV ID: ${referenceCvId} (mimic section order and headings when persona is "Mimic my CV").` : ''}
+
 PAGE LIMIT: ${cvPageLimit} A4 pages maximum (applies to ALL documents).
 
 USER PROFILE (FILTERED FOR RELEVANCE - DO NOT ADD OTHER SKILLS/CERTS):

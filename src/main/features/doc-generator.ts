@@ -669,7 +669,7 @@ function normalizeCvText(content: string, isGerman: boolean): string {
     text = text.replace(/^PROFESSIONAL SUMMARY$/gim, 'Berufsprofil');
     text = text.replace(/^WORK EXPERIENCE$/gim, 'Berufserfahrung');
     text = text.replace(/^EDUCATION$/gim, 'Ausbildung');
-    text = text.replace/^SKILLS$/gim, 'Kenntnisse');
+    text = text.replace(/^SKILLS$/gim, 'Kenntnisse');
     text = text.replace(/^CERTIFICATIONS$/gim, 'Zertifizierungen');
   }
 

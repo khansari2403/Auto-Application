@@ -160,6 +160,8 @@ function cleanAIOutput(content: string): string {
 }
 
 // Safety net: validate the generated body language and (if mismatch) retry once.
+// If the AI still responds in the wrong language, we TRANSLATE the existing
+// content instead of silently accepting the error.
 async function ensureTargetLanguageOrRetry(args: {
   content: string;
   lang3: string;
@@ -174,20 +176,40 @@ async function ensureTargetLanguageOrRetry(args: {
   if (text.length < 40) return content; // too short for reliable detection
   if (lang3 === 'und') return content; // unknown JD language
 
+  // Detect language of the generated text
   const detected = franc(text);
   if (detected === 'und' || detected === lang3) return content;
 
+  // Second attempt: explicitly rewrite/translate the EXISTING document into the
+  // target language. We keep the original prompt for context so that the
+  // "ABSOLUTE LANGUAGE RULE" is still present (important for tests and real AI
+  // behaviour), but we also pass the previous output so the model can
+  // translate/adjust it instead of inventing something completely new.
   const fixPrompt = `${originalPrompt}
 
-CRITICAL FIX:
-- The previous output language detection was '${detected}' but the job description language is '${lang3}' which corresponds to ${targetLanguage}.
-- REWRITE the document so that it is 100% in ${targetLanguage}. Do NOT include any other language.
-- Return ONLY the rewritten content.`;
+CRITICAL LANGUAGE FIX:
+The document below was generated in language '${detected}', but the job description language is '${lang3}' which corresponds to ${targetLanguage}.
+
+You MUST now rewrite/translate THIS EXACT DOCUMENT so that it is 100% in ${targetLanguage}. Preserve the structure, headings and bullet points as much as possible.
+
+Return ONLY the rewritten content, with no JSON, no markdown code fences, and no meta-text.
+
+DOCUMENT TO REWRITE:
+"""${text}"""`;
 
   const retryRaw = await callAI(thinker, fixPrompt);
   if (!retryRaw || String(retryRaw).startsWith('Error:')) return content;
 
-  return cleanAIOutput(retryRaw);
+  const cleanedRetry = cleanAIOutput(String(retryRaw));
+  const retryText = String(cleanedRetry || '').trim();
+  if (!retryText) return content;
+
+  // If detection still disagrees, we still prefer the rewritten content since it
+  // was explicitly asked to be in the target language.
+  const detectedRetry = franc(retryText);
+  if (detectedRetry === 'und') return retryText;
+
+  return detectedRetry === lang3 ? retryText : retryText;
 }
 function stripLetterGreetingAndClosing(text: string, isGerman: boolean): string {
   let out = (text || '').trim();

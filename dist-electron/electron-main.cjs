@@ -882,13 +882,15 @@ async function launchBrowser(options = {}) {
     console.log(`Scraper: Using proxy server: ${proxyServer}`);
     defaultArgs.push(`--proxy-server=${proxyServer}`);
   }
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
   const launchOptions = {
     headless: options.headless !== void 0 ? options.headless : false,
-    executablePath,
     userDataDir: options.userDataDir || getUserDataDir2(),
     args: [...defaultArgs, "--disable-dev-shm-usage", ...options.args || []]
   };
+  if (executablePath) {
+    launchOptions.executablePath = executablePath;
+  }
   const browser = await import_puppeteer2.default.launch(launchOptions);
   if (proxyServer && proxyServer.includes("@")) {
     const authPart = proxyServer.split("@")[0].replace("http://", "").replace("https://", "");
@@ -2840,12 +2842,15 @@ async function convertHtmlToPdf(htmlPath, userId) {
       return { success: false, error: "HTML file not found" };
     }
     const htmlContent = fs3.readFileSync(htmlPath, "utf-8");
-    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
-    browser = await import_puppeteer3.default.launch({
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    const launchOptions = {
       headless: true,
-      executablePath,
       args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
-    });
+    };
+    if (executablePath) {
+      launchOptions.executablePath = executablePath;
+    }
+    browser = await import_puppeteer3.default.launch(launchOptions);
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
     await page.evaluateHandle("document.fonts.ready");
@@ -2969,12 +2974,15 @@ async function generatePdfFromContent(content, fileName, userId, options) {
   <div class="content">${content.replace(/\n/g, "<br>")}</div>
 </body>
 </html>`;
-    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || "/usr/bin/chromium";
-    browser = await import_puppeteer3.default.launch({
+    const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
+    const launchOptions = {
       headless: true,
-      executablePath,
       args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
-    });
+    };
+    if (executablePath) {
+      launchOptions.executablePath = executablePath;
+    }
+    browser = await import_puppeteer3.default.launch(launchOptions);
     const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: "networkidle0" });
     await page.evaluateHandle("document.fonts.ready");
@@ -3076,7 +3084,7 @@ async function ensureTargetLanguageOrRetry(args) {
   const text = String(content || "").trim();
   if (text.length < 40) return content;
   if (lang3 === "und") return content;
-  const detected = (0, import_franc_min.franc)(text);
+  const detected = (0, import_franc_min.default)(text);
   if (detected === "und" || detected === lang3) return content;
   const fixPrompt = `${originalPrompt}
 
@@ -3115,7 +3123,7 @@ function stripLetterGreetingAndClosing(text, isGerman) {
 function detectJobLanguage(job) {
   const raw = `${(job == null ? void 0 : job.job_title) || ""} ${(job == null ? void 0 : job.required_skills) || ""} ${(job == null ? void 0 : job.description) || ""}`.trim();
   const jobText = raw.toLowerCase();
-  const lang3 = (0, import_franc_min.franc)(raw || "");
+  const lang3 = (0, import_franc_min.default)(raw || "");
   const iso6393ToLanguageName = {
     deu: "GERMAN",
     eng: "ENGLISH",
@@ -3220,22 +3228,41 @@ function computeRelevanceScore(itemText, jobTokens) {
 function filterProfileForJob(userProfile, job) {
   const jobText = `${(job == null ? void 0 : job.job_title) || ""} ${(job == null ? void 0 : job.required_skills) || ""} ${(job == null ? void 0 : job.description) || ""}`;
   const jobTokens = new Set(tokenize(jobText));
-  const skillsRaw = Array.isArray(userProfile == null ? void 0 : userProfile.skills) ? userProfile.skills : [];
-  const certsRaw = Array.isArray(userProfile == null ? void 0 : userProfile.licenses) ? userProfile.licenses : [];
+  let skillsRaw = [];
+  if (Array.isArray(userProfile == null ? void 0 : userProfile.skills)) {
+    skillsRaw = userProfile.skills;
+  } else if (typeof (userProfile == null ? void 0 : userProfile.skills) === "string") {
+    try {
+      skillsRaw = JSON.parse(userProfile.skills);
+    } catch {
+      skillsRaw = [];
+    }
+  }
+  let certsRaw = [];
+  if (Array.isArray(userProfile == null ? void 0 : userProfile.licenses)) {
+    certsRaw = userProfile.licenses;
+  } else if (typeof (userProfile == null ? void 0 : userProfile.licenses) === "string") {
+    try {
+      certsRaw = JSON.parse(userProfile.licenses);
+    } catch {
+      certsRaw = [];
+    }
+  }
   const skillStrings = skillsRaw.map((s) => {
     if (typeof s === "string") return s;
     return (s == null ? void 0 : s.name) || (s == null ? void 0 : s.title) || JSON.stringify(s);
-  });
+  }).filter((s) => s && s.length > 0);
   const certStrings = certsRaw.map((c) => {
     if (typeof c === "string") return c;
     return (c == null ? void 0 : c.name) || (c == null ? void 0 : c.title) || (c == null ? void 0 : c.issuer) || JSON.stringify(c);
-  });
+  }).filter((c) => c && c.length > 0);
   const scoredSkills = skillStrings.map((s) => ({ s, score: computeRelevanceScore(s, jobTokens) })).sort((a, b) => b.score - a.score || a.s.localeCompare(b.s));
   const scoredCerts = certStrings.map((s) => ({ s, score: computeRelevanceScore(s, jobTokens) })).sort((a, b) => b.score - a.score || a.s.localeCompare(b.s));
-  const relevantSkills = scoredSkills.filter((x) => x.score > 0).slice(0, 7).map((x) => x.s);
-  const relevantCerts = scoredCerts.filter((x) => x.score > 0).slice(0, 5).map((x) => x.s);
-  const finalSkills = relevantSkills.length > 0 ? relevantSkills : skillStrings.slice(0, 5);
-  const finalCerts = relevantCerts.length > 0 ? relevantCerts : certStrings.slice(0, 3);
+  const relevantSkills = scoredSkills.slice(0, 7).map((x) => x.s);
+  const relevantCerts = scoredCerts.slice(0, 5).map((x) => x.s);
+  const finalSkills = relevantSkills.length > 0 ? relevantSkills : skillStrings.slice(0, 7);
+  const finalCerts = relevantCerts.length > 0 ? relevantCerts : certStrings.slice(0, 5);
+  console.log(`[Relevance Filter] Skills: ${finalSkills.length}/${skillStrings.length}, Certs: ${finalCerts.length}/${certStrings.length}`);
   const filteredProfile = {
     ...userProfile,
     skills: finalSkills,
@@ -3441,43 +3468,18 @@ function generateDocumentHTML(content, docType, userProfile, job, isGerman, targ
 </body>
 </html>`;
 }
-function generateCVHTML(content, userProfile, job, isGerman) {
-  var _a;
-  const experiences = (userProfile == null ? void 0 : userProfile.experiences) || [];
-  const educations = (userProfile == null ? void 0 : userProfile.educations) || [];
+function generateCVHTML(content, userProfile, job, isGerman, targetLanguage) {
+  const lang = (targetLanguage || (isGerman ? "GERMAN" : "ENGLISH")).toUpperCase();
+  const labels = {
+    GERMAN: { summary: "Berufsprofil", experience: "Berufserfahrung", education: "Ausbildung", skills: "Kenntnisse", certifications: "Zertifizierungen", languages: "Sprachen", present: "Heute" },
+    ENGLISH: { summary: "Professional Summary", experience: "Work Experience", education: "Education", skills: "Skills", certifications: "Certifications", languages: "Languages", present: "Present" },
+    FRENCH: { summary: "Profil Professionnel", experience: "Exp\xE9rience", education: "Formation", skills: "Comp\xE9tences", certifications: "Certifications", languages: "Langues", present: "Pr\xE9sent" },
+    SPANISH: { summary: "Perfil Profesional", experience: "Experiencia", education: "Educaci\xF3n", skills: "Habilidades", certifications: "Certificaciones", languages: "Idiomas", present: "Presente" }
+  };
+  const l = labels[lang] || labels.ENGLISH;
+  const useAIContent = lang !== "ENGLISH" && content && content.trim().length > 100;
   const skills = (userProfile == null ? void 0 : userProfile.skills) || [];
   const certifications = (userProfile == null ? void 0 : userProfile.licenses) || [];
-  let experiencesHTML = "";
-  if (Array.isArray(experiences)) {
-    experiencesHTML = experiences.map((exp) => `
-      <div class="experience-item">
-        <div class="item-header">
-          <div>
-            <span class="item-title">${exp.title || exp.job_title || exp}</span>
-            ${exp.company || exp.company_name ? `<span class="item-company"> at ${exp.company || exp.company_name}</span>` : ""}
-          </div>
-          <span class="item-date">${exp.startDate || exp.start_date || ""} - ${exp.endDate || exp.end_date || "Present"}</span>
-        </div>
-        ${exp.location || exp.city ? `<div style="color: #666; font-size: 13px;">${exp.location || exp.city}</div>` : ""}
-        ${exp.description || exp.summary ? `<div class="item-description">${exp.description || exp.summary}</div>` : ""}
-      </div>
-    `).join("");
-  }
-  let educationsHTML = "";
-  if (Array.isArray(educations)) {
-    educationsHTML = educations.map((edu) => `
-      <div class="education-item">
-        <div class="item-header">
-          <div>
-            <span class="item-title">${edu.degree || edu.qualification || edu}</span>
-            ${edu.field || edu.major ? `<span class="item-company"> in ${edu.field || edu.major}</span>` : ""}
-          </div>
-          <span class="item-date">${edu.startYear || edu.start_year || edu.startDate || ""} - ${edu.endYear || edu.end_year || edu.endDate || ""}</span>
-        </div>
-        ${edu.school || edu.university || edu.institution ? `<div style="color: #666; font-size: 13px;">${edu.school || edu.university || edu.institution}</div>` : ""}
-      </div>
-    `).join("");
-  }
   let skillsHTML = "";
   if (Array.isArray(skills) && skills.length > 0) {
     skillsHTML = `<div class="skills-list">${skills.map((s) => `<span class="skill-tag">${s}</span>`).join("")}</div>`;
@@ -3486,154 +3488,55 @@ function generateCVHTML(content, userProfile, job, isGerman) {
   if (Array.isArray(certifications) && certifications.length > 0) {
     certsHTML = `<div class="skills-list">${certifications.map((c) => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${c}</span>`).join("")}</div>`;
   }
+  const formatContent = (text) => {
+    return text.replace(/\n/g, "<br>");
+  };
   return `<!DOCTYPE html>
-<html lang="${isGerman ? "de" : "en"}">
+<html lang="${lang === "GERMAN" ? "de" : "en"}">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CV - ${(userProfile == null ? void 0 : userProfile.name) || "Applicant"}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      line-height: 1.5;
-      color: #1a1a1a;
-      max-width: 850px;
-      margin: 0 auto;
-      padding: 30px 40px;
-      background: #fff;
-    }
-    
-    .header {
-      display: flex;
-      gap: 20px;
-      align-items: center;
-      margin-bottom: 25px;
-      padding-bottom: 20px;
-      border-bottom: 3px solid #0077b5;
-    }
-    
-    .header-photo {
-      width: 100px;
-      height: 100px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 3px solid #0077b5;
-    }
-    
-    .header-info { flex: 1; }
-    .name { font-size: 32px; font-weight: 700; color: #0077b5; }
-    .title { font-size: 18px; color: #444; margin: 5px 0; }
-    .contact { font-size: 13px; color: #666; display: flex; flex-wrap: wrap; gap: 15px; margin-top: 8px; }
-    
-    .main { display: grid; grid-template-columns: 1fr 300px; gap: 30px; }
-    .left-column { }
-    .right-column { }
-    
+    body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 850px; margin: 0 auto; padding: 30px 40px; background: #fff; }
+    .header { margin-bottom: 25px; padding-bottom: 20px; border-bottom: 3px solid #0077b5; }
+    .name { font-size: 28px; font-weight: 700; color: #0077b5; }
+    .contact { font-size: 13px; color: #666; margin-top: 8px; }
     .section { margin-bottom: 20px; }
-    .section-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #0077b5;
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      margin-bottom: 12px;
-      padding-bottom: 5px;
-      border-bottom: 2px solid #e0e0e0;
-    }
-    
-    .summary { font-size: 14px; color: #333; text-align: justify; }
-    
-    .experience-item, .education-item { margin-bottom: 18px; }
-    .item-header { display: flex; justify-content: space-between; flex-wrap: wrap; }
-    .item-title { font-weight: 600; font-size: 15px; color: #1a1a1a; }
-    .item-company { color: #666; font-size: 14px; }
-    .item-date { color: #888; font-size: 12px; }
-    .item-description { font-size: 13px; color: #444; margin-top: 5px; }
-    
-    .skills-list { display: flex; flex-wrap: wrap; gap: 6px; }
-    .skill-tag {
-      background: #e3f2fd;
-      color: #0077b5;
-      padding: 4px 10px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 500;
-    }
-    
-    @media print {
-      body { padding: 15px; font-size: 12px; }
-      .section-title { font-size: 11px; }
-      .name { font-size: 24px; }
-    }
+    .section-title { font-size: 14px; font-weight: 700; color: #0077b5; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #e0e0e0; }
+    .content { font-size: 14px; line-height: 1.7; }
+    .skills-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .skill-tag { background: #e3f2fd; color: #0077b5; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
   </style>
 </head>
 <body>
   <div class="header">
-    ${(userProfile == null ? void 0 : userProfile.photo) ? `<img src="${userProfile.photo}" class="header-photo" alt="Photo">` : ""}
-    <div class="header-info">
-      <div class="name">${(userProfile == null ? void 0 : userProfile.name) || "Your Name"}</div>
-      <div class="title">${(userProfile == null ? void 0 : userProfile.title) || "Professional Title"}</div>
-      <div class="contact">
-        ${(userProfile == null ? void 0 : userProfile.email) ? `<span>\u{1F4E7} ${userProfile.email}</span>` : ""}
-        ${(userProfile == null ? void 0 : userProfile.phone) ? `<span>\u{1F4F1} ${userProfile.phone}</span>` : ""}
-        ${(userProfile == null ? void 0 : userProfile.location) ? `<span>\u{1F4CD} ${userProfile.location}</span>` : ""}
-      </div>
+    <div class="name">${(userProfile == null ? void 0 : userProfile.name) || "Your Name"}</div>
+    <div class="contact">
+      ${(userProfile == null ? void 0 : userProfile.email) ? `\u{1F4E7} ${userProfile.email}` : ""} 
+      ${(userProfile == null ? void 0 : userProfile.phone) ? `| \u{1F4F1} ${userProfile.phone}` : ""} 
+      ${(userProfile == null ? void 0 : userProfile.location) ? `| \u{1F4CD} ${userProfile.location}` : ""}
     </div>
   </div>
   
-  <div class="main">
-    <div class="left-column">
-      ${(userProfile == null ? void 0 : userProfile.summary) ? `
-        <div class="section">
-          <div class="section-title">${isGerman ? "Beruflicher Werdegang" : "Professional Summary"}</div>
-          <div class="summary">${userProfile.summary}</div>
-        </div>
-      ` : ""}
-      
-      ${experiencesHTML ? `
-        <div class="section">
-          <div class="section-title">${isGerman ? "Berufserfahrung" : "Work Experience"}</div>
-          ${experiencesHTML}
-        </div>
-      ` : ""}
-      
-      ${educationsHTML ? `
-        <div class="section">
-          <div class="section-title">${isGerman ? "Ausbildung" : "Education"}</div>
-          ${educationsHTML}
-        </div>
-      ` : ""}
-    </div>
-    
-    <div class="right-column">
-      ${skillsHTML ? `
-        <div class="section">
-          <div class="section-title">${isGerman ? "Kenntnisse" : "Skills"}</div>
-          ${skillsHTML}
-        </div>
-      ` : ""}
-      
-      ${certsHTML ? `
-        <div class="section">
-          <div class="section-title">${isGerman ? "Zertifizierungen" : "Certifications"}</div>
-          ${certsHTML}
-        </div>
-      ` : ""}
-      
-      ${((_a = userProfile == null ? void 0 : userProfile.languages) == null ? void 0 : _a.length) > 0 ? `
-        <div class="section">
-          <div class="section-title">${isGerman ? "Sprachen" : "Languages"}</div>
-          <div class="skills-list">
-            ${userProfile.languages.map((l) => `<span class="skill-tag" style="background: #e8f5e9; color: #388e3c;">${l}</span>`).join("")}
-          </div>
-        </div>
-      ` : ""}
-    </div>
+  <div class="content">
+    ${formatContent(content)}
   </div>
+  
+  ${skillsHTML ? `
+  <div class="section" style="margin-top: 25px;">
+    <div class="section-title">${l.skills}</div>
+    ${skillsHTML}
+  </div>
+  ` : ""}
+  
+  ${certsHTML ? `
+  <div class="section">
+    <div class="section-title">${l.certifications}</div>
+    ${certsHTML}
+  </div>
+  ` : ""}
 </body>
 </html>`;
 }
@@ -3711,7 +3614,7 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
         content = stripLetterGreetingAndClosing(content, isGerman);
       }
       await logAction(userId, "ai_thinker", `\u2705 ${type.label} generated successfully`, "completed", true);
-      const htmlContent = type.key === "cv" ? generateCVHTML(content, filteredProfile, job, isGerman) : generateDocumentHTML(content, type.label, filteredProfile, job, isGerman, targetLanguage);
+      const htmlContent = type.key === "cv" ? generateCVHTML(content, filteredProfile, job, isGerman, targetLanguage) : generateDocumentHTML(content, type.label, filteredProfile, job, isGerman, targetLanguage);
       const htmlPath = saveDocumentFile(
         htmlContent,
         job.id,
@@ -3742,6 +3645,7 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
       await logAction(userId, "ai_thinker", `\u{1F4C4} ${type.label} saved (HTML): ${htmlPath}`, "completed", true);
       try {
         const { convertHtmlToPdf: convertHtmlToPdf2 } = await Promise.resolve().then(() => (init_pdf_export(), pdf_export_exports));
+        console.log(`[PDF] Starting conversion for: ${htmlPath}`);
         const pdfResult = await convertHtmlToPdf2(htmlPath, userId);
         if (pdfResult.success && pdfResult.pdfPath) {
           await runQuery("UPDATE job_listings", {
@@ -3753,9 +3657,14 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
             file_path: pdfResult.pdfPath
           });
           await logAction(userId, "pdf", `\u2705 PDF created: ${path5.basename(pdfResult.pdfPath)}`, "completed", true);
+          console.log(`[PDF] Success: ${pdfResult.pdfPath}`);
+        } else {
+          console.error(`[PDF] Conversion failed: ${pdfResult.error || "Unknown error"}`);
+          await logAction(userId, "pdf", `\u26A0\uFE0F PDF conversion failed: ${pdfResult.error || "Unknown"}`, "failed", false);
         }
       } catch (pdfErr) {
-        console.error("Auto-PDF conversion failed:", pdfErr);
+        console.error("[PDF] Auto-PDF conversion error:", (pdfErr == null ? void 0 : pdfErr.message) || pdfErr);
+        await logAction(userId, "pdf", `\u274C PDF error: ${(pdfErr == null ? void 0 : pdfErr.message) || "Unknown"}`, "failed", false);
       }
     } catch (e) {
       console.error(`Error generating ${type.key}:`, e);
@@ -4009,7 +3918,7 @@ var init_doc_generator = __esm({
   "src/main/features/doc-generator.ts"() {
     init_database();
     init_scraper_service();
-    import_franc_min = require("franc-min");
+    import_franc_min = __toESM(require("franc-min"), 1);
     fs4 = __toESM(require("fs"), 1);
     path5 = __toESM(require("path"), 1);
     try {

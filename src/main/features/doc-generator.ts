@@ -853,7 +853,9 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
           coverLetterWordLimit,
           cvPageLimit,
           targetLanguage,
-          isGerman
+          isGerman,
+          cvStylePersona: thinker?.cv_style_persona || thinker?.cvStylePersona || 'Classic',
+          referenceCvId: thinker?.reference_cv_id || thinker?.referenceCvId || ''
         }
       });
 

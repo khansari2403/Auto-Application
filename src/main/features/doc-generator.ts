@@ -995,8 +995,10 @@ function buildThinkerPrompt(args: {
   const cvPageLimit = constraints.cvPageLimit || '2';
   const targetLanguage = constraints.targetLanguage;
   const isGerman = constraints.isGerman;
+  const cvStylePersona = (constraints.cvStylePersona || 'Classic').toString();
+  const referenceCvId = constraints.referenceCvId;
 
-  const languageHardRule = `ABSOLUTE LANGUAGE RULE: Output MUST be 100% in ${targetLanguage}. Do NOT mix languages. Do NOT include any words, headings, salutations, or closings in any other language. If you output ANY other language, the document is INVALID.`;
+  const languageHardRule = `ABSOLUTE LANGUAGE RULE: Output MUST be 100% in ${targetLanguage}. Do NOT mix languages, except that you may keep original English job titles or technical terms in parentheses AFTER their translation (e.g., "Projektleiter (Project Manager)"). If you output ANY other language outside such parentheses, the document is INVALID.`;
 
   const baseContext = `
 ${languageHardRule}

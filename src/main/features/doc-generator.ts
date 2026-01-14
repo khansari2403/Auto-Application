@@ -1,6 +1,22 @@
 import { runQuery, getDatabase, logAction, getAllQuery } from '../database';
 import { getCompanyInfo } from '../scraper-service';
-import * as francModule from 'franc-min';
+// franc-min can be shipped either as a default-exported function (v5)
+// or as a named export { franc } (v6+). To be robust across both versions
+// and across Electron/Node bundling, we normalize it to a single `franc`
+// function via require().
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const francLib: any = require('franc-min');
+let franc: (text: string) => string;
+if (typeof francLib === 'function') {
+  franc = francLib as (text: string) => string;
+} else if (typeof francLib?.franc === 'function') {
+  franc = francLib.franc as (text: string) => string;
+} else if (typeof francLib?.default === 'function') {
+  franc = francLib.default as (text: string) => string;
+} else {
+  franc = () => 'und';
+}
+
 import * as fs from 'fs';
 import * as path from 'path';
 let app: any;
@@ -177,7 +193,7 @@ async function ensureTargetLanguageOrRetry(args: {
   if (lang3 === 'und') return content; // unknown JD language
 
   // Detect language of the generated text
-  const detected = francModule.franc(text);
+  const detected = franc(text);
   if (detected === 'und' || detected === lang3) return content;
 
   // Second attempt: explicitly rewrite/translate the EXISTING document into the

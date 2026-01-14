@@ -34,7 +34,9 @@ export async function convertHtmlToPdf(htmlPath: string, userId: number): Promis
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
 
     const launchOptions: any = {
-      headless: true,
+      // Use new headless mode for better compatibility; in user Windows
+      // environment Puppeteer manages Chromium automatically.
+      headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     };
     
@@ -204,7 +206,9 @@ export async function generatePdfFromContent(
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
 
     const launchOptions: any = {
-      headless: true,
+      // Use new headless mode for better compatibility; in user Windows
+      // environment Puppeteer manages Chromium automatically.
+      headless: 'new',
       args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     };
     

@@ -1,21 +1,6 @@
 import { runQuery, getDatabase, logAction, getAllQuery } from '../database';
 import { getCompanyInfo } from '../scraper-service';
-// franc-min can be shipped either as a default-exported function (v5)
-// or as a named export { franc } (v6+). To be robust across both versions
-// and across Electron/Node bundling, we normalize it to a single `franc`
-// function via require().
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const francLib: any = require('franc-min');
-let franc: (text: string) => string;
-if (typeof francLib === 'function') {
-  franc = francLib as (text: string) => string;
-} else if (typeof francLib?.franc === 'function') {
-  franc = francLib.franc as (text: string) => string;
-} else if (typeof francLib?.default === 'function') {
-  franc = francLib.default as (text: string) => string;
-} else {
-  franc = () => 'und';
-}
+import { franc } from './franc-wrapper.cjs';
 
 import * as fs from 'fs';
 import * as path from 'path';

@@ -691,12 +691,23 @@ function normalizeCvText(content: string, isGerman: boolean): string {
 }
 
 // Generate CV HTML with full profile - supports multiple languages
-function generateCVHTML(content: string, userProfile: any, job: any, isGerman: boolean, targetLanguage?: string): string {
+// When cvStylePersona is "Mimic my CV" and language is German, we use a
+// two-column Lebenslauf-style layout: left = Kontakt/Sprachen/Qualifikationen,
+// right = main CV content.
+function generateCVHTML(
+  content: string,
+  userProfile: any,
+  job: any,
+  isGerman: boolean,
+  targetLanguage?: string,
+  cvStylePersona?: string
+): string {
   const lang = (targetLanguage || (isGerman ? 'GERMAN' : 'ENGLISH')).toUpperCase();
-  
+  const persona = (cvStylePersona || 'Classic').toLowerCase();
+
   // Multi-language labels for section headers
   const labels: Record<string, Record<string, string>> = {
-    GERMAN: { summary: 'Berufsprofil', experience: 'Berufserfahrung', education: 'Ausbildung', skills: 'Kenntnisse', certifications: 'Zertifizierungen', languages: 'Sprachen', present: 'Heute' },
+    GERMAN: { summary: 'Berufsprofil', experience: 'Berufserfahrung', education: 'Ausbildung', skills: 'Kenntnisse', certifications: 'Zertifizierungen', languages: 'Sprachkenntnisse', present: 'Heute' },
     ENGLISH: { summary: 'Professional Summary', experience: 'Work Experience', education: 'Education', skills: 'Skills', certifications: 'Certifications', languages: 'Languages', present: 'Present' },
     FRENCH: { summary: 'Profil Professionnel', experience: 'Expérience', education: 'Formation', skills: 'Compétences', certifications: 'Certifications', languages: 'Langues', present: 'Présent' },
     SPANISH: { summary: 'Perfil Profesional', experience: 'Experiencia', education: 'Educación', skills: 'Habilidades', certifications: 'Certificaciones', languages: 'Idiomas', present: 'Presente' }
@@ -708,21 +719,113 @@ function generateCVHTML(content: string, userProfile: any, job: any, isGerman: b
 
   const skills = userProfile?.skills || [];
   const certifications = userProfile?.licenses || [];
-  
-  let skillsHTML = '';
-  if (Array.isArray(skills) && skills.length > 0) {
-    skillsHTML = `<div class="skills-list">${skills.map((s: string) => `<span class="skill-tag">${s}</span>`).join('')}</div>`;
-  }
-  
-  let certsHTML = '';
-  if (Array.isArray(certifications) && certifications.length > 0) {
-    certsHTML = `<div class="skills-list">${certifications.map((c: string) => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${c}</span>`).join('')}</div>`;
+  const languages = userProfile?.languages || [];
+
+  const formatContent = (text: string): string => text.replace(/\n/g, '<br>');
+
+  // Special two-column German layout for "Mimic my CV"
+  if (persona === 'mimic my cv' && lang === 'GERMAN') {
+    const leftSkills = Array.isArray(skills) ? skills : [];
+    const leftCerts = Array.isArray(certifications) ? certifications : [];
+    const leftLangs = Array.isArray(languages) ? languages : [];
+
+    const skillsHTML = leftSkills.length
+      ? `<div class="sidebar-section"><div class="sidebar-title">Weitere Qualifikationen</div><div class="tag-list">${leftSkills
+          .map((s: string) => `<span class="tag">${s}</span>`)
+          .join('')}</div></div>`
+      : '';
+
+    const certsHTML = leftCerts.length
+      ? `<div class="sidebar-section"><div class="sidebar-title">Zertifizierungen</div><div class="tag-list">${leftCerts
+          .map((c: string) => `<span class="tag tag--cert">${c}</span>`)
+          .join('')}</div></div>`
+      : '';
+
+    const langsHTML = leftLangs.length
+      ? `<div class="sidebar-section"><div class="sidebar-title">${l.languages}</div><ul class="list">${leftLangs
+          .map((ln: string) => `<li>${ln}</li>`)
+          .join('')}</ul></div>`
+      : '';
+
+    return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Lebenslauf - ${userProfile?.name || 'Bewerber'}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 900px; margin: 0 auto; padding: 30px 40px; background: #fff; }
+    .cv-grid { display: grid; grid-template-columns: 30% 70%; gap: 24px; }
+    .sidebar { border-right: 2px solid #e0e0e0; padding-right: 18px; }
+    .sidebar-header { text-align: center; margin-bottom: 24px; }
+    .sidebar-name { font-size: 20px; font-weight: 700; color: #0077b5; margin-bottom: 4px; }
+    .sidebar-title-main { font-size: 13px; color: #555; }
+    .sidebar-section { margin-bottom: 18px; }
+    .sidebar-title { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #555; margin-bottom: 6px; }
+    .contact-line { font-size: 11px; color: #555; }
+    .contact-line span { display: block; }
+
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { background: #e3f2fd; color: #0d47a1; padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 500; }
+    .tag--cert { background: #fff3e0; color: #ef6c00; }
+    .list { list-style: none; font-size: 11px; color: #444; }
+    .list li { margin-bottom: 2px; }
+
+    .main { padding-left: 6px; }
+    .main-name { font-size: 26px; font-weight: 700; color: #0077b5; margin-bottom: 2px; }
+    .main-title { font-size: 14px; color: #555; margin-bottom: 10px; }
+    .main-contact { font-size: 11px; color: #666; margin-bottom: 18px; }
+    .main-section { margin-bottom: 18px; }
+    .main-section-title { font-size: 12px; font-weight: 700; color: #0077b5; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; border-bottom: 2px solid #e0e0e0; padding-bottom: 4px; }
+    .main-content { font-size: 12px; line-height: 1.7; }
+  </style>
+</head>
+<body>
+  <div class="cv-grid">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-name">${userProfile?.name || 'Ihr Name'}</div>
+        <div class="sidebar-title-main">${userProfile?.title || 'Projektmanager'}</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Kontakt</div>
+        <div class="contact-line">
+          ${userProfile?.email ? `<span>📧 ${userProfile.email}</span>` : ''}
+          ${userProfile?.phone ? `<span>📱 ${userProfile.phone}</span>` : ''}
+          ${userProfile?.location ? `<span>📍 ${userProfile.location}</span>` : ''}
+        </div>
+      </div>
+      ${langsHTML}
+      ${skillsHTML}
+      ${certsHTML}
+    </aside>
+    <main class="main">
+      <div class="main-name">${userProfile?.name || 'Ihr Name'}</div>
+      <div class="main-title">${userProfile?.title || ''}</div>
+      <div class="main-contact">
+        ${userProfile?.email ? `📧 ${userProfile.email}` : ''}
+        ${userProfile?.phone ? ` | 📱 ${userProfile.phone}` : ''}
+        ${userProfile?.location ? ` | 📍 ${userProfile.location}` : ''}
+      </div>
+      <div class="main-section">
+        <div class="main-section-title">${l.summary}</div>
+        <div class="main-content">${formatContent(normalizedContent)}</div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>`;
   }
 
-  // Format AI content - convert to readable paragraphs
-  const formatContent = (text: string): string => {
-    return text.replace(/\n/g, '<br>');
-  };
+  // Default single-column layout (existing behaviour) for all other personas
+  const skillsHTML = Array.isArray(skills) && skills.length
+    ? `<div class="skills-list">${skills.map((s: string) => `<span class="skill-tag">${s}</span>`).join('')}</div>`
+    : '';
+
+  const certsHTML = Array.isArray(certifications) && certifications.length
+    ? `<div class="skills-list">${certifications.map((c: string) => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${c}</span>`).join('')}</div>`
+    : '';
 
   return `<!DOCTYPE html>
 <html lang="${lang === 'GERMAN' ? 'de' : 'en'}">

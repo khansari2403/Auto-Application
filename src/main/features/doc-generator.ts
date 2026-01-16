@@ -852,10 +852,7 @@ function generateCVHTML(
         ${userProfile?.phone ? ` | 📱 ${userProfile.phone}` : ''}
         ${userProfile?.location ? ` | 📍 ${userProfile.location}` : ''}
       </div>
-      <div class="main-section">
-        <div class="main-section-title">${l.summary}</div>
-        <div class="main-content">${formatContent(normalizedContent)}</div>
-      </div>
+      ${mainSectionsHtml}
     </main>
   </div>
 </body>

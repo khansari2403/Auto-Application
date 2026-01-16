@@ -704,6 +704,7 @@ function generateCVHTML(
 ): string {
   const lang = (targetLanguage || (isGerman ? 'GERMAN' : 'ENGLISH')).toUpperCase();
   const persona = (cvStylePersona || 'Classic').toLowerCase();
+  const isMimicPersona = persona.includes('mimic');
 
   // Multi-language labels for section headers
   const labels: Record<string, Record<string, string>> = {

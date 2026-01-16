@@ -730,6 +730,49 @@ function generateCVHTML(
     const leftCerts = Array.isArray(certifications) ? certifications : [];
     const leftLangs = Array.isArray(languages) ? languages : [];
 
+    // Parse main content into sections based on "## " headings (added by the prompt).
+    const sectionRegex = /^##\s+(.+)$/gm;
+    const sections: { title: string; body: string }[] = [];
+    let lastIndex = 0;
+    let currentTitle: string | null = null;
+    let match: RegExpExecArray | null;
+
+    while ((match = sectionRegex.exec(normalizedContent)) !== null) {
+      if (currentTitle) {
+        const body = normalizedContent.slice(lastIndex, match.index).trim();
+        if (body) {
+          sections.push({ title: currentTitle, body });
+        }
+      }
+      currentTitle = match[1].trim();
+      lastIndex = sectionRegex.lastIndex;
+    }
+
+    if (currentTitle) {
+      const body = normalizedContent.slice(lastIndex).trim();
+      if (body) {
+        sections.push({ title: currentTitle, body });
+      }
+    }
+
+    let mainSectionsHtml: string;
+    if (sections.length === 0) {
+      // Fallback: single summary section with all content
+      mainSectionsHtml = `
+      <div class="main-section">
+        <div class="main-section-title">${l.summary}</div>
+        <div class="main-content">${formatContent(normalizedContent)}</div>
+      </div>`;
+    } else {
+      mainSectionsHtml = sections
+        .map(sec => `
+      <div class="main-section">
+        <div class="main-section-title">${sec.title}</div>
+        <div class="main-content">${formatContent(sec.body)}</div>
+      </div>`)
+        .join('\n');
+    }
+
     const skillsHTML = leftSkills.length
       ? `<div class="sidebar-section"><div class="sidebar-title">Weitere Qualifikationen</div><div class="tag-list">${leftSkills
           .map((s: string) => `<span class="tag">${s}</span>`)
@@ -1167,7 +1210,16 @@ Please fix these issues in the new version.` : ''}
       return `STYLE: Use a minimalist CV style. Very clean, concise bullets, no redundant phrases, no decorative language. Focus on clarity and readability.`;
     }
     if (persona === 'mimic my cv') {
-      return `STYLE: Mimic the user's existing CV layout as closely as possible. Use the same section order, heading labels, and general tone as their reference CV (ID: ${referenceCvId || 'unknown'}), but update the content for this specific job and keep everything in ${targetLanguage}.`;
+      return `STYLE: Mimic the user's existing CV layout as closely as possible. Use the same section order, heading labels, and general tone as their reference CV (ID: ${referenceCvId || 'unknown'}), but update the content for this specific job and keep everything in ${targetLanguage}.
+
+STRUCTURE MARKUP:
+- Mark each main section with a markdown-style heading line that starts with "## " followed by the section title.
+- For a German CV, prefer sections like:
+  • "## BERUFSPROFIL" (summary)
+  • "## BERUFLICHER WERDEGANG" (or "## BERUFSERFAHRUNG")
+  • "## BILDUNG" (or "## AUSBILDUNG")
+  • Optional: "## WEITERE QUALIFIKATIONEN", "## SPRACHKENNTNISSE".
+- The content of each section must come after its heading.`;
     }
     return `STYLE: Use a classic, professional CV layout similar to a traditional Word document. Clear sections, bullet points, and conservative formatting.`;
   })();

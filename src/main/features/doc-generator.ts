@@ -725,7 +725,7 @@ function generateCVHTML(
   const formatContent = (text: string): string => text.replace(/\n/g, '<br>');
 
   // Special two-column German layout for "Mimic my CV"
-  if (persona === 'mimic my cv' && lang === 'GERMAN') {
+  if (isMimicPersona && lang === 'GERMAN') {
     const leftSkills = Array.isArray(skills) ? skills : [];
     const leftCerts = Array.isArray(certifications) ? certifications : [];
     const leftLangs = Array.isArray(languages) ? languages : [];

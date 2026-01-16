@@ -992,9 +992,16 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
 
       await logAction(userId, 'ai_thinker', `✅ ${type.label} generated successfully`, 'completed', true);
 
-      // Generate HTML file - pass targetLanguage for proper localization
+      // Generate HTML file - pass targetLanguage and persona for proper localization & layout
       const htmlContent = type.key === 'cv'
-        ? generateCVHTML(content, filteredProfile, job, isGerman, targetLanguage)
+        ? generateCVHTML(
+            content,
+            filteredProfile,
+            job,
+            isGerman,
+            targetLanguage,
+            thinker?.cv_style_persona || thinker?.cvStylePersona || 'Classic'
+          )
         : generateDocumentHTML(content, type.label, filteredProfile, job, isGerman, targetLanguage);
 
       const htmlPath = saveDocumentFile(

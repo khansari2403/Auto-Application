@@ -42,6 +42,7 @@
     "concurrently": "^8.2.2",
     "electron": "^27.0.2",
     "electron-builder": "^24.6.4",
+    "ts-node": "^10.9.2",
     "tsup": "^8.0.1",
     "typescript": "^5.2.2",
     "vite": "^5.0.0",

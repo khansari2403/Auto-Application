@@ -1456,7 +1456,7 @@ STRUCTURE:
 - CONTACT: Name, Title, Email, Phone, Location (from profile)
 - PROFESSIONAL SUMMARY: 3-4 sentences summarizing experience relevant to this role. If there's a skill gap, briefly mention eagerness to apply existing skills to new challenges.
 - WORK EXPERIENCE: List jobs from profile with title, company, dates, and bullet points
-- EDUCATION: List degrees from profile
+- EDUCATION: List each degree from the profile with school, degree, years, and, if the entry has a "details" field (skills, syllabi, thesis, etc.), add 1-3 short bullet points directly under that education item based on that text
 - SKILLS: List skills from profile, prioritizing those matching job requirements
 - CERTIFICATIONS: List certifications from profile
 - LANGUAGES: List languages from profile

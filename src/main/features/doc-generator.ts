@@ -724,51 +724,86 @@ function generateCVHTML(
 
   const formatContent = (text: string): string => text.replace(/\n/g, '<br>');
 
-  // Format work experience content into subheadings/rows (for mimic persona)
+  // Format work experience/education content into grouped entries (for mimic persona)
   const formatExperienceContent = (text: string): string => {
-    const lines = String(text || '')
+    const rawLines = String(text || '')
       .split(/\r?\n/)
       .map(l => l.trim())
       .filter(l => l.length > 0);
 
     const labelPattern = /^(Unternehmen|Company|Firma|Standort|Location|Ort|Zeitraum|Period|Dates?|Aufgaben|Responsibilities?|Tätigkeiten)\s*:\s*(.+)$/i;
 
-    const htmlLines = lines.map((line, idx) => {
+    type LineKind = 'none' | 'title' | 'meta' | 'tasks' | 'body';
+
+    const entries: string[][] = [];
+    let current: string[] = [];
+    let lastKind: LineKind = 'none';
+
+    const flush = () => {
+      if (current.length > 0) {
+        entries.push(current);
+        current = [];
+      }
+    };
+
+    for (let i = 0; i < rawLines.length; i++) {
+      let line = rawLines[i];
       let l = line.replace(/^\-\s*/, ''); // remove leading dash used as bullet
       l = l.replace(/^\*+/, '').replace(/\*+$/, ''); // strip simple markdown bold markers
+
       const m = l.match(labelPattern);
       if (m) {
         const rawLabel = m[1];
         const value = m[2];
         const labelKey = rawLabel.toLowerCase();
 
-        // Only show a visible label for Aufgaben/Responsibilities/Tätigkeiten
         if (labelKey.startsWith('aufgaben') || labelKey.startsWith('responsibilit') || labelKey.startsWith('tätig')) {
-          return `<div class="exp-row exp-tasks"><span class="exp-label">${rawLabel}:</span><span class="exp-value"> ${value}</span></div>`;
+          current.push(`<div class="exp-row exp-tasks"><span class="exp-label">${rawLabel}:</span><span class="exp-value"> ${value}</span></div>`);
+          lastKind = 'tasks';
+          continue;
         }
 
-        // For Company / Standort / Zeitraum we keep the value but drop the label text
         if (labelKey.startsWith('unternehmen') || labelKey.startsWith('company') || labelKey.startsWith('firma')) {
-          return `<div class="exp-row exp-company">${value}</div>`;
+          current.push(`<div class="exp-row exp-company">${value}</div>`);
+          lastKind = 'meta';
+          continue;
         }
         if (labelKey.startsWith('standort') || labelKey.startsWith('location') || labelKey.startsWith('ort')) {
-          return `<div class="exp-row exp-location">${value}</div>`;
+          current.push(`<div class="exp-row exp-location">${value}</div>`);
+          lastKind = 'meta';
+          continue;
         }
         if (labelKey.startsWith('zeitraum') || labelKey.startsWith('period') || labelKey.startsWith('date')) {
-          return `<div class="exp-row exp-dates">${value}</div>`;
+          current.push(`<div class="exp-row exp-dates">${value}</div>`);
+          lastKind = 'meta';
+          continue;
         }
 
-        // Fallback: value only
-        return `<div class="exp-row">${value}</div>`;
+        current.push(`<div class="exp-row">${value}</div>`);
+        lastKind = 'meta';
+        continue;
       }
-      if (idx === 0) {
-        // First line in a block is typically the role/title
-        return `<div class="exp-role">${l}</div>`;
-      }
-      return `<div class="exp-text">${l}</div>`;
-    });
 
-    return htmlLines.join('');
+      const likelyTitle =
+        current.length === 0 && entries.length === 0 && i === 0
+          ? true
+          : (lastKind === 'body' || lastKind === 'tasks') && /[A-ZÄÖÜ][^.!?]{2,80}$/.test(l);
+
+      if (likelyTitle) {
+        flush();
+        current.push(`<div class="exp-role">${l}</div>`);
+        lastKind = 'title';
+      } else {
+        current.push(`<div class="exp-text">${l}</div>`);
+        lastKind = 'body';
+      }
+    }
+
+    flush();
+
+    return entries
+      .map((entryLines, idx) => `<div class="exp-entry${idx > 0 ? ' exp-entry--spaced' : ''}\">${entryLines.join('')}</div>`)
+      .join('');
   };
 
   const formatSectionBody = (body: string, title: string): string => {

@@ -159,7 +159,7 @@ function ManualProfileSection({ userId }: { userId: number }) {
   };
 
   const addEducation = () => {
-    setEducations([...educations, { school: '', degree: '', field: '', startYear: '', endYear: '', description: '' }]);
+    setEducations([...educations, { school: '', degree: '', field: '', startYear: '', endYear: '', description: '', details: '' }]);
   };
 
   const addProject = () => {

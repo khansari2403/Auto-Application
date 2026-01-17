@@ -92,11 +92,11 @@ function testGenerateCVHTML_MimicLayoutStructure() {
 
   const html = generateCVHTML(content, userProfile, job, true, 'GERMAN', 'Mimic my CV');
 
-  // Summary (Berufsprofil) section should appear before Berufserfahrung
-  const summaryIndex = html.indexOf('Berufsprofil');
-  const experienceIndex = html.indexOf('Berufserfahrung');
-  assert.ok(summaryIndex !== -1, 'Summary section (Berufsprofil) should be present');
-  assert.ok(experienceIndex !== -1, 'Experience section (Berufserfahrung) should be present');
+  // Summary (BERUFSPROFIL) section should appear before BERUFLICHER WERDEGANG
+  const summaryIndex = html.indexOf('BERUFSPROFIL');
+  const experienceIndex = html.indexOf('BERUFLICHER WERDEGANG');
+  assert.ok(summaryIndex !== -1, 'Summary section (BERUFSPROFIL) should be present');
+  assert.ok(experienceIndex !== -1, 'Experience section (BERUFLICHER WERDEGANG) should be present');
   assert.ok(summaryIndex < experienceIndex, 'Summary section should come before experience section');
 
   // Contact info should appear only in sidebar, not duplicated in main contact header

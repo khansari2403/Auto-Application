@@ -802,7 +802,7 @@ function generateCVHTML(
     flush();
 
     return entries
-      .map((entryLines, idx) => `<div class="exp-entry${idx > 0 ? ' exp-entry--spaced' : ''}\">${entryLines.join('')}</div>`)
+      .map((entryLines, idx) => `<div class="exp-entry${idx > 0 ? ' exp-entry--spaced' : ''}">${entryLines.join('')}</div>`)
       .join('');
   };
 

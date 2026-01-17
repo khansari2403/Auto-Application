@@ -730,8 +730,9 @@ function generateCVHTML(
     const leftCerts = Array.isArray(certifications) ? certifications : [];
     const leftLangs = Array.isArray(languages) ? languages : [];
 
-    // Parse main content into sections based on "## " headings (added by the prompt).
-    const sectionRegex = /^##\s+(.+)$/gm;
+    // Parse main content into sections based on "##" (or "###") headings (added by the prompt).
+    // Be tolerant of missing space after hashes, e.g. "##Berufsprofil".
+    const sectionRegex = /^#{2,3}\s*(.+)$/gm;
     const sections: { title: string; body: string }[] = [];
     let lastIndex = 0;
     let currentTitle: string | null = null;

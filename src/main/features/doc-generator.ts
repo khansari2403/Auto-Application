@@ -1354,7 +1354,12 @@ STRUCTURE MARKUP:
   • "## BILDUNG" (or "## AUSBILDUNG")
   • Optional: "## WEITERE QUALIFIKATIONEN", "## SPRACHKENNTNISSE".
 - DO NOT create a separate "CONTACT" or "KONTAKT" section; contact information will be handled by the template.
-- The content of each section must come after its heading.`;
+- The content of each section must come after its heading.
+
+LANGUAGE ENFORCEMENT:
+- Every heading and every sentence in the CV MUST be written in the SAME LANGUAGE as the job description (${targetLanguage}).
+- It is strictly forbidden to write section titles like "WORK EXPERIENCE" or "EDUCATION" when the language is German. Use "BERUFLICHER WERDEGANG" and "BILDUNG" instead.
+- If you are unsure, always choose the fully localized (${targetLanguage}) version of headings and sentences.`;
     }
     return `STYLE: Use a classic, professional CV layout similar to a traditional Word document. Clear sections, bullet points, and conservative formatting.`;
   })();

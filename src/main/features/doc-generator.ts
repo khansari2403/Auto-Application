@@ -287,7 +287,7 @@ function stripLetterGreetingAndClosing(text: string, isGerman: boolean): string 
   return out;
 }
 
-function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage: string; lang3: string } {
+export function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage: string; lang3: string } {
   const raw = `${job?.job_title || ''} ${job?.required_skills || ''} ${job?.description || ''}`.trim();
   const jobText = raw.toLowerCase();
 
@@ -463,7 +463,7 @@ const DOC_TYPES = [
 ];
 
 // Generate HTML template for document
-function generateDocumentHTML(content: string, docType: string, userProfile: any, job: any, isGerman: boolean, targetLanguage?: string): string {
+export function generateDocumentHTML(content: string, docType: string, userProfile: any, job: any, isGerman: boolean, targetLanguage?: string): string {
   const title = `${docType} - ${userProfile?.name || 'Applicant'} - ${job?.company_name || 'Company'}`;
   const isLetter = docType.toLowerCase().includes('letter');
 

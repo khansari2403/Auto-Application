@@ -3549,9 +3549,19 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
   const languages = (userProfile == null ? void 0 : userProfile.languages) || [];
   const formatContent = (text) => text.replace(/\n/g, "<br>");
   const formatExperienceContent = (text) => {
-    const lines = String(text || "").split(/\r?\n/).map((l2) => l2.trim()).filter((l2) => l2.length > 0);
+    const rawLines = String(text || "").split(/\r?\n/).map((l2) => l2.trim()).filter((l2) => l2.length > 0);
     const labelPattern = /^(Unternehmen|Company|Firma|Standort|Location|Ort|Zeitraum|Period|Dates?|Aufgaben|Responsibilities?|Tätigkeiten)\s*:\s*(.+)$/i;
-    const htmlLines = lines.map((line, idx) => {
+    const entries = [];
+    let current = [];
+    let lastKind = "none";
+    const flush = () => {
+      if (current.length > 0) {
+        entries.push(current);
+        current = [];
+      }
+    };
+    for (let i = 0; i < rawLines.length; i++) {
+      let line = rawLines[i];
       let l2 = line.replace(/^\-\s*/, "");
       l2 = l2.replace(/^\*+/, "").replace(/\*+$/, "");
       const m = l2.match(labelPattern);
@@ -3560,29 +3570,48 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
         const value = m[2];
         const labelKey = rawLabel.toLowerCase();
         if (labelKey.startsWith("aufgaben") || labelKey.startsWith("responsibilit") || labelKey.startsWith("t\xE4tig")) {
-          return `<div class="exp-row exp-tasks"><span class="exp-label">${rawLabel}:</span><span class="exp-value"> ${value}</span></div>`;
+          current.push(`<div class="exp-row exp-tasks"><span class="exp-label">${rawLabel}:</span><span class="exp-value"> ${value}</span></div>`);
+          lastKind = "tasks";
+          continue;
         }
         if (labelKey.startsWith("unternehmen") || labelKey.startsWith("company") || labelKey.startsWith("firma")) {
-          return `<div class="exp-row exp-company">${value}</div>`;
+          current.push(`<div class="exp-row exp-company">${value}</div>`);
+          lastKind = "meta";
+          continue;
         }
         if (labelKey.startsWith("standort") || labelKey.startsWith("location") || labelKey.startsWith("ort")) {
-          return `<div class="exp-row exp-location">${value}</div>`;
+          current.push(`<div class="exp-row exp-location">${value}</div>`);
+          lastKind = "meta";
+          continue;
         }
         if (labelKey.startsWith("zeitraum") || labelKey.startsWith("period") || labelKey.startsWith("date")) {
-          return `<div class="exp-row exp-dates">${value}</div>`;
+          current.push(`<div class="exp-row exp-dates">${value}</div>`);
+          lastKind = "meta";
+          continue;
         }
-        return `<div class="exp-row">${value}</div>`;
+        current.push(`<div class="exp-row">${value}</div>`);
+        lastKind = "meta";
+        continue;
       }
-      if (idx === 0) {
-        return `<div class="exp-role">${l2}</div>`;
+      const likelyTitle = current.length === 0 && entries.length === 0 && i === 0 ? true : (lastKind === "body" || lastKind === "tasks") && /[A-ZÄÖÜ][^.!?]{2,80}$/.test(l2);
+      if (likelyTitle) {
+        flush();
+        current.push(`<div class="exp-role">${l2}</div>`);
+        lastKind = "title";
+      } else {
+        current.push(`<div class="exp-text">${l2}</div>`);
+        lastKind = "body";
       }
-      return `<div class="exp-text">${l2}</div>`;
-    });
-    return htmlLines.join("");
+    }
+    flush();
+    return entries.map((entryLines, idx) => `<div class="exp-entry${idx > 0 ? " exp-entry--spaced" : ""}">${entryLines.join("")}</div>`).join("");
   };
   const formatSectionBody = (body, title) => {
     const t = String(title || "").toUpperCase();
     if (t.includes("BERUFLICHER WERDEGANG") || t.includes("BERUFSERFAHRUNG") || t.includes("WORK EXPERIENCE")) {
+      return formatExperienceContent(body);
+    }
+    if (t.includes("BILDUNG") || t.includes("AUSBILDUNG") || t.includes("EDUCATION")) {
       return formatExperienceContent(body);
     }
     return formatContent(body);
@@ -3670,6 +3699,8 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
       padding-bottom: 4px;
     }
     .main-content { font-size: 11.5px; line-height: 1.7; }
+    .exp-entry { margin-bottom: 4px; }
+    .exp-entry--spaced { margin-top: 10px; }
     .exp-role { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
     .exp-row, .exp-text { font-size: 11px; margin: 1px 0; }
     .exp-label { font-weight: 600; }

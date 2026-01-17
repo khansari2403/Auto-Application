@@ -724,6 +724,42 @@ function generateCVHTML(
 
   const formatContent = (text: string): string => text.replace(/\n/g, '<br>');
 
+  // Format work experience content into subheadings/rows (for mimic persona)
+  const formatExperienceContent = (text: string): string => {
+    const lines = String(text || '')
+      .split(/\r?\n/)
+      .map(l => l.trim())
+      .filter(l => l.length > 0);
+
+    const labelPattern = /^(Unternehmen|Company|Firma|Standort|Location|Ort|Zeitraum|Period|Dates?|Aufgaben|Responsibilities?|Tätigkeiten)\s*:\s*(.+)$/i;
+
+    const htmlLines = lines.map((line, idx) => {
+      let l = line.replace(/^\-\s*/, ''); // remove leading dash used as bullet
+      l = l.replace(/^\*+/, '').replace(/\*+$/, ''); // strip simple markdown bold markers
+      const m = l.match(labelPattern);
+      if (m) {
+        const label = m[1];
+        const value = m[2];
+        return `<div class="exp-row"><span class="exp-label">${label}:</span><span class="exp-value"> ${value}</span></div>`;
+      }
+      if (idx === 0) {
+        // First line in a block is typically the role/title
+        return `<div class="exp-role">${l}</div>`;
+      }
+      return `<div class="exp-text">${l}</div>`;
+    });
+
+    return htmlLines.join('');
+  };
+
+  const formatSectionBody = (body: string, title: string): string => {
+    const t = String(title || '').toUpperCase();
+    if (t.includes('BERUFLICHER WERDEGANG') || t.includes('BERUFSERFAHRUNG') || t.includes('WORK EXPERIENCE')) {
+      return formatExperienceContent(body);
+    }
+    return formatContent(body);
+  };
+
   // Special two-column layout for "Mimic my CV" (all languages)
   if (isMimicPersona) {
     const leftSkills = Array.isArray(skills) ? skills : [];
@@ -769,7 +805,7 @@ function generateCVHTML(
         .map(sec => `
       <div class="main-section">
         <div class="main-section-title">${sec.title}</div>
-        <div class="main-content">${formatContent(sec.body)}</div>
+        <div class="main-content">${formatSectionBody(sec.body, sec.title)}</div>
       </div>`)
         .join('\n');
     }
@@ -833,6 +869,10 @@ function generateCVHTML(
       padding-bottom: 4px;
     }
     .main-content { font-size: 11.5px; line-height: 1.7; }
+    .exp-role { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
+    .exp-row, .exp-text { font-size: 11px; margin: 1px 0; }
+    .exp-label { font-weight: 600; }
+    .exp-value { margin-left: 4px; }
   </style>
 </head>
 <body>

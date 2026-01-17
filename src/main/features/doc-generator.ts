@@ -1353,6 +1353,7 @@ STRUCTURE MARKUP:
   • "## BERUFLICHER WERDEGANG" (or "## BERUFSERFAHRUNG")
   • "## BILDUNG" (or "## AUSBILDUNG")
   • Optional: "## WEITERE QUALIFIKATIONEN", "## SPRACHKENNTNISSE".
+- DO NOT create a separate "CONTACT" or "KONTAKT" section; contact information will be handled by the template.
 - The content of each section must come after its heading.`;
     }
     return `STYLE: Use a classic, professional CV layout similar to a traditional Word document. Clear sections, bullet points, and conservative formatting.`;

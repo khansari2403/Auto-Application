@@ -177,16 +177,23 @@ async function ensureTargetLanguageOrRetry(args: {
   if (text.length < 40) return content; // too short for reliable detection
   if (lang3 === 'und') return content; // unknown JD language
 
-  // Detect language of the generated text
-  const detected = franc(text);
-  if (detected === 'und' || detected === lang3) return content;
+  const detectLang = (input: string): string => {
+    const t = String(input || '').trim();
+    if (!t || t.length < 5) return 'und';
+    return franc(t);
+  };
 
-  // Second attempt: explicitly rewrite/translate the EXISTING document into the
-  // target language. We keep the original prompt for context so that the
-  // "ABSOLUTE LANGUAGE RULE" is still present (important for tests and real AI
-  // behaviour), but we also pass the previous output so the model can
-  // translate/adjust it instead of inventing something completely new.
-  const fixPrompt = `${originalPrompt}
+  let workingText = text;
+
+  // First pass: detect language of the whole generated text
+  let detected = detectLang(workingText);
+  if (detected !== 'und' && detected !== lang3) {
+    // Second attempt: explicitly rewrite/translate the EXISTING document into the
+    // target language. We keep the original prompt for context so that the
+    // "ABSOLUTE LANGUAGE RULE" is still present (important for tests and real AI
+    // behaviour), but we also pass the previous output so the model can
+    // translate/adjust it instead of inventing something completely new.
+    const fixPrompt = `${originalPrompt}
 
 CRITICAL LANGUAGE FIX:
 The document below was generated in language '${detected}', but the job description language is '${lang3}' which corresponds to ${targetLanguage}.
@@ -196,21 +203,51 @@ You MUST now rewrite/translate THIS EXACT DOCUMENT so that it is 100% in ${targe
 Return ONLY the rewritten content, with no JSON, no markdown code fences, and no meta-text.
 
 DOCUMENT TO REWRITE:
-"""${text}"""`;
+"""${workingText}"""`;
 
-  const retryRaw = await callAI(thinker, fixPrompt);
-  if (!retryRaw || String(retryRaw).startsWith('Error:')) return content;
+    const retryRaw = await callAI(thinker, fixPrompt);
+    if (!retryRaw || String(retryRaw).startsWith('Error:')) return content;
 
-  const cleanedRetry = cleanAIOutput(String(retryRaw));
-  const retryText = String(cleanedRetry || '').trim();
-  if (!retryText) return content;
+    const cleanedRetry = cleanAIOutput(String(retryRaw));
+    const retryText = String(cleanedRetry || '').trim();
+    if (!retryText) return content;
 
-  // If detection still disagrees, we still prefer the rewritten content since it
-  // was explicitly asked to be in the target language.
-  const detectedRetry = franc(retryText);
-  if (detectedRetry === 'und') return retryText;
+    workingText = retryText;
+  }
 
-  return detectedRetry === lang3 ? retryText : retryText;
+  // Second pass: line-level sanitation to catch mixed-language sections
+  const lines = workingText.split('\n');
+  const hasOffendingLines = lines.some(l => {
+    const trimmed = l.trim();
+    if (trimmed.length < 20) return false;
+    const lineLang = detectLang(trimmed);
+    return lineLang !== 'und' && lineLang !== lang3;
+  });
+
+  if (!hasOffendingLines) {
+    return workingText;
+  }
+
+  const sanitizePrompt = `${originalPrompt}
+
+FINAL LANGUAGE SANITIZATION:
+Target language: ${targetLanguage} (code: ${lang3}).
+
+The CV text below may contain some lines or bullet points in a different language (e.g. Spanish, Portuguese, English).
+You MUST return the same CV content, but with EVERY word rewritten so the entire text is 100% in ${targetLanguage}.
+Preserve the structure, headings, bullet points and numbers.
+
+Return ONLY the corrected CV text, with no JSON, no markdown code fences, and no meta-text.
+
+CV TEXT:
+"""${workingText}"""`;
+
+  const sanitizedRaw = await callAI(thinker, sanitizePrompt);
+  if (!sanitizedRaw || String(sanitizedRaw).startsWith('Error:')) return workingText;
+
+  const cleanedSanitized = cleanAIOutput(String(sanitizedRaw));
+  const sanitizedText = String(cleanedSanitized || '').trim();
+  return sanitizedText || workingText;
 }
 function stripLetterGreetingAndClosing(text: string, isGerman: boolean): string {
   let out = (text || '').trim();
@@ -874,6 +911,18 @@ function generateCVHTML(
       }
     }
 
+    // Ensure summary-style section (Berufsprofil/Professional Summary) appears first when present
+    if (sections.length > 1) {
+      const summaryIndex = sections.findIndex(sec => {
+        const t = String(sec.title || '').toUpperCase();
+        return t.includes('BERUFSPROFIL') || t.includes('PROFESSIONAL SUMMARY') || t === 'SUMMARY';
+      });
+      if (summaryIndex > 0) {
+        const [summary] = sections.splice(summaryIndex, 1);
+        sections.unshift(summary);
+      }
+    }
+
     let mainSectionsHtml: string;
     if (sections.length === 0) {
       // Fallback: single summary section with all content
@@ -984,11 +1033,6 @@ function generateCVHTML(
     <main class="main">
       <div class="main-name">${userProfile?.name || 'Ihr Name'}</div>
       <div class="main-title">${userProfile?.title || ''}</div>
-      <div class="main-contact">
-        ${userProfile?.email ? `📧 ${userProfile.email}` : ''}
-        ${userProfile?.phone ? ` | 📱 ${userProfile.phone}` : ''}
-        ${userProfile?.location ? ` | 📍 ${userProfile.location}` : ''}
-      </div>
       ${mainSectionsHtml}
     </main>
   </div>

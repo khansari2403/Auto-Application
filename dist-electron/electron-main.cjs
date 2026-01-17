@@ -2857,6 +2857,27 @@ __export(pdf_export_exports, {
   convertHtmlToPdf: () => convertHtmlToPdf,
   generatePdfFromContent: () => generatePdfFromContent
 });
+async function fallbackHtmlToPdf(htmlPath, userId) {
+  try {
+    if (!fs3.existsSync(htmlPath)) {
+      return { success: false, error: "HTML file not found for fallback" };
+    }
+    const rawHtml = fs3.readFileSync(htmlPath, "utf-8");
+    let text = rawHtml.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|h[1-6]|li|tr)>/gi, "\n").replace(/<style[\s\S]*?<\/style>/gi, "").replace(/<script[\s\S]*?<\/script>/gi, "").replace(/<[^>]+>/g, "");
+    text = text.replace(/\n{3,}/g, "\n\n").trim();
+    const baseName = path4.basename(htmlPath, ".html") || "document";
+    const result = await generatePdfFromContent(text, baseName, userId);
+    if (!result.success || !result.pdfPath) {
+      return { success: false, error: result.error || "Fallback PDF generation failed" };
+    }
+    await logAction(userId, "pdf", `\u2705 Fallback PDF created from HTML: ${path4.basename(result.pdfPath)}`, "completed", true);
+    return { success: true, pdfPath: result.pdfPath };
+  } catch (e) {
+    console.error("Fallback HTML\u2192PDF conversion error:", e);
+    await logAction(userId, "pdf", `\u274C Fallback PDF conversion failed: ${e.message}`, "failed", false);
+    return { success: false, error: e.message };
+  }
+}
 async function convertHtmlToPdf(htmlPath, userId) {
   let browser = null;
   try {
@@ -2898,6 +2919,10 @@ async function convertHtmlToPdf(htmlPath, userId) {
     console.error("PDF conversion error:", error);
     if (browser) await browser.close();
     await logAction(userId, "pdf", `\u274C PDF conversion failed: ${error.message}`, "failed", false);
+    const fallback = await fallbackHtmlToPdf(htmlPath, userId);
+    if (fallback.success) {
+      return fallback;
+    }
     return { success: false, error: error.message };
   }
 }
@@ -3111,9 +3136,15 @@ async function ensureTargetLanguageOrRetry(args) {
   const text = String(content || "").trim();
   if (text.length < 40) return content;
   if (lang3 === "und") return content;
-  const detected = (0, import_franc_wrapper.franc)(text);
-  if (detected === "und" || detected === lang3) return content;
-  const fixPrompt = `${originalPrompt}
+  const detectLang = (input) => {
+    const t = String(input || "").trim();
+    if (!t || t.length < 5) return "und";
+    return (0, import_franc_wrapper.franc)(t);
+  };
+  let workingText = text;
+  let detected = detectLang(workingText);
+  if (detected !== "und" && detected !== lang3) {
+    const fixPrompt = `${originalPrompt}
 
 CRITICAL LANGUAGE FIX:
 The document below was generated in language '${detected}', but the job description language is '${lang3}' which corresponds to ${targetLanguage}.
@@ -3123,15 +3154,42 @@ You MUST now rewrite/translate THIS EXACT DOCUMENT so that it is 100% in ${targe
 Return ONLY the rewritten content, with no JSON, no markdown code fences, and no meta-text.
 
 DOCUMENT TO REWRITE:
-"""${text}"""`;
-  const retryRaw = await callAI2(thinker, fixPrompt);
-  if (!retryRaw || String(retryRaw).startsWith("Error:")) return content;
-  const cleanedRetry = cleanAIOutput(String(retryRaw));
-  const retryText = String(cleanedRetry || "").trim();
-  if (!retryText) return content;
-  const detectedRetry = (0, import_franc_wrapper.franc)(retryText);
-  if (detectedRetry === "und") return retryText;
-  return detectedRetry === lang3 ? retryText : retryText;
+"""${workingText}"""`;
+    const retryRaw = await callAI2(thinker, fixPrompt);
+    if (!retryRaw || String(retryRaw).startsWith("Error:")) return content;
+    const cleanedRetry = cleanAIOutput(String(retryRaw));
+    const retryText = String(cleanedRetry || "").trim();
+    if (!retryText) return content;
+    workingText = retryText;
+  }
+  const lines = workingText.split("\n");
+  const hasOffendingLines = lines.some((l) => {
+    const trimmed = l.trim();
+    if (trimmed.length < 20) return false;
+    const lineLang = detectLang(trimmed);
+    return lineLang !== "und" && lineLang !== lang3;
+  });
+  if (!hasOffendingLines) {
+    return workingText;
+  }
+  const sanitizePrompt = `${originalPrompt}
+
+FINAL LANGUAGE SANITIZATION:
+Target language: ${targetLanguage} (code: ${lang3}).
+
+The CV text below may contain some lines or bullet points in a different language (e.g. Spanish, Portuguese, English).
+You MUST return the same CV content, but with EVERY word rewritten so the entire text is 100% in ${targetLanguage}.
+Preserve the structure, headings, bullet points and numbers.
+
+Return ONLY the corrected CV text, with no JSON, no markdown code fences, and no meta-text.
+
+CV TEXT:
+"""${workingText}"""`;
+  const sanitizedRaw = await callAI2(thinker, sanitizePrompt);
+  if (!sanitizedRaw || String(sanitizedRaw).startsWith("Error:")) return workingText;
+  const cleanedSanitized = cleanAIOutput(String(sanitizedRaw));
+  const sanitizedText = String(cleanedSanitized || "").trim();
+  return sanitizedText || workingText;
 }
 function stripLetterGreetingAndClosing(text, isGerman) {
   let out = (text || "").trim();
@@ -3522,6 +3580,8 @@ function normalizeCvText(content, isGerman) {
     text = text.replace(/,\s*\n/g, "\n");
   }
   text = text.replace(/[\{\}]/g, "");
+  text = text.replace(/\*\*(.*?)\*\*/g, "$1");
+  text = text.replace(/__(.*?)__/g, "$1");
   if (isGerman) {
     text = text.replace(/^CONTACT$/gim, "Kontakt");
     text = text.replace(/^PROFESSIONAL SUMMARY$/gim, "Berufsprofil");
@@ -3529,6 +3589,11 @@ function normalizeCvText(content, isGerman) {
     text = text.replace(/^EDUCATION$/gim, "Ausbildung");
     text = text.replace(/^SKILLS$/gim, "Kenntnisse");
     text = text.replace(/^CERTIFICATIONS$/gim, "Zertifizierungen");
+    text = text.replace(/^\s*EDUCATION\s*$/gim, "Ausbildung");
+    text = text.replace(/^\s*WORK EXPERIENCE\s*$/gim, "Berufserfahrung");
+    text = text.replace(/^\s*PROFESSIONAL SUMMARY\s*$/gim, "Berufsprofil");
+    text = text.replace(/^\s*SKILLS\s*$/gim, "Kenntnisse");
+    text = text.replace(/^\s*CERTIFICATIONS\s*$/gim, "Zertifizierungen");
   }
   return text.trim();
 }
@@ -3616,6 +3681,18 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
     }
     return formatContent(body);
   };
+  const localizeSectionTitle = (title) => {
+    const upper = String(title || "").toUpperCase().trim();
+    if (lang === "GERMAN") {
+      if (upper.includes("WORK EXPERIENCE")) return "BERUFLICHER WERDEGANG";
+      if (upper.includes("BERUFLICHER WERDEGANG") || upper.includes("BERUFSERFAHRUNG")) return "BERUFLICHER WERDEGANG";
+      if (upper.includes("EDUCATION")) return "BILDUNG";
+      if (upper.includes("PROFESSIONAL SUMMARY") || upper.includes("SUMMARY") || upper === "BERUFSPROFIL") return "BERUFSPROFIL";
+      if (upper.includes("SKILLS")) return "WEITERE QUALIFIKATIONEN";
+      if (upper.includes("LANGUAGES")) return "SPRACHKENNTNISSE";
+    }
+    return title;
+  };
   if (isMimicPersona) {
     const leftSkills = Array.isArray(skills) ? skills : [];
     const leftCerts = Array.isArray(certifications) ? certifications : [];
@@ -3641,6 +3718,16 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
         sections.push({ title: currentTitle, body });
       }
     }
+    if (sections.length > 1) {
+      const summaryIndex = sections.findIndex((sec) => {
+        const t = String(sec.title || "").toUpperCase();
+        return t.includes("BERUFSPROFIL") || t.includes("PROFESSIONAL SUMMARY") || t === "SUMMARY";
+      });
+      if (summaryIndex > 0) {
+        const [summary] = sections.splice(summaryIndex, 1);
+        sections.unshift(summary);
+      }
+    }
     let mainSectionsHtml;
     if (sections.length === 0) {
       mainSectionsHtml = `
@@ -3649,11 +3736,14 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
         <div class="main-content">${formatContent(normalizedContent)}</div>
       </div>`;
     } else {
-      mainSectionsHtml = sections.map((sec) => `
+      mainSectionsHtml = sections.map((sec) => {
+        const localizedTitle = localizeSectionTitle(sec.title);
+        return `
       <div class="main-section">
-        <div class="main-section-title">${sec.title}</div>
-        <div class="main-content">${formatSectionBody(sec.body, sec.title)}</div>
-      </div>`).join("\n");
+        <div class="main-section-title">${localizedTitle}</div>
+        <div class="main-content">${formatSectionBody(sec.body, localizedTitle)}</div>
+      </div>`;
+      }).join("\n");
     }
     const skillsHTML2 = leftSkills.length ? `<div class="sidebar-section"><div class="sidebar-title">Weitere Qualifikationen</div><div class="tag-list">${leftSkills.map((s) => `<span class="tag">${s}</span>`).join("")}</div></div>` : "";
     const certsHTML2 = leftCerts.length ? `<div class="sidebar-section"><div class="sidebar-title">Zertifizierungen</div><div class="tag-list">${leftCerts.map((c) => `<span class="tag tag--cert">${c}</span>`).join("")}</div></div>` : "";
@@ -3729,11 +3819,6 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
     <main class="main">
       <div class="main-name">${(userProfile == null ? void 0 : userProfile.name) || "Ihr Name"}</div>
       <div class="main-title">${(userProfile == null ? void 0 : userProfile.title) || ""}</div>
-      <div class="main-contact">
-        ${(userProfile == null ? void 0 : userProfile.email) ? `\u{1F4E7} ${userProfile.email}` : ""}
-        ${(userProfile == null ? void 0 : userProfile.phone) ? ` | \u{1F4F1} ${userProfile.phone}` : ""}
-        ${(userProfile == null ? void 0 : userProfile.location) ? ` | \u{1F4CD} ${userProfile.location}` : ""}
-      </div>
       ${mainSectionsHtml}
     </main>
   </div>
@@ -4010,7 +4095,13 @@ STRUCTURE MARKUP:
   \u2022 "## BERUFLICHER WERDEGANG" (or "## BERUFSERFAHRUNG")
   \u2022 "## BILDUNG" (or "## AUSBILDUNG")
   \u2022 Optional: "## WEITERE QUALIFIKATIONEN", "## SPRACHKENNTNISSE".
-- The content of each section must come after its heading.`;
+- DO NOT create a separate "CONTACT" or "KONTAKT" section; contact information will be handled by the template.
+- The content of each section must come after its heading.
+
+LANGUAGE ENFORCEMENT:
+- Every heading and every sentence in the CV MUST be written in the SAME LANGUAGE as the job description (${targetLanguage}).
+- It is strictly forbidden to write section titles like "WORK EXPERIENCE" or "EDUCATION" when the language is German. Use "BERUFLICHER WERDEGANG" and "BILDUNG" instead.
+- If you are unsure, always choose the fully localized (${targetLanguage}) version of headings and sentences.`;
     }
     return `STYLE: Use a classic, professional CV layout similar to a traditional Word document. Clear sections, bullet points, and conservative formatting.`;
   })();

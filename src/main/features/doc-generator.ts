@@ -738,9 +738,28 @@ function generateCVHTML(
       l = l.replace(/^\*+/, '').replace(/\*+$/, ''); // strip simple markdown bold markers
       const m = l.match(labelPattern);
       if (m) {
-        const label = m[1];
+        const rawLabel = m[1];
         const value = m[2];
-        return `<div class="exp-row"><span class="exp-label">${label}:</span><span class="exp-value"> ${value}</span></div>`;
+        const labelKey = rawLabel.toLowerCase();
+
+        // Only show a visible label for Aufgaben/Responsibilities/Tätigkeiten
+        if (labelKey.startsWith('aufgaben') || labelKey.startsWith('responsibilit') || labelKey.startsWith('tätig')) {
+          return `<div class="exp-row exp-tasks"><span class="exp-label">${rawLabel}:</span><span class="exp-value"> ${value}</span></div>`;
+        }
+
+        // For Company / Standort / Zeitraum we keep the value but drop the label text
+        if (labelKey.startsWith('unternehmen') || labelKey.startsWith('company') || labelKey.startsWith('firma')) {
+          return `<div class="exp-row exp-company">${value}</div>`;
+        }
+        if (labelKey.startsWith('standort') || labelKey.startsWith('location') || labelKey.startsWith('ort')) {
+          return `<div class="exp-row exp-location">${value}</div>`;
+        }
+        if (labelKey.startsWith('zeitraum') || labelKey.startsWith('period') || labelKey.startsWith('date')) {
+          return `<div class="exp-row exp-dates">${value}</div>`;
+        }
+
+        // Fallback: value only
+        return `<div class="exp-row">${value}</div>`;
       }
       if (idx === 0) {
         // First line in a block is typically the role/title

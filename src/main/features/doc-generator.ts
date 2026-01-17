@@ -677,14 +677,26 @@ function normalizeCvText(content: string, isGerman: boolean): string {
   // have slipped through other formats.
   text = text.replace(/[\{\}]/g, '');
 
+  // Strip simple markdown bold/italic markers like **EDUCATION** or __Skills__
+  text = text.replace(/\*\*(.*?)\*\*/g, '$1');
+  text = text.replace(/__(.*?)__/g, '$1');
+
   // Localize the section labels for German CVs so headings are not English.
   if (isGerman) {
+    // JSON-style headings
     text = text.replace(/^CONTACT$/gim, 'Kontakt');
     text = text.replace(/^PROFESSIONAL SUMMARY$/gim, 'Berufsprofil');
     text = text.replace(/^WORK EXPERIENCE$/gim, 'Berufserfahrung');
     text = text.replace(/^EDUCATION$/gim, 'Ausbildung');
     text = text.replace(/^SKILLS$/gim, 'Kenntnisse');
     text = text.replace(/^CERTIFICATIONS$/gim, 'Zertifizierungen');
+
+    // Plain-text or markdown headings the model may emit
+    text = text.replace(/^\s*EDUCATION\s*$/gim, 'Ausbildung');
+    text = text.replace(/^\s*WORK EXPERIENCE\s*$/gim, 'Berufserfahrung');
+    text = text.replace(/^\s*PROFESSIONAL SUMMARY\s*$/gim, 'Berufsprofil');
+    text = text.replace(/^\s*SKILLS\s*$/gim, 'Kenntnisse');
+    text = text.replace(/^\s*CERTIFICATIONS\s*$/gim, 'Zertifizierungen');
   }
 
   return text.trim();

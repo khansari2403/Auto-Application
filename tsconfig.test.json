@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.app.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "outDir": "./dist-test",
+    "types": ["node"]
+  },
+  "include": [
+    "src/main/features/doc-generator.ts",
+    "tests/**/*.ts"
+  ]
+}

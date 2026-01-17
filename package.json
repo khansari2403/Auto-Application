@@ -44,6 +44,7 @@
     "electron-builder": "^24.6.4",
     "ts-node": "^10.9.2",
     "tsup": "^8.0.1",
+    "tsx": "^4.21.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.0",
     "wait-on": "^7.2.0"

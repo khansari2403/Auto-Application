@@ -7,6 +7,9 @@ var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __esm = (fn, res) => function __init() {
   return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
 };
+var __commonJS = (cb, mod) => function __require() {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -2827,6 +2830,26 @@ var init_Hunter_engine = __esm({
   }
 });
 
+// src/main/features/franc-wrapper.cjs
+var require_franc_wrapper = __commonJS({
+  "src/main/features/franc-wrapper.cjs"(exports2, module2) {
+    var francLib = require("franc-min");
+    var francFn;
+    if (typeof francLib === "function") {
+      francFn = francLib;
+    } else if (francLib && typeof francLib.franc === "function") {
+      francFn = francLib.franc;
+    } else if (francLib && typeof francLib.default === "function") {
+      francFn = francLib.default;
+    } else {
+      francFn = () => "und";
+    }
+    module2.exports = {
+      franc: francFn
+    };
+  }
+});
+
 // src/main/features/pdf-export.ts
 var pdf_export_exports = {};
 __export(pdf_export_exports, {
@@ -2844,7 +2867,9 @@ async function convertHtmlToPdf(htmlPath, userId) {
     const htmlContent = fs3.readFileSync(htmlPath, "utf-8");
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     const launchOptions = {
-      headless: true,
+      // Use new headless mode for better compatibility; in user Windows
+      // environment Puppeteer manages Chromium automatically.
+      headless: "new",
       args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     };
     if (executablePath) {
@@ -2976,7 +3001,9 @@ async function generatePdfFromContent(content, fileName, userId, options) {
 </html>`;
     const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
     const launchOptions = {
-      headless: true,
+      // Use new headless mode for better compatibility; in user Windows
+      // environment Puppeteer manages Chromium automatically.
+      headless: "new",
       args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
     };
     if (executablePath) {
@@ -3084,17 +3111,27 @@ async function ensureTargetLanguageOrRetry(args) {
   const text = String(content || "").trim();
   if (text.length < 40) return content;
   if (lang3 === "und") return content;
-  const detected = (0, import_franc_min.franc)(text);
+  const detected = (0, import_franc_wrapper.franc)(text);
   if (detected === "und" || detected === lang3) return content;
   const fixPrompt = `${originalPrompt}
 
-CRITICAL FIX:
-- The previous output language detection was '${detected}' but the job description language is '${lang3}' which corresponds to ${targetLanguage}.
-- REWRITE the document so that it is 100% in ${targetLanguage}. Do NOT include any other language.
-- Return ONLY the rewritten content.`;
+CRITICAL LANGUAGE FIX:
+The document below was generated in language '${detected}', but the job description language is '${lang3}' which corresponds to ${targetLanguage}.
+
+You MUST now rewrite/translate THIS EXACT DOCUMENT so that it is 100% in ${targetLanguage}. Preserve the structure, headings and bullet points as much as possible.
+
+Return ONLY the rewritten content, with no JSON, no markdown code fences, and no meta-text.
+
+DOCUMENT TO REWRITE:
+"""${text}"""`;
   const retryRaw = await callAI2(thinker, fixPrompt);
   if (!retryRaw || String(retryRaw).startsWith("Error:")) return content;
-  return cleanAIOutput(retryRaw);
+  const cleanedRetry = cleanAIOutput(String(retryRaw));
+  const retryText = String(cleanedRetry || "").trim();
+  if (!retryText) return content;
+  const detectedRetry = (0, import_franc_wrapper.franc)(retryText);
+  if (detectedRetry === "und") return retryText;
+  return detectedRetry === lang3 ? retryText : retryText;
 }
 function stripLetterGreetingAndClosing(text, isGerman) {
   let out = (text || "").trim();
@@ -3123,7 +3160,7 @@ function stripLetterGreetingAndClosing(text, isGerman) {
 function detectJobLanguage(job) {
   const raw = `${(job == null ? void 0 : job.job_title) || ""} ${(job == null ? void 0 : job.required_skills) || ""} ${(job == null ? void 0 : job.description) || ""}`.trim();
   const jobText = raw.toLowerCase();
-  const lang3 = (0, import_franc_min.franc)(raw || "");
+  let lang3 = (0, import_franc_wrapper.franc)(raw || "");
   const iso6393ToLanguageName = {
     deu: "GERMAN",
     eng: "ENGLISH",
@@ -3166,9 +3203,12 @@ function detectJobLanguage(job) {
     "deutsch",
     "entwickler",
     "ingenieur",
-    "abschluss"
+    "abschluss",
+    "wir suchen",
+    "festanstellung"
   ];
-  if (lang3 === "und" && germanSignals.some((k) => jobText.includes(k))) {
+  if (germanSignals.some((k) => jobText.includes(k))) {
+    lang3 = "deu";
     targetLanguage = "GERMAN";
   }
   const isGerman = targetLanguage === "GERMAN";
@@ -3468,29 +3508,209 @@ function generateDocumentHTML(content, docType, userProfile, job, isGerman, targ
 </body>
 </html>`;
 }
-function generateCVHTML(content, userProfile, job, isGerman, targetLanguage) {
+function normalizeCvText(content, isGerman) {
+  let text = String(content || "");
+  const looksLikeJsonCv = /"CONTACT"\s*:\s*\{/i.test(text) || /"PROFESSIONAL SUMMARY"\s*:/i.test(text) || /\{\s*"Name"\s*:\s*"/i.test(text);
+  if (looksLikeJsonCv) {
+    text = text.replace(/"CONTACT"\s*:\s*\{/gi, "CONTACT\n");
+    text = text.replace(/"PROFESSIONAL SUMMARY"\s*:\s*/gi, "\n\nPROFESSIONAL SUMMARY\n");
+    text = text.replace(/"WORK EXPERIENCE"\s*:\s*\[/gi, "\n\nWORK EXPERIENCE\n- ");
+    text = text.replace(/"EDUCATION"\s*:\s*\[/gi, "\n\nEDUCATION\n- ");
+    text = text.replace(/"SKILLS"\s*:\s*\[/gi, "\n\nSKILLS\n- ");
+    text = text.replace(/"CERTIFICATIONS"\s*:\s*\[/gi, "\n\nCERTIFICATIONS\n- ");
+    text = text.replace(/[\{\}\[\]"]/g, "");
+    text = text.replace(/,\s*\n/g, "\n");
+  }
+  text = text.replace(/[\{\}]/g, "");
+  if (isGerman) {
+    text = text.replace(/^CONTACT$/gim, "Kontakt");
+    text = text.replace(/^PROFESSIONAL SUMMARY$/gim, "Berufsprofil");
+    text = text.replace(/^WORK EXPERIENCE$/gim, "Berufserfahrung");
+    text = text.replace(/^EDUCATION$/gim, "Ausbildung");
+    text = text.replace(/^SKILLS$/gim, "Kenntnisse");
+    text = text.replace(/^CERTIFICATIONS$/gim, "Zertifizierungen");
+  }
+  return text.trim();
+}
+function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvStylePersona) {
   const lang = (targetLanguage || (isGerman ? "GERMAN" : "ENGLISH")).toUpperCase();
+  const persona = (cvStylePersona || "Classic").toLowerCase();
+  const isMimicPersona = persona.includes("mimic");
   const labels = {
-    GERMAN: { summary: "Berufsprofil", experience: "Berufserfahrung", education: "Ausbildung", skills: "Kenntnisse", certifications: "Zertifizierungen", languages: "Sprachen", present: "Heute" },
+    GERMAN: { summary: "Berufsprofil", experience: "Berufserfahrung", education: "Ausbildung", skills: "Kenntnisse", certifications: "Zertifizierungen", languages: "Sprachkenntnisse", present: "Heute" },
     ENGLISH: { summary: "Professional Summary", experience: "Work Experience", education: "Education", skills: "Skills", certifications: "Certifications", languages: "Languages", present: "Present" },
     FRENCH: { summary: "Profil Professionnel", experience: "Exp\xE9rience", education: "Formation", skills: "Comp\xE9tences", certifications: "Certifications", languages: "Langues", present: "Pr\xE9sent" },
     SPANISH: { summary: "Perfil Profesional", experience: "Experiencia", education: "Educaci\xF3n", skills: "Habilidades", certifications: "Certificaciones", languages: "Idiomas", present: "Presente" }
   };
   const l = labels[lang] || labels.ENGLISH;
-  const useAIContent = lang !== "ENGLISH" && content && content.trim().length > 100;
+  let normalizedContent = normalizeCvText(content, lang === "GERMAN");
   const skills = (userProfile == null ? void 0 : userProfile.skills) || [];
   const certifications = (userProfile == null ? void 0 : userProfile.licenses) || [];
-  let skillsHTML = "";
-  if (Array.isArray(skills) && skills.length > 0) {
-    skillsHTML = `<div class="skills-list">${skills.map((s) => `<span class="skill-tag">${s}</span>`).join("")}</div>`;
-  }
-  let certsHTML = "";
-  if (Array.isArray(certifications) && certifications.length > 0) {
-    certsHTML = `<div class="skills-list">${certifications.map((c) => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${c}</span>`).join("")}</div>`;
-  }
-  const formatContent = (text) => {
-    return text.replace(/\n/g, "<br>");
+  const languages = (userProfile == null ? void 0 : userProfile.languages) || [];
+  const formatContent = (text) => text.replace(/\n/g, "<br>");
+  const formatExperienceContent = (text) => {
+    const lines = String(text || "").split(/\r?\n/).map((l2) => l2.trim()).filter((l2) => l2.length > 0);
+    const labelPattern = /^(Unternehmen|Company|Firma|Standort|Location|Ort|Zeitraum|Period|Dates?|Aufgaben|Responsibilities?|Tätigkeiten)\s*:\s*(.+)$/i;
+    const htmlLines = lines.map((line, idx) => {
+      let l2 = line.replace(/^\-\s*/, "");
+      l2 = l2.replace(/^\*+/, "").replace(/\*+$/, "");
+      const m = l2.match(labelPattern);
+      if (m) {
+        const rawLabel = m[1];
+        const value = m[2];
+        const labelKey = rawLabel.toLowerCase();
+        if (labelKey.startsWith("aufgaben") || labelKey.startsWith("responsibilit") || labelKey.startsWith("t\xE4tig")) {
+          return `<div class="exp-row exp-tasks"><span class="exp-label">${rawLabel}:</span><span class="exp-value"> ${value}</span></div>`;
+        }
+        if (labelKey.startsWith("unternehmen") || labelKey.startsWith("company") || labelKey.startsWith("firma")) {
+          return `<div class="exp-row exp-company">${value}</div>`;
+        }
+        if (labelKey.startsWith("standort") || labelKey.startsWith("location") || labelKey.startsWith("ort")) {
+          return `<div class="exp-row exp-location">${value}</div>`;
+        }
+        if (labelKey.startsWith("zeitraum") || labelKey.startsWith("period") || labelKey.startsWith("date")) {
+          return `<div class="exp-row exp-dates">${value}</div>`;
+        }
+        return `<div class="exp-row">${value}</div>`;
+      }
+      if (idx === 0) {
+        return `<div class="exp-role">${l2}</div>`;
+      }
+      return `<div class="exp-text">${l2}</div>`;
+    });
+    return htmlLines.join("");
   };
+  const formatSectionBody = (body, title) => {
+    const t = String(title || "").toUpperCase();
+    if (t.includes("BERUFLICHER WERDEGANG") || t.includes("BERUFSERFAHRUNG") || t.includes("WORK EXPERIENCE")) {
+      return formatExperienceContent(body);
+    }
+    return formatContent(body);
+  };
+  if (isMimicPersona) {
+    const leftSkills = Array.isArray(skills) ? skills : [];
+    const leftCerts = Array.isArray(certifications) ? certifications : [];
+    const leftLangs = Array.isArray(languages) ? languages : [];
+    const sectionRegex = /^#{2,3}\s*(.+)$/gm;
+    const sections = [];
+    let lastIndex = 0;
+    let currentTitle = null;
+    let match;
+    while ((match = sectionRegex.exec(normalizedContent)) !== null) {
+      if (currentTitle) {
+        const body = normalizedContent.slice(lastIndex, match.index).trim();
+        if (body) {
+          sections.push({ title: currentTitle, body });
+        }
+      }
+      currentTitle = match[1].trim();
+      lastIndex = sectionRegex.lastIndex;
+    }
+    if (currentTitle) {
+      const body = normalizedContent.slice(lastIndex).trim();
+      if (body) {
+        sections.push({ title: currentTitle, body });
+      }
+    }
+    let mainSectionsHtml;
+    if (sections.length === 0) {
+      mainSectionsHtml = `
+      <div class="main-section">
+        <div class="main-section-title">${l.summary}</div>
+        <div class="main-content">${formatContent(normalizedContent)}</div>
+      </div>`;
+    } else {
+      mainSectionsHtml = sections.map((sec) => `
+      <div class="main-section">
+        <div class="main-section-title">${sec.title}</div>
+        <div class="main-content">${formatSectionBody(sec.body, sec.title)}</div>
+      </div>`).join("\n");
+    }
+    const skillsHTML2 = leftSkills.length ? `<div class="sidebar-section"><div class="sidebar-title">Weitere Qualifikationen</div><div class="tag-list">${leftSkills.map((s) => `<span class="tag">${s}</span>`).join("")}</div></div>` : "";
+    const certsHTML2 = leftCerts.length ? `<div class="sidebar-section"><div class="sidebar-title">Zertifizierungen</div><div class="tag-list">${leftCerts.map((c) => `<span class="tag tag--cert">${c}</span>`).join("")}</div></div>` : "";
+    const langsHTML = leftLangs.length ? `<div class="sidebar-section"><div class="sidebar-title">${l.languages}</div><ul class="list">${leftLangs.map((ln) => `<li>${ln}</li>`).join("")}</ul></div>` : "";
+    return `<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <title>Lebenslauf - ${(userProfile == null ? void 0 : userProfile.name) || "Bewerber"}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 900px; margin: 0 auto; padding: 30px 40px; background: #fff; }
+    .cv-grid { display: grid; grid-template-columns: 30% 70%; gap: 24px; }
+    .sidebar { border-right: 2px solid #e0e0e0; padding-right: 18px; }
+    .sidebar-header { text-align: center; margin-bottom: 24px; }
+    .sidebar-name { font-size: 20px; font-weight: 700; color: #0077b5; margin-bottom: 4px; }
+    .sidebar-title-main { font-size: 13px; color: #555; }
+    .sidebar-section { margin-bottom: 18px; }
+    .sidebar-title { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #555; margin-bottom: 6px; }
+    .contact-line { font-size: 11px; color: #555; }
+    .contact-line span { display: block; }
+
+    .tag-list { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag { background: #e3f2fd; color: #0d47a1; padding: 3px 8px; border-radius: 999px; font-size: 10px; font-weight: 500; }
+    .tag--cert { background: #fff3e0; color: #ef6c00; }
+    .list { list-style: none; font-size: 11px; color: #444; }
+    .list li { margin-bottom: 2px; }
+
+    .main { padding-left: 6px; }
+    .main-name { font-size: 26px; font-weight: 700; color: #0077b5; margin-bottom: 2px; }
+    .main-title { font-size: 14px; color: #555; margin-bottom: 10px; }
+    .main-contact { font-size: 11px; color: #666; margin-bottom: 18px; }
+    .main-section { margin-bottom: 20px; }
+    .main-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0077b5;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 4px;
+    }
+    .main-content { font-size: 11.5px; line-height: 1.7; }
+    .exp-role { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
+    .exp-row, .exp-text { font-size: 11px; margin: 1px 0; }
+    .exp-label { font-weight: 600; }
+    .exp-value { margin-left: 4px; }
+  </style>
+</head>
+<body>
+  <div class="cv-grid">
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-name">${(userProfile == null ? void 0 : userProfile.name) || "Ihr Name"}</div>
+        <div class="sidebar-title-main">${(userProfile == null ? void 0 : userProfile.title) || "Projektmanager"}</div>
+      </div>
+      <div class="sidebar-section">
+        <div class="sidebar-title">Kontakt</div>
+        <div class="contact-line">
+          ${(userProfile == null ? void 0 : userProfile.email) ? `<span>\u{1F4E7} ${userProfile.email}</span>` : ""}
+          ${(userProfile == null ? void 0 : userProfile.phone) ? `<span>\u{1F4F1} ${userProfile.phone}</span>` : ""}
+          ${(userProfile == null ? void 0 : userProfile.location) ? `<span>\u{1F4CD} ${userProfile.location}</span>` : ""}
+        </div>
+      </div>
+      ${langsHTML}
+      ${skillsHTML2}
+      ${certsHTML2}
+    </aside>
+    <main class="main">
+      <div class="main-name">${(userProfile == null ? void 0 : userProfile.name) || "Ihr Name"}</div>
+      <div class="main-title">${(userProfile == null ? void 0 : userProfile.title) || ""}</div>
+      <div class="main-contact">
+        ${(userProfile == null ? void 0 : userProfile.email) ? `\u{1F4E7} ${userProfile.email}` : ""}
+        ${(userProfile == null ? void 0 : userProfile.phone) ? ` | \u{1F4F1} ${userProfile.phone}` : ""}
+        ${(userProfile == null ? void 0 : userProfile.location) ? ` | \u{1F4CD} ${userProfile.location}` : ""}
+      </div>
+      ${mainSectionsHtml}
+    </main>
+  </div>
+</body>
+</html>`;
+  }
+  const skillsHTML = Array.isArray(skills) && skills.length ? `<div class="skills-list">${skills.map((s) => `<span class="skill-tag">${s}</span>`).join("")}</div>` : "";
+  const certsHTML = Array.isArray(certifications) && certifications.length ? `<div class="skills-list">${certifications.map((c) => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${c}</span>`).join("")}</div>` : "";
   return `<!DOCTYPE html>
 <html lang="${lang === "GERMAN" ? "de" : "en"}">
 <head>
@@ -3521,7 +3741,7 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage) {
   </div>
   
   <div class="content">
-    ${formatContent(content)}
+    ${formatContent(normalizedContent)}
   </div>
   
   ${skillsHTML ? `
@@ -3594,7 +3814,9 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
           coverLetterWordLimit,
           cvPageLimit,
           targetLanguage,
-          isGerman
+          isGerman,
+          cvStylePersona: (thinker == null ? void 0 : thinker.cv_style_persona) || (thinker == null ? void 0 : thinker.cvStylePersona) || "Classic",
+          referenceCvId: (thinker == null ? void 0 : thinker.reference_cv_id) || (thinker == null ? void 0 : thinker.referenceCvId) || ""
         }
       });
       const rawContent = await callAI2(thinker, thinkerPrompt);
@@ -3614,7 +3836,14 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
         content = stripLetterGreetingAndClosing(content, isGerman);
       }
       await logAction(userId, "ai_thinker", `\u2705 ${type.label} generated successfully`, "completed", true);
-      const htmlContent = type.key === "cv" ? generateCVHTML(content, filteredProfile, job, isGerman, targetLanguage) : generateDocumentHTML(content, type.label, filteredProfile, job, isGerman, targetLanguage);
+      const htmlContent = type.key === "cv" ? generateCVHTML(
+        content,
+        filteredProfile,
+        job,
+        isGerman,
+        targetLanguage,
+        (thinker == null ? void 0 : thinker.cv_style_persona) || (thinker == null ? void 0 : thinker.cvStylePersona) || "Classic"
+      ) : generateDocumentHTML(content, type.label, filteredProfile, job, isGerman, targetLanguage);
       const htmlPath = saveDocumentFile(
         htmlContent,
         job.id,
@@ -3691,9 +3920,14 @@ function buildThinkerPrompt(args) {
   const cvPageLimit = constraints.cvPageLimit || "2";
   const targetLanguage = constraints.targetLanguage;
   const isGerman = constraints.isGerman;
-  const languageHardRule = `ABSOLUTE LANGUAGE RULE: Output MUST be 100% in ${targetLanguage}. Do NOT mix languages. Do NOT include any words, headings, salutations, or closings in any other language. If you output ANY other language, the document is INVALID.`;
+  const cvStylePersona = (constraints.cvStylePersona || "Classic").toString();
+  const referenceCvId = constraints.referenceCvId;
+  const languageHardRule = `ABSOLUTE LANGUAGE RULE: Output MUST be 100% in ${targetLanguage}. Do NOT mix languages, except that you may keep original English job titles or technical terms in parentheses AFTER their translation (e.g., "Projektleiter (Project Manager)"). If you output ANY other language outside such parentheses, the document is INVALID.`;
   const baseContext = `
 ${languageHardRule}
+
+CV STYLE PERSONA: ${cvStylePersona}
+${referenceCvId ? `REFERENCE CV ID: ${referenceCvId} (mimic section order and headings when persona is "Mimic my CV").` : ""}
 
 PAGE LIMIT: ${cvPageLimit} A4 pages maximum (applies to ALL documents).
 
@@ -3724,12 +3958,39 @@ ${companyResearch || "No additional company research available. Focus on what ca
 ${feedback ? `PREVIOUS FEEDBACK FROM AUDITOR: ${feedback}
 Please fix these issues in the new version.` : ""}
 `;
+  const cvStyleGuidance = (() => {
+    const persona = cvStylePersona.toLowerCase();
+    if (persona === "modern") {
+      return `STYLE: Use a modern, achievement-focused CV style. Short, impactful bullet points, clear section headings, and emphasis on measurable results.`;
+    }
+    if (persona === "academic") {
+      return `STYLE: Use an academic CV style. Emphasize education, research projects, publications, and teaching experience. Use clear section headings like "Forschung", "Projekte", "Publikationen" when appropriate.`;
+    }
+    if (persona === "minimalist") {
+      return `STYLE: Use a minimalist CV style. Very clean, concise bullets, no redundant phrases, no decorative language. Focus on clarity and readability.`;
+    }
+    if (persona === "mimic my cv") {
+      return `STYLE: Mimic the user's existing CV layout as closely as possible. Use the same section order, heading labels, and general tone as their reference CV (ID: ${referenceCvId || "unknown"}), but update the content for this specific job and keep everything in ${targetLanguage}.
+
+STRUCTURE MARKUP:
+- Mark each main section with a markdown-style heading line that starts with "## " followed by the section title.
+- For a German CV, prefer sections like:
+  \u2022 "## BERUFSPROFIL" (summary)
+  \u2022 "## BERUFLICHER WERDEGANG" (or "## BERUFSERFAHRUNG")
+  \u2022 "## BILDUNG" (or "## AUSBILDUNG")
+  \u2022 Optional: "## WEITERE QUALIFIKATIONEN", "## SPRACHKENNTNISSE".
+- The content of each section must come after its heading.`;
+    }
+    return `STYLE: Use a classic, professional CV layout similar to a traditional Word document. Clear sections, bullet points, and conservative formatting.`;
+  })();
   const prompts = {
     cv: `You are a professional CV/Resume writer. Create a tailored CV for this job application.
 
 ${languageHardRule}
 
-CRITICAL LANGUAGE REQUIREMENT: You MUST write the entire CV in ${targetLanguage}. This includes all section headings, job descriptions, and summaries.
+CRITICAL LANGUAGE REQUIREMENT: You MUST write the entire CV in ${targetLanguage}. This includes all section headings, job descriptions, and summaries. You may keep original English job titles or technical terms in parentheses after their translation (e.g., "Projektmanager (Project Manager)"), but the main sentence language must remain ${targetLanguage}.
+
+${cvStyleGuidance}
 
 ${baseContext}
 
@@ -3775,7 +4036,7 @@ STRUCTURE:
 - CERTIFICATIONS: List certifications from profile
 - LANGUAGES: List languages from profile
 
-OUTPUT FORMAT: Return ONLY the CV content in clean text format. Use clear section headings.`,
+OUTPUT FORMAT: Return ONLY the CV content in clean text format. Use clear section headings. NEVER use JSON, code blocks, or curly braces.`,
     motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter.
 
 ${baseContext}
@@ -3913,12 +4174,12 @@ async function generateSingleDocument(jobId, userId, docType, thinker, auditor, 
   }
   return { success: false, error: "Document generation failed" };
 }
-var import_franc_min, fs4, path5, app5, getBaseDocsDir, getOrganizedDocsDir, getDocsDir2, DOC_TYPES;
+var import_franc_wrapper, fs4, path5, app5, getBaseDocsDir, getOrganizedDocsDir, getDocsDir2, DOC_TYPES;
 var init_doc_generator = __esm({
   "src/main/features/doc-generator.ts"() {
     init_database();
     init_scraper_service();
-    import_franc_min = require("franc-min");
+    import_franc_wrapper = __toESM(require_franc_wrapper(), 1);
     fs4 = __toESM(require("fs"), 1);
     path5 = __toESM(require("path"), 1);
     try {

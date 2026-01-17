@@ -829,6 +829,19 @@ function generateCVHTML(
     return formatContent(body);
   };
 
+  const localizeSectionTitle = (title: string): string => {
+    const upper = String(title || '').toUpperCase().trim();
+    if (lang === 'GERMAN') {
+      if (upper.includes('WORK EXPERIENCE')) return 'BERUFLICHER WERDEGANG';
+      if (upper.includes('BERUFLICHER WERDEGANG') || upper.includes('BERUFSERFAHRUNG')) return 'BERUFLICHER WERDEGANG';
+      if (upper.includes('EDUCATION')) return 'BILDUNG';
+      if (upper.includes('PROFESSIONAL SUMMARY') || upper.includes('SUMMARY') || upper === 'BERUFSPROFIL') return 'BERUFSPROFIL';
+      if (upper.includes('SKILLS')) return 'WEITERE QUALIFIKATIONEN';
+      if (upper.includes('LANGUAGES')) return 'SPRACHKENNTNISSE';
+    }
+    return title;
+  };
+
   // Special two-column layout for "Mimic my CV" (all languages)
   if (isMimicPersona) {
     const leftSkills = Array.isArray(skills) ? skills : [];
@@ -871,11 +884,14 @@ function generateCVHTML(
       </div>`;
     } else {
       mainSectionsHtml = sections
-        .map(sec => `
+        .map(sec => {
+          const localizedTitle = localizeSectionTitle(sec.title);
+          return `
       <div class="main-section">
-        <div class="main-section-title">${sec.title}</div>
-        <div class="main-content">${formatSectionBody(sec.body, sec.title)}</div>
-      </div>`)
+        <div class="main-section-title">${localizedTitle}</div>
+        <div class="main-content">${formatSectionBody(sec.body, localizedTitle)}</div>
+      </div>`;
+        })
         .join('\n');
     }
 

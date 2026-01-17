@@ -163,7 +163,7 @@ function cleanAIOutput(content: string): string {
 // Safety net: validate the generated body language and (if mismatch) retry once.
 // If the AI still responds in the wrong language, we TRANSLATE the existing
 // content instead of silently accepting the error.
-async function ensureTargetLanguageOrRetry(args: {
+export async function ensureTargetLanguageOrRetry(args: {
   content: string;
   lang3: string;
   targetLanguage: string;
@@ -743,7 +743,7 @@ function normalizeCvText(content: string, isGerman: boolean): string {
 // When cvStylePersona is "Mimic my CV" and language is German, we use a
 // two-column Lebenslauf-style layout: left = Kontakt/Sprachen/Qualifikationen,
 // right = main CV content.
-function generateCVHTML(
+export function generateCVHTML(
   content: string,
   userProfile: any,
   job: any,

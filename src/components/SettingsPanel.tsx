@@ -470,6 +470,15 @@ function ManualProfileSection({ userId }: { userId: number }) {
                 </div>
               </div>
             </div>
+            <div style={{ marginTop: '10px' }}>
+              <label style={labelStyle}>Details (skills, syllabi, thesis, etc.)</label>
+              <textarea
+                style={{ ...inputStyle, minHeight: '60px' }}
+                value={edu.details || ''}
+                onChange={e => { const n = [...educations]; n[i].details = e.target.value; setEducations(n); }}
+                placeholder="Optional: list key courses, skills, thesis topic, notable achievements..."
+              />
+            </div>
             <button onClick={() => setEducations(educations.filter((_, idx) => idx !== i))} style={{ marginTop: '10px', padding: '5px 15px', background: '#f44336', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' }}>Remove</button>
           </div>
         ))}

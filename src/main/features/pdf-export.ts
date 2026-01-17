@@ -118,6 +118,13 @@ export async function convertHtmlToPdf(htmlPath: string, userId: number): Promis
     console.error('PDF conversion error:', error);
     if (browser) await browser.close();
     await logAction(userId, 'pdf', `❌ PDF conversion failed: ${error.message}`, 'failed', false);
+
+    // Fallback: attempt a simpler text-based PDF conversion using the HTML
+    const fallback = await fallbackHtmlToPdf(htmlPath, userId);
+    if (fallback.success) {
+      return fallback;
+    }
+
     return { success: false, error: error.message };
   }
 }

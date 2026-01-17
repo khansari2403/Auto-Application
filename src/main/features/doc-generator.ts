@@ -776,6 +776,9 @@ function generateCVHTML(
     if (t.includes('BERUFLICHER WERDEGANG') || t.includes('BERUFSERFAHRUNG') || t.includes('WORK EXPERIENCE')) {
       return formatExperienceContent(body);
     }
+    if (t.includes('BILDUNG') || t.includes('AUSBILDUNG') || t.includes('EDUCATION')) {
+      return formatExperienceContent(body);
+    }
     return formatContent(body);
   };
 
@@ -888,6 +891,8 @@ function generateCVHTML(
       padding-bottom: 4px;
     }
     .main-content { font-size: 11.5px; line-height: 1.7; }
+    .exp-entry { margin-bottom: 4px; }
+    .exp-entry--spaced { margin-top: 10px; }
     .exp-role { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
     .exp-row, .exp-text { font-size: 11px; margin: 1px 0; }
     .exp-label { font-weight: 600; }

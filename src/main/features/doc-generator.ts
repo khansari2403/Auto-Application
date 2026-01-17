@@ -821,9 +821,18 @@ function generateCVHTML(
     .main-name { font-size: 26px; font-weight: 700; color: #0077b5; margin-bottom: 2px; }
     .main-title { font-size: 14px; color: #555; margin-bottom: 10px; }
     .main-contact { font-size: 11px; color: #666; margin-bottom: 18px; }
-    .main-section { margin-bottom: 18px; }
-    .main-section-title { font-size: 12px; font-weight: 700; color: #0077b5; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; border-bottom: 2px solid #e0e0e0; padding-bottom: 4px; }
-    .main-content { font-size: 12px; line-height: 1.7; }
+    .main-section { margin-bottom: 20px; }
+    .main-section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0077b5;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 10px;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 4px;
+    }
+    .main-content { font-size: 11.5px; line-height: 1.7; }
   </style>
 </head>
 <body>

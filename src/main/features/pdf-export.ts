@@ -14,6 +14,45 @@ const getDocsDir = () => {
 };
 
 /**
+ * Best-effort fallback: convert HTML file to a simple text-based PDF when
+ * direct HTML→PDF rendering fails. This ensures we still end up with a .pdf
+ * file even if the browser-based conversion is flaky.
+ */
+async function fallbackHtmlToPdf(htmlPath: string, userId: number): Promise<{ success: boolean; pdfPath?: string; error?: string }> {
+  try {
+    if (!fs.existsSync(htmlPath)) {
+      return { success: false, error: 'HTML file not found for fallback' };
+    }
+
+    const rawHtml = fs.readFileSync(htmlPath, 'utf-8');
+
+    // Very lightweight HTML → plain text conversion keeping basic line breaks.
+    let text = rawHtml
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|h[1-6]|li|tr)>/gi, '\n')
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<[^>]+>/g, '');
+
+    text = text.replace(/\n{3,}/g, '\n\n').trim();
+
+    const baseName = path.basename(htmlPath, '.html') || 'document';
+
+    const result = await generatePdfFromContent(text, baseName, userId);
+    if (!result.success || !result.pdfPath) {
+      return { success: false, error: result.error || 'Fallback PDF generation failed' };
+    }
+
+    await logAction(userId, 'pdf', `✅ Fallback PDF created from HTML: ${path.basename(result.pdfPath)}`, 'completed', true);
+    return { success: true, pdfPath: result.pdfPath };
+  } catch (e: any) {
+    console.error('Fallback HTML→PDF conversion error:', e);
+    await logAction(userId, 'pdf', `❌ Fallback PDF conversion failed: ${e.message}`, 'failed', false);
+    return { success: false, error: e.message };
+  }
+}
+
+/**
  * Convert HTML file to PDF
  */
 export async function convertHtmlToPdf(htmlPath: string, userId: number): Promise<{ success: boolean; pdfPath?: string; error?: string }> {

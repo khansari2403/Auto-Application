@@ -35,8 +35,15 @@ const getBaseDocsDir = () => {
 // Get organized documents directory:
 // [StorageRoot]/Company/Position/YYYY-MM-DD
 const getOrganizedDocsDir = (companyName: string, position: string, dateFolder: string) => {
-  // Sanitize folder names (remove invalid characters)
-  const sanitize = (str: string) => String(str || '').replace(/[<>:"/\\|?*]/g, '_').trim().substring(0, 50);
+  // Sanitize folder names (remove invalid characters and Windows-unsafe endings)
+  const sanitize = (str: string) => {
+    let safe = String(str || '').replace(/[<>:"/\\|?*]/g, '_');
+    // Windows does not like folder names ending with a dot or space; strip them
+    safe = safe.replace(/[\.\s]+$/g, '');
+    safe = safe.trim();
+    if (!safe) safe = 'Unknown';
+    return safe.substring(0, 50);
+  };
 
   const company = sanitize(companyName || 'Unknown_Company');
   const pos = sanitize(position || 'Unknown_Position');

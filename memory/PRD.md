@@ -107,3 +107,33 @@ Build and fix an Electron-based Job Application Automation Tool. The project is 
 - Set up Jest/Vitest testing framework for CI/CD
 - Add unit tests for individual functions
 - Consider caching company research results
+
+---
+
+## Session Update - December 2025
+
+### Completed in this session
+1. **Verified Build Fix** - The `Unexpected keyword 'const'` error in `JobSearch.tsx` was fixed by previous agent
+   - The `confirmLanguageForJob` function is now correctly placed at component scope
+   - Frontend build succeeds: `vite build` completed in 1.03s
+   - Backend tests pass: `doc_core tests: ALL PASSED`
+
+### Pending User Verification
+1. **Build on User Machine** - User needs to restart `npm run dev` to verify fix
+2. **Third-Language Dialog** - Test with Polish job description to confirm dialog appears
+3. **PDF Output** - Check `generated_docs` folder for PDF vs HTML output
+4. **CV Structure** - Verify Work Experience/Education entries are properly separated
+
+### Issues Tracked
+| Issue | Priority | Status |
+|-------|----------|--------|
+| Frontend build error | P0 | FIXED (pending user verification) |
+| Third-language job handling | P0 | Implemented, needs testing |
+| CV structure/style | P1 | Implemented, needs verification |
+| "Details" field in Education | P1 | Implemented in prompt |
+
+### Files Modified
+- `/app/src/components/JobSearch.tsx` - Fixed misplaced function, added third-language confirmation
+- `/app/src/main/ipc/ai-handlers.ts` - Added `ai:detect-job-language` endpoint
+- `/app/src/main/features/doc-generator.ts` - Updated prompt for "Details" field
+- `/app/tests/doc_core.test.ts` - New test harness for regression testing

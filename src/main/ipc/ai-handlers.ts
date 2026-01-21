@@ -253,6 +253,35 @@ export function registerAIHandlers(): string[] {
       return { success: false, error: e.message };
     }
   });
+  // Detect job language before generation (for confirmation on third-language jobs)
+  ipcMain.handle('ai:detect-job-language', async (_, jobId: number) => {
+    try {
+      const db = getDatabase();
+      const job = db.job_listings?.find((j: any) => String(j.id) === String(jobId));
+      if (!job) {
+        return { success: false, error: 'Job not found' };
+      }
+
+      const DocGenerator = require('../features/doc-generator');
+      const { isGerman, targetLanguage, lang3 } = DocGenerator.detectJobLanguage(job);
+      const upperLang = String(targetLanguage || '').toUpperCase();
+      const isEnglish = upperLang === 'ENGLISH';
+      const isThirdLanguage = !isGerman && !isEnglish;
+
+      return {
+        success: true,
+        isGerman,
+        targetLanguage,
+        lang3,
+        isThirdLanguage,
+      };
+    } catch (e: any) {
+      console.error('Detect job language error:', e);
+      return { success: false, error: e.message };
+    }
+  });
+
+
 
   ipcMain.handle('ai:generate-tailored-docs', async (_, data) => {
     try {

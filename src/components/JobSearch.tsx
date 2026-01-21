@@ -318,6 +318,12 @@ export function JobSearch({ userId }: { userId: number }) {
   const handleGenerateDocs = async (jobId: number) => {
     setProcessingId(jobId);
     try {
+      // Ask for confirmation when the job is in a third language (neither German nor English)
+      const allowGeneration = await confirmLanguageForJob(jobId);
+      if (!allowGeneration) {
+        return;
+      }
+
       const result = await (window as any).electron.invoke('ai:generate-tailored-docs', { 
         jobId, 
         userId, 

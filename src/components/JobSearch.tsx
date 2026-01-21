@@ -522,7 +522,16 @@ Tip: You can "Force Generate" to create the document anyway, but review it caref
       
       if (status === 'auditor_done' && openPath) {
         // Open the completed document (prefer PDF when available)
-        (window as any).electron.invoke('docs:open-file', openPath);
+        (window as any).electron
+          .invoke('docs:open-file', openPath)
+          .then((res: any) => {
+            if (!res?.success) {
+              alert('Could not open file.\n\n' + (res?.error || 'Unknown error'));
+            }
+          })
+          .catch((err: any) => {
+            alert('Could not open file.\n\n' + (err?.message || String(err)));
+          });
       } else if (status === 'rejected' && rejectionReason) {
         // Format the rejection reason for readability
         const formattedReason = formatRejectionReason(rejectionReason);

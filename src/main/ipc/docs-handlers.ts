@@ -66,9 +66,15 @@ export function registerDocsHandlers(): string[] {
 
   ipcMain.handle('docs:open-file', async (_, filePath) => {
     try {
-      await shell.openPath(filePath);
+      // shell.openPath returns an empty string on success, or an error message string on failure
+      const result = await shell.openPath(filePath);
+      if (result) {
+        console.error('Failed to open file:', filePath, '-', result);
+        return { success: false, error: result };
+      }
       return { success: true };
     } catch (e: any) {
+      console.error('docs:open-file exception:', e);
       return { success: false, error: e.message };
     }
   });

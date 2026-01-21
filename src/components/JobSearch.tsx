@@ -393,6 +393,11 @@ export function JobSearch({ userId }: { userId: number }) {
         singleDocOptions[optionKey] = true;
       }
       
+      const allowGeneration = await confirmLanguageForJob(jobId);
+      if (!allowGeneration) {
+        return;
+      }
+
       const result = await (window as any).electron.invoke('ai:generate-tailored-docs', { 
         jobId, 
         userId, 

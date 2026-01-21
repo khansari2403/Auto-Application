@@ -334,6 +334,38 @@ export function JobSearch({ userId }: { userId: number }) {
     }
   };
 
+  // Ask user before generating docs when job is in a third language (neither German nor English)
+  const confirmLanguageForJob = async (jobId: number): Promise<boolean> => {
+    try {
+      const result = await (window as any).electron.invoke('ai:detect-job-language', jobId);
+      if (!result?.success) {
+        return true; // fallback: allow generation
+      }
+
+      const { targetLanguage, isThirdLanguage } = result;
+      const upperTarget = String(targetLanguage || '').toUpperCase();
+
+      // Only intercept when it's neither German nor English
+      if (!isThirdLanguage) {
+        return true;
+      }
+
+      const langLabel = upperTarget.charAt(0) + upperTarget.slice(1).toLowerCase();
+
+      const proceed = confirm(
+        `This job description appears to be in ${langLabel} (neither German nor English).\n\n` +
+        `If you continue, your CV, motivation letter and cover letter will all be generated in ${langLabel}.\n\n` +
+        `Click OK to generate documents in ${langLabel}, or Cancel to skip generation for this job.`
+      );
+
+      return proceed;
+    } catch {
+      // If detection fails for any reason, don't block generation
+      return true;
+    }
+  };
+
+
   // Generate a single document type for a job
   const handleGenerateSingleDoc = async (jobId: number, docType: string) => {
     setProcessingId(jobId);

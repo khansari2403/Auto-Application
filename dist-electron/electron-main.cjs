@@ -3078,6 +3078,10 @@ var init_pdf_export = __esm({
 // src/main/features/doc-generator.ts
 var doc_generator_exports = {};
 __export(doc_generator_exports, {
+  detectJobLanguage: () => detectJobLanguage,
+  ensureTargetLanguageOrRetry: () => ensureTargetLanguageOrRetry,
+  generateCVHTML: () => generateCVHTML,
+  generateDocumentHTML: () => generateDocumentHTML,
   generateSingleDocument: () => generateSingleDocument,
   generateTailoredDocs: () => generateTailoredDocs
 });
@@ -4153,7 +4157,7 @@ STRUCTURE:
 - CONTACT: Name, Title, Email, Phone, Location (from profile)
 - PROFESSIONAL SUMMARY: 3-4 sentences summarizing experience relevant to this role. If there's a skill gap, briefly mention eagerness to apply existing skills to new challenges.
 - WORK EXPERIENCE: List jobs from profile with title, company, dates, and bullet points
-- EDUCATION: List degrees from profile
+- EDUCATION: List each degree from the profile with school, degree, years, and, if the entry has a "details" field (skills, syllabi, thesis, etc.), add 1-3 short bullet points directly under that education item based on that text
 - SKILLS: List skills from profile, prioritizing those matching job requirements
 - CERTIFICATIONS: List certifications from profile
 - LANGUAGES: List languages from profile
@@ -5820,6 +5824,31 @@ function registerAIHandlers() {
     try {
       return await processApplication(jobId, userId);
     } catch (e) {
+      return { success: false, error: e.message };
+    }
+  });
+  import_electron6.ipcMain.handle("ai:detect-job-language", async (_, jobId) => {
+    var _a;
+    try {
+      const db = getDatabase();
+      const job = (_a = db.job_listings) == null ? void 0 : _a.find((j) => String(j.id) === String(jobId));
+      if (!job) {
+        return { success: false, error: "Job not found" };
+      }
+      const DocGenerator = (init_doc_generator(), __toCommonJS(doc_generator_exports));
+      const { isGerman, targetLanguage, lang3 } = DocGenerator.detectJobLanguage(job);
+      const upperLang = String(targetLanguage || "").toUpperCase();
+      const isEnglish = upperLang === "ENGLISH";
+      const isThirdLanguage = !isGerman && !isEnglish;
+      return {
+        success: true,
+        isGerman,
+        targetLanguage,
+        lang3,
+        isThirdLanguage
+      };
+    } catch (e) {
+      console.error("Detect job language error:", e);
       return { success: false, error: e.message };
     }
   });

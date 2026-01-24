@@ -164,6 +164,7 @@ async function run() {
   try {
     await testEnsureTargetLanguage_RewritesWrongLanguage();
     await testEnsureTargetLanguage_LeavesCorrectLanguageUntouched();
+    await testEnsureTargetLanguage_ThirdLanguage_ForceTranslate();
     testGenerateCVHTML_MimicLayoutStructure();
     testGenerateDocumentHTML_LetterSalutationAndClosing();
     console.log('doc_core tests: ALL PASSED');

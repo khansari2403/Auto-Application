@@ -1094,7 +1094,7 @@ export function generateCVHTML(
         <div class="sidebar-title-main">${userProfile?.title || 'Projektmanager'}</div>
       </div>
       <div class="sidebar-section">
-        <div class="sidebar-title">Kontakt</div>
+        <div class="sidebar-title">${sidebar.contact}</div>
         <div class="contact-line">
           ${userProfile?.email ? `<span>📧 ${userProfile.email}</span>` : ''}
           ${userProfile?.phone ? `<span>📱 ${userProfile.phone}</span>` : ''}

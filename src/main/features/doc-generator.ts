@@ -1038,10 +1038,10 @@ export function generateCVHTML(
       : '';
 
     return `<!DOCTYPE html>
-<html lang="de">
+<html lang="${htmlLang}">
 <head>
   <meta charset="UTF-8">
-  <title>Lebenslauf - ${userProfile?.name || 'Bewerber'}</title>
+  <title>${lang === 'GERMAN' ? 'Lebenslauf' : 'CV'} - ${userProfile?.name || 'Bewerber'}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }

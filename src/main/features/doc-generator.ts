@@ -1584,7 +1584,7 @@ MUST INCLUDE:
 - If skill gaps exist: Express enthusiasm to learn and adapt
 
 Length: Approximately ${motivationWordLimit} words. This is a formal document.
-LANGUAGE: You MUST write the entire document in the SAME LANGUAGE as the job description provided above. If the job is in German, write in German. If in English, write in English.
+LANGUAGE: You MUST write the entire document in ${targetLanguage}, the same language as the job description. Every sentence must be in ${targetLanguage} (except for names or fixed product/tool names).
 
 Return ONLY the motivation letter BODY (paragraphs). Start directly with the first paragraph and end with the final paragraph. No greeting, no sign-off, no date, no address.`,
 

@@ -805,6 +805,40 @@ export function generateCVHTML(
   };
   const l = labels[lang] || labels.ENGLISH;
 
+  // Sidebar label localization (contact, extra qualifications, certifications)
+  const sidebarLabels: Record<string, { contact: string; extras: string; certs: string }> = {
+    GERMAN: {
+      contact: 'Kontakt',
+      extras: 'Weitere Qualifikationen',
+      certs: 'Zertifizierungen',
+    },
+    ENGLISH: {
+      contact: 'Contact',
+      extras: 'Additional Qualifications',
+      certs: 'Certifications',
+    },
+    FRENCH: {
+      contact: 'Contact',
+      extras: 'Compétences complémentaires',
+      certs: 'Certifications',
+    },
+    SPANISH: {
+      contact: 'Contacto',
+      extras: 'Competencias adicionales',
+      certs: 'Certificaciones',
+    },
+  };
+  const sidebar = sidebarLabels[lang] || sidebarLabels.ENGLISH;
+
+  // HTML lang attribute mapping
+  const htmlLangMap: Record<string, string> = {
+    GERMAN: 'de',
+    ENGLISH: 'en',
+    FRENCH: 'fr',
+    SPANISH: 'es',
+  };
+  const htmlLang = htmlLangMap[lang] || 'en';
+
   // Normalize JSON-ish CV outputs into readable text when necessary
   let normalizedContent = normalizeCvText(content, lang === 'GERMAN');
 

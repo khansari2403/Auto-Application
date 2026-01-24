@@ -1519,7 +1519,8 @@ REQUIREMENTS:
 4. Keep it ATS-friendly (no tables, columns, graphics)
 5. Include contact information at the top (from the profile)
 6. LANGUAGE: You MUST write the entire document in ${targetLanguage}, which is the language of the job description. Every heading and sentence must be in ${targetLanguage} (except occasional untranslatable names or tool names).
-7. Structure: Contact Info, Professional Summary, Work Experience, Education, Skills, Certifications, Languages
+7. For third-language jobs (neither German nor English), if you find yourself starting to answer in English, STOP and rewrite the entire document in ${targetLanguage}.
+8. Structure: Contact Info, Professional Summary, Work Experience, Education, Skills, Certifications, Languages
 
 ATS OPTIMIZATION:
 - IMPORTANT: Include relevant KEYWORDS from the job description in your CV where they genuinely apply

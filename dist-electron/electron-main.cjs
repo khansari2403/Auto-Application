@@ -3140,12 +3140,33 @@ async function ensureTargetLanguageOrRetry(args) {
   const text = String(content || "").trim();
   if (text.length < 40) return content;
   if (lang3 === "und") return content;
+  const isThirdLanguage = lang3 !== "deu" && lang3 !== "eng";
   const detectLang = (input) => {
     const t = String(input || "").trim();
     if (!t || t.length < 5) return "und";
     return (0, import_franc_wrapper.franc)(t);
   };
   let workingText = text;
+  if (isThirdLanguage) {
+    const forceFixPrompt = `${originalPrompt}
+
+ABSOLUTE TRANSLATION MODE:
+The job description language code is '${lang3}', which corresponds to ${targetLanguage}.
+
+You MUST now rewrite/translate THE ENTIRE DOCUMENT below so that it is 100% in ${targetLanguage}.
+- Do not change the meaning.
+- Preserve structure, headings and bullet points.
+- Do NOT include any meta-text, JSON, or markdown fences.
+
+DOCUMENT TO REWRITE:
+"""${workingText}"""`;
+    const retryRaw = await callAI2(thinker, forceFixPrompt);
+    if (!retryRaw || String(retryRaw).startsWith("Error:")) return content;
+    const cleanedRetry = cleanAIOutput(String(retryRaw));
+    const retryText = String(cleanedRetry || "").trim();
+    if (!retryText) return content;
+    return retryText;
+  }
   let detected = detectLang(workingText);
   if (detected !== "und" && detected !== lang3) {
     const fixPrompt = `${originalPrompt}
@@ -3612,6 +3633,36 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
     SPANISH: { summary: "Perfil Profesional", experience: "Experiencia", education: "Educaci\xF3n", skills: "Habilidades", certifications: "Certificaciones", languages: "Idiomas", present: "Presente" }
   };
   const l = labels[lang] || labels.ENGLISH;
+  const sidebarLabels = {
+    GERMAN: {
+      contact: "Kontakt",
+      extras: "Weitere Qualifikationen",
+      certs: "Zertifizierungen"
+    },
+    ENGLISH: {
+      contact: "Contact",
+      extras: "Additional Qualifications",
+      certs: "Certifications"
+    },
+    FRENCH: {
+      contact: "Contact",
+      extras: "Comp\xE9tences compl\xE9mentaires",
+      certs: "Certifications"
+    },
+    SPANISH: {
+      contact: "Contacto",
+      extras: "Competencias adicionales",
+      certs: "Certificaciones"
+    }
+  };
+  const sidebar = sidebarLabels[lang] || sidebarLabels.ENGLISH;
+  const htmlLangMap = {
+    GERMAN: "de",
+    ENGLISH: "en",
+    FRENCH: "fr",
+    SPANISH: "es"
+  };
+  const htmlLang = htmlLangMap[lang] || "en";
   let normalizedContent = normalizeCvText(content, lang === "GERMAN");
   const skills = (userProfile == null ? void 0 : userProfile.skills) || [];
   const certifications = (userProfile == null ? void 0 : userProfile.licenses) || [];
@@ -3749,14 +3800,14 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
       </div>`;
       }).join("\n");
     }
-    const skillsHTML2 = leftSkills.length ? `<div class="sidebar-section"><div class="sidebar-title">Weitere Qualifikationen</div><div class="tag-list">${leftSkills.map((s) => `<span class="tag">${s}</span>`).join("")}</div></div>` : "";
-    const certsHTML2 = leftCerts.length ? `<div class="sidebar-section"><div class="sidebar-title">Zertifizierungen</div><div class="tag-list">${leftCerts.map((c) => `<span class="tag tag--cert">${c}</span>`).join("")}</div></div>` : "";
+    const skillsHTML2 = leftSkills.length ? `<div class="sidebar-section"><div class="sidebar-title">${sidebar.extras}</div><div class="tag-list">${leftSkills.map((s) => `<span class="tag">${s}</span>`).join("")}</div></div>` : "";
+    const certsHTML2 = leftCerts.length ? `<div class="sidebar-section"><div class="sidebar-title">${sidebar.certs}</div><div class="tag-list">${leftCerts.map((c) => `<span class="tag tag--cert">${c}</span>`).join("")}</div></div>` : "";
     const langsHTML = leftLangs.length ? `<div class="sidebar-section"><div class="sidebar-title">${l.languages}</div><ul class="list">${leftLangs.map((ln) => `<li>${ln}</li>`).join("")}</ul></div>` : "";
     return `<!DOCTYPE html>
-<html lang="de">
+<html lang="${htmlLang}">
 <head>
   <meta charset="UTF-8">
-  <title>Lebenslauf - ${(userProfile == null ? void 0 : userProfile.name) || "Bewerber"}</title>
+  <title>${lang === "GERMAN" ? "Lebenslauf" : "CV"} - ${(userProfile == null ? void 0 : userProfile.name) || "Bewerber"}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -3809,7 +3860,7 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
         <div class="sidebar-title-main">${(userProfile == null ? void 0 : userProfile.title) || "Projektmanager"}</div>
       </div>
       <div class="sidebar-section">
-        <div class="sidebar-title">Kontakt</div>
+        <div class="sidebar-title">${sidebar.contact}</div>
         <div class="contact-line">
           ${(userProfile == null ? void 0 : userProfile.email) ? `<span>\u{1F4E7} ${userProfile.email}</span>` : ""}
           ${(userProfile == null ? void 0 : userProfile.phone) ? `<span>\u{1F4F1} ${userProfile.phone}</span>` : ""}
@@ -4330,7 +4381,13 @@ var init_doc_generator = __esm({
       }
     };
     getOrganizedDocsDir = (companyName, position, dateFolder) => {
-      const sanitize = (str) => String(str || "").replace(/[<>:"/\\|?*]/g, "_").trim().substring(0, 50);
+      const sanitize = (str) => {
+        let safe = String(str || "").replace(/[<>:"/\\|?*]/g, "_");
+        safe = safe.replace(/[\.\s]+$/g, "");
+        safe = safe.trim();
+        if (!safe) safe = "Unknown";
+        return safe.substring(0, 50);
+      };
       const company = sanitize(companyName || "Unknown_Company");
       const pos = sanitize(position || "Unknown_Position");
       const date = sanitize(dateFolder || "Unknown_Date");
@@ -6608,9 +6665,14 @@ function registerDocsHandlers() {
   });
   import_electron7.ipcMain.handle("docs:open-file", async (_, filePath) => {
     try {
-      await import_electron7.shell.openPath(filePath);
+      const result = await import_electron7.shell.openPath(filePath);
+      if (result) {
+        console.error("Failed to open file:", filePath, "-", result);
+        return { success: false, error: result };
+      }
       return { success: true };
     } catch (e) {
+      console.error("docs:open-file exception:", e);
       return { success: false, error: e.message };
     }
   });

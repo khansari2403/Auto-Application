@@ -222,10 +222,13 @@ DOCUMENT TO REWRITE:
     const retryText = String(cleanedRetry || '').trim();
     if (!retryText) return content;
 
-    return retryText;
+    // Do not return early; continue with detection + sanitization using the
+    // translated text so we can still catch any residual language issues.
+    workingText = retryText;
   }
 
-  // Existing two-step safety net for German/English
+  // Existing safety net for German/English (and a second pass for third
+  // languages when needed).
   // First pass: detect language of the whole generated text
   let detected = detectLang(workingText);
   if (detected !== 'und' && detected !== lang3) {

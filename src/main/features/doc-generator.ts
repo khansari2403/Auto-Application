@@ -1020,13 +1020,13 @@ export function generateCVHTML(
     }
 
     const skillsHTML = leftSkills.length
-      ? `<div class="sidebar-section"><div class="sidebar-title">Weitere Qualifikationen</div><div class="tag-list">${leftSkills
+      ? `<div class="sidebar-section"><div class="sidebar-title">${sidebar.extras}</div><div class="tag-list">${leftSkills
           .map((s: string) => `<span class="tag">${s}</span>`)
           .join('')}</div></div>`
       : '';
 
     const certsHTML = leftCerts.length
-      ? `<div class="sidebar-section"><div class="sidebar-title">Zertifizierungen</div><div class="tag-list">${leftCerts
+      ? `<div class="sidebar-section"><div class="sidebar-title">${sidebar.certs}</div><div class="tag-list">${leftCerts
           .map((c: string) => `<span class="tag tag--cert">${c}</span>`)
           .join('')}</div></div>`
       : '';

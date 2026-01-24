@@ -64,6 +64,36 @@ async function testEnsureTargetLanguage_LeavesCorrectLanguageUntouched() {
   assert.equal(called, false, 'callAI should not be invoked when language is already correct');
   assert.equal(fixed, germanContent, 'Content already in target language should be returned unchanged');
 }
+async function testEnsureTargetLanguage_ThirdLanguage_ForceTranslate() {
+  const job = { job_title: 'Développeur Backend', description: 'Poste en CDI, maîtrise du français obligatoire.' };
+  const { lang3, targetLanguage } = detectJobLanguage(job);
+
+  // Simulate AI returning English text even though JD is French
+  const originalContent = 'This is an English sentence that should be translated into French.';
+
+  let called = 0;
+  const thinker = {};
+  async function callAIStub(_thinker: any, _prompt: string): Promise<string> {
+    called += 1;
+    // Return a clearly French sentence to show translation happened
+    return 'Ceci est une phrase française qui montre que la langue a été corrigée.';
+  }
+
+  const fixed = await ensureTargetLanguageOrRetry({
+    content: originalContent,
+    lang3,
+    targetLanguage,
+    callAI: callAIStub,
+    thinker,
+    originalPrompt: 'ORIGINAL PROMPT',
+  });
+
+  // For third languages, we should always invoke callAI once for translation
+  assert.ok(called >= 1, 'callAI should be invoked at least once for third-language jobs');
+  assert.notEqual(fixed, originalContent, 'Content should be rewritten for third-language jobs');
+  assert.ok(/française|langue/.test(fixed), 'Rewritten content should look French');
+}
+
 
 function testGenerateCVHTML_MimicLayoutStructure() {
   const userProfile = {

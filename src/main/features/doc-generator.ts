@@ -184,6 +184,11 @@ export async function ensureTargetLanguageOrRetry(args: {
   if (text.length < 40) return content; // too short for reliable detection
   if (lang3 === 'und') return content; // unknown JD language
 
+  // Treat any non-German, non-English language as a "third language" where we
+  // enforce translation more aggressively instead of trusting automatic
+  // detection (which can be flaky for shorter texts).
+  const isThirdLanguage = lang3 !== 'deu' && lang3 !== 'eng';
+
   const detectLang = (input: string): string => {
     const t = String(input || '').trim();
     if (!t || t.length < 5) return 'und';
@@ -192,6 +197,35 @@ export async function ensureTargetLanguageOrRetry(args: {
 
   let workingText = text;
 
+  // For third languages (French, Polish, etc.), always run a dedicated
+  // translation/rewrite step to ${targetLanguage}, regardless of what
+  // detection says. This avoids cases where both the job and generated
+  // content are misclassified as English and the safety net never triggers.
+  if (isThirdLanguage) {
+    const forceFixPrompt = `${originalPrompt}
+
+ABSOLUTE TRANSLATION MODE:
+The job description language code is '${lang3}', which corresponds to ${targetLanguage}.
+
+You MUST now rewrite/translate THE ENTIRE DOCUMENT below so that it is 100% in ${targetLanguage}.
+- Do not change the meaning.
+- Preserve structure, headings and bullet points.
+- Do NOT include any meta-text, JSON, or markdown fences.
+
+DOCUMENT TO REWRITE:
+"""${workingText}"""`;
+
+    const retryRaw = await callAI(thinker, forceFixPrompt);
+    if (!retryRaw || String(retryRaw).startsWith('Error:')) return content;
+
+    const cleanedRetry = cleanAIOutput(String(retryRaw));
+    const retryText = String(cleanedRetry || '').trim();
+    if (!retryText) return content;
+
+    return retryText;
+  }
+
+  // Existing two-step safety net for German/English
   // First pass: detect language of the whole generated text
   let detected = detectLang(workingText);
   if (detected !== 'und' && detected !== lang3) {

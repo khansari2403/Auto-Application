@@ -1518,7 +1518,7 @@ REQUIREMENTS:
 3. Use action verbs and quantify achievements where the data exists in the profile
 4. Keep it ATS-friendly (no tables, columns, graphics)
 5. Include contact information at the top (from the profile)
-6. LANGUAGE: You MUST write the entire document in the SAME LANGUAGE as the job description provided above. If the job is in German, write in German. If in English, write in English.
+6. LANGUAGE: You MUST write the entire document in ${targetLanguage}, which is the language of the job description. Every heading and sentence must be in ${targetLanguage} (except occasional untranslatable names or tool names).
 7. Structure: Contact Info, Professional Summary, Work Experience, Education, Skills, Certifications, Languages
 
 ATS OPTIMIZATION:

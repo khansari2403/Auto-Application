@@ -1390,6 +1390,7 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
         userProfile: filteredProfile,
         job,
         companyResearch,
+        companyDeepDive,
         feedback: '',
         constraints: {
           motivationLetterWordLimit,

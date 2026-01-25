@@ -1421,6 +1421,12 @@ ${scrapedInfo || 'No additional info scraped.'}`;
     .filter(Boolean)
     .join('\n\n');
 
+  // IMPORTANT: The deep dive itself may be in English or another language,
+  // but it is used ONLY as semantic/context input. The actual document
+  // language is fully controlled by targetLanguage in buildThinkerPrompt and
+  // enforced by ensureTargetLanguageOrRetry. We never copy deepDive text
+  // verbatim into the final documents; we only pass it in the prompt.
+
   return {
     missionVision,
     productsServices,

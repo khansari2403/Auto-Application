@@ -273,9 +273,11 @@ export function registerAIHandlers(): string[] {
     }
   });
 
-  // Detect job language before generation (for confirmation on third-language jobs)
-  ipcMain.handle('ai:detect-job-language', async (_, jobId: number) => {
+  // Detect job language before generation (for confirmation based on Search Profile languages)
+  ipcMain.handle('ai:detect-job-language', async (_, payload: any) => {
     try {
+      const { jobId, userId } = typeof payload === 'object' ? payload : { jobId: payload, userId: 1 };
+
       const db = getDatabase();
       const job = db.job_listings?.find((j: any) => String(j.id) === String(jobId));
       if (!job) {
@@ -285,15 +287,45 @@ export function registerAIHandlers(): string[] {
       const DocGenerator = require('../features/doc-generator');
       const { isGerman, targetLanguage, lang3 } = DocGenerator.detectJobLanguage(job);
       const upperLang = String(targetLanguage || '').toUpperCase();
-      const isEnglish = upperLang === 'ENGLISH';
-      const isThirdLanguage = !isGerman && !isEnglish;
+
+      // Determine which languages are considered "native/allowed" from active Search Profile
+      let allowedLanguages: string[] = [];
+      try {
+        const searchProfiles = db.search_profiles || [];
+        const activeProfile = searchProfiles.find((p: any) => p.is_active === 1) || searchProfiles[0];
+        if (activeProfile?.languages) {
+          allowedLanguages = String(activeProfile.languages)
+            .split(',')
+            .map((s: string) => s.trim())
+            .filter(Boolean)
+            .map((s: string) => s.toUpperCase());
+        }
+      } catch (e) {
+        console.error('Failed to read search profile languages:', e);
+      }
+
+      // Map detected targetLanguage to a loose label we can match against Search Profile entries
+      const languageAliases: Record<string, string[]> = {
+        GERMAN: ['GERMAN', 'DEUTSCH', 'DE'],
+        ENGLISH: ['ENGLISH', 'ENGLISCH', 'EN'],
+        FRENCH: ['FRENCH', 'FRANZÖSISCH', 'FRANCAIS', 'FR'],
+        SPANISH: ['SPANISH', 'SPANISCH', 'ES'],
+        ITALIAN: ['ITALIAN', 'ITALIENISCH', 'IT'],
+      };
+
+      const aliases = languageAliases[upperLang] || [upperLang];
+      const isInProfileLanguages = allowedLanguages.some(l => aliases.some(a => l.includes(a)));
+
+      // If the job language is one of the Search Profile languages, we treat it as "native" and skip confirmation
+      const shouldAskConfirmation = !isInProfileLanguages;
 
       return {
         success: true,
         isGerman,
         targetLanguage,
         lang3,
-        isThirdLanguage,
+        isThirdLanguage: shouldAskConfirmation,
+        allowedLanguagesFromProfile: allowedLanguages,
       };
     } catch (e: any) {
       console.error('Detect job language error:', e);

@@ -254,6 +254,25 @@ export function registerAIHandlers(): string[] {
       return { success: false, error: e.message };
     }
   });
+
+  ipcMain.handle('ai:company-deep-dive', async (_, data) => {
+    try {
+      const { jobId, userId } = data;
+      const db = getDatabase();
+      const job = db.job_listings?.find((j: any) => String(j.id) === String(jobId));
+      if (!job) {
+        return { success: false, error: 'Job not found' };
+      }
+
+      const DocGenerator = require('../features/doc-generator');
+      const deepDive = await DocGenerator.generateCompanyDeepDive(job, userId, aiService.callAI);
+      return { success: true, deepDive };
+    } catch (e: any) {
+      console.error('Company deep dive error:', e);
+      return { success: false, error: e.message };
+    }
+  });
+
   // Detect job language before generation (for confirmation on third-language jobs)
   ipcMain.handle('ai:detect-job-language', async (_, jobId: number) => {
     try {

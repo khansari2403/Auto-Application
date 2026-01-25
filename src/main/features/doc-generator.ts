@@ -385,7 +385,7 @@ export async function determineJobLanguageUsingLLM(
   job: any,
   thinker: any,
   callAI: Function
-): Promise<{ isGerman: boolean; targetLanguage: string; lang3: string }> {
+): Promise<{ isGerman: boolean; targetLanguage: string; lang3: string; confidence?: number }> {
   try {
     if (!thinker || !callAI) {
       // Fallback to baseline franc-based detection

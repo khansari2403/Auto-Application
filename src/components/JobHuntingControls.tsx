@@ -619,7 +619,7 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
               fontSize: '12px',
               color: 'var(--success)'
             }}>
-               Auto-applying to jobs with <strong>{minCompatibility}</strong> or higher compatibility
+              ✓ Auto-applying to jobs with <strong>{minCompatibility}</strong> or higher compatibility
             </div>
           )}
         </div>

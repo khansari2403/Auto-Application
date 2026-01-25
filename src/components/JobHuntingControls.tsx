@@ -14,6 +14,8 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
   const [minCompatibility, setMinCompatibility] = useState<'yellow' | 'green' | 'gold'>('green');
   const [status, setStatus] = useState('idle');
   const [isInitialized, setIsInitialized] = useState(false);
+  const [deepAutoDiveMode, setDeepAutoDiveMode] = useState<'off' | 'yellow_plus' | 'green_plus' | 'gold_only'>('off');
+  const [detectiveSettings, setDetectiveSettings] = useState<{ level: string; prompt: string } | null>(null);
 
   useEffect(() => {
     loadSettings();

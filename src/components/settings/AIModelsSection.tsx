@@ -196,7 +196,8 @@ function AIModelsSection({ userId }: { userId: number }) {
       auditorSource: model.auditor_source || 'all',
       thinkerSource: model.thinker_source || 'all',
       motivationLetterWordLimit: model.motivation_letter_word_limit || '450',
-      coverLetterWordLimit: model.cover_letter_word_limit || '280', cvPageLimit: model.cv_page_limit || '2'
+      coverLetterWordLimit: model.cover_letter_word_limit || '280', cvPageLimit: model.cv_page_limit || '2',
+      deepDiveLevel: model.deep_dive_level || 'normal'
     });
     setShowForm(true);
   };

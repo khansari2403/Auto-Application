@@ -321,8 +321,13 @@ export function registerAIHandlers(): string[] {
       const aliases = languageAliases[upperLang] || [upperLang];
       const isInProfileLanguages = allowedLanguages.some(l => aliases.some(a => l.includes(a)));
 
-      // If the job language is one of the Search Profile languages, we treat it as "native" and skip confirmation
-      const shouldAskConfirmation = !isInProfileLanguages;
+      // B+ logic: Search Profile is the source of truth for "native" languages,
+      // but we also consider the LLM's confidence. If the language is not in the
+      // Search Profile -> always ask. If it IS in the profile but confidence is
+      // low, still ask for confirmation.
+      const conf = typeof confidence === 'number' ? confidence : 1.0;
+      const lowConfidence = conf < 0.6;
+      const shouldAskConfirmation = !isInProfileLanguages || (isInProfileLanguages && lowConfidence);
 
       return {
         success: true,

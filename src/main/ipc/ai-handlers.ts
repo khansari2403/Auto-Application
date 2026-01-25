@@ -285,7 +285,12 @@ export function registerAIHandlers(): string[] {
       }
 
       const DocGenerator = require('../features/doc-generator');
-      const { isGerman, targetLanguage, lang3 } = DocGenerator.detectJobLanguage(job);
+
+      // Use the same brain (Thinker) that generates documents to detect the job
+      // language, so detection and writing share the same understanding.
+      const models = await getAllQuery('SELECT * FROM ai_models');
+      const thinker = models.find((m: any) => m.role === 'Thinker' && m.status === 'active');
+      const { isGerman, targetLanguage, lang3 } = await DocGenerator.determineJobLanguageUsingLLM(job, thinker, aiService.callAI);
       const upperLang = String(targetLanguage || '').toUpperCase();
 
       // Determine which languages are considered "native/allowed" from active Search Profile

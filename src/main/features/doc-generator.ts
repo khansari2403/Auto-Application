@@ -462,6 +462,11 @@ export async function determineJobLanguageUsingLLM(
       : (iso6393ToLanguageName[lang3] || language || 'ENGLISH');
 
     const isGerman = targetLanguage === 'GERMAN';
+    // We currently ignore confidence in downstream logic, but return it for the
+    // caller so it can decide when to ask the user for confirmation.
+    (parsed as any)._resolvedTargetLanguage = targetLanguage;
+    (parsed as any)._resolvedLang3 = lang3;
+
     return { isGerman, targetLanguage, lang3 };
   } catch (e) {
     console.error('determineJobLanguageUsingLLM failed, falling back to franc:', e);

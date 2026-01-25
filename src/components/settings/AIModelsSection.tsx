@@ -349,7 +349,14 @@ function AIModelsSection({ userId }: { userId: number }) {
 
             <div>
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Functional Prompt</label>
-              <textarea style={{ width: '100%', height: '80px', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', marginBottom: '15px' }} value={formData.functionalPrompt} onChange={(e) => handleInputChange('functionalPrompt', e.target.value)} placeholder='Specific instructions for this role...' />
+              <textarea style={{ width: '100%', height: '80px', padding: '10px', borderRadius: '6px', border: '1px solid #ccc', marginBottom: '10px' }} value={formData.functionalPrompt} onChange={(e) => handleInputChange('functionalPrompt', e.target.value)} placeholder={isDetective ? 'Global instructions for the Detective (company research preferences)...' : 'Specific instructions for this role...'} />
+
+              {isDetective && (
+                <div style={{ fontSize: '11px', color: '#666', marginBottom: '15px' }}>
+                  This prompt steers how the Detective performs company deep dives for ALL jobs
+                  (manual deep dive button + auto deep dive).
+                </div>
+              )}
 
               {isWritingRole && (
                 <>

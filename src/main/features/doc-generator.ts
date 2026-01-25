@@ -1480,12 +1480,34 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
   const coverLetterWordLimit = thinker?.cover_letter_word_limit || '280';
   const cvPageLimit = thinker?.cv_page_limit || '2';
 
-  // Step 0: Research Company (via Detective / Thinker)
+  // Step 0: Research Company (via Detective / Thinker), conditioned by deep_auto_dive_mode
   let companyResearch = '';
   let companyDeepDive: CompanyDeepDiveSummary | null = null;
+
   try {
-    companyDeepDive = await buildCompanyDeepDive(job, userId, callAI);
-    companyResearch = companyDeepDive.rawText || 'Research unavailable.';
+    const settings = (db.settings && db.settings[0]) || {};
+    const deepAutoDiveMode: 'off' | 'yellow_plus' | 'green_plus' | 'gold_only' = settings.deep_auto_dive_mode || 'off';
+
+    // Determine job match level from compatibility score
+    const compatScore = job.compatibility_score || 0;
+    const isGoldJob = compatScore >= 76; // 76-100%
+    const isGreenJob = compatScore >= 51 && compatScore < 76; // 51-75%
+    const isYellowJob = compatScore >= 26 && compatScore < 51; // 26-50%
+
+    const isEligibleForDeepDive = (() => {
+      if (deepAutoDiveMode === 'off') return false;
+      if (deepAutoDiveMode === 'gold_only') return isGoldJob;
+      if (deepAutoDiveMode === 'green_plus') return isGreenJob || isGoldJob;
+      if (deepAutoDiveMode === 'yellow_plus') return isYellowJob || isGreenJob || isGoldJob;
+      return false;
+    })();
+
+    if (isEligibleForDeepDive) {
+      companyDeepDive = await buildCompanyDeepDive(job, userId, callAI);
+      companyResearch = companyDeepDive.rawText || 'Research unavailable.';
+    } else {
+      companyResearch = 'No additional company research available. Focus on what can be inferred from the job description.';
+    }
   } catch (e) {
     console.error('Research failed:', e);
     companyResearch = 'Research unavailable.';

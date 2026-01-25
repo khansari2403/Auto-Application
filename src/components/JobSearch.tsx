@@ -867,6 +867,61 @@ Note: Forced documents will be checked for accuracy.`);
                     <a href={job.url} target='_blank' rel='noreferrer' style={{ color: '#0077b5', textDecoration: 'none', fontWeight: 'bold' }}>{job.job_title} 🔗</a>
                     {job.status === 'ghost_job_detected' && <div style={{ fontSize: '9px', color: 'var(--warning)', fontWeight: 'bold' }}>👻 GHOST JOB DETECTED</div>}
                     {job.archived === 1 && <div style={{ fontSize: '9px', color: 'var(--text-tertiary)', fontWeight: 'bold' }}>📦 ARCHIVED</div>}
+
+                    {/* Company Deep Dive Button & Panel */}
+                    <div style={{ marginTop: '6px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <button
+                        onClick={async (e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setDeepDiveLoadingId(job.id);
+                          try {
+                            const result = await (window as any).electron.invoke('ai:company-deep-dive', { jobId: job.id, userId });
+                            if (result?.success && result.deepDive) {
+                              setCompanyDeepDives(prev => ({ ...prev, [job.id]: result.deepDive }));
+                            } else {
+                              alert('Company Deep Dive Error: ' + (result?.error || 'Unknown error'));
+                            }
+                          } catch (err: any) {
+                            alert('Company Deep Dive Error: ' + (err?.message || String(err)));
+                          } finally {
+                            setDeepDiveLoadingId(null);
+                          }
+                        }}
+                        style={{
+                          padding: '4px 8px',
+                          fontSize: '10px',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border)',
+                          background: '#fffde7',
+                          color: '#f57f17',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        {deepDiveLoadingId === job.id ? '🕵️‍♂️ Diving...' : '🕵️ Company Deep Dive'}
+                      </button>
+
+                      {companyDeepDives[job.id] && (
+                        <div style={{
+                          marginTop: '4px',
+                          padding: '6px 8px',
+                          background: 'var(--bg-secondary)',
+                          borderRadius: '6px',
+                          border: '1px solid var(--border)',
+                          fontSize: '10px',
+                          color: 'var(--text-secondary)'
+                        }}>
+                          <div style={{ fontWeight: 600, marginBottom: '4px' }}>Detective Summary</div>
+                          <div><strong>Mission & Vision:</strong> {companyDeepDives[job.id].missionVision || 'N/A'}</div>
+                          <div><strong>Products / Services:</strong> {companyDeepDives[job.id].productsServices || 'N/A'}</div>
+                          <div><strong>Markets:</strong> {companyDeepDives[job.id].targetMarkets || 'N/A'}</div>
+                          <div><strong>Culture & Values:</strong> {companyDeepDives[job.id].cultureValues || 'N/A'}</div>
+                        </div>
+                      )}
+                    </div>
                   </td>
                 )}
                 {allColumns.filter(c => visibleColumns.includes(c.id) && c.id !== 'job_title').map(col => (

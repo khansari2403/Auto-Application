@@ -1776,6 +1776,21 @@ STRUCTURE MARKUP:
 - DO NOT create a separate "CONTACT" or "KONTAKT" section; contact information will be handled by the template.
 - The content of each section must come after its heading.
 
+WORK EXPERIENCE & EDUCATION ENTRY FORMAT (VERY IMPORTANT FOR LAYOUT):
+- For EACH job in the work experience section, emit the raw lines in this order:
+  1) "Zeitraum: <Start Monat Jahr> - <Ende Monat Jahr oder Heute>"
+  2) "Unternehmen: <Firmenname>" (or "Company: <Company name>" for non-German)
+  3) "Standort: <Stadt, Land>" (or "Location: <City, Country>")
+  4) A single line with the job title/role (no label, just the title text)
+  5) Optional: one line starting with "Aufgaben:" or "Responsibilities:" followed by a short summary or bullets of the tasks.
+- For EACH education entry, use a similar pattern:
+  1) "Zeitraum: <Start Jahr> - <Ende Jahr oder Heute>"
+  2) "Unternehmen: <Hochschule / Schule>" (or "Company/Institution" equivalent)
+  3) "Standort: <Stadt, Land>" (or "Location: <City, Country>")
+  4) A single line with the degree/title only.
+  5) If there are education details (thesis, focus, courses), you may start a line with "Aufgaben:" / "Tätigkeiten:" / "Responsibilities:" and then list them.
+- Do NOT prefix the title line with any label. Only the date/company/location and tasks lines use labels.
+
 LANGUAGE ENFORCEMENT:
 - Every heading and every sentence in the CV MUST be written in the SAME LANGUAGE as the job description (${targetLanguage}).
 - It is strictly forbidden to write section titles like "WORK EXPERIENCE" or "EDUCATION" when the language is German. Use "BERUFLICHER WERDEGANG" and "BILDUNG" instead.

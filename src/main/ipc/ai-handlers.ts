@@ -17,6 +17,7 @@ export function registerAIHandlers(): string[] {
     'ai:smart-apply',
     'ai:continue-application',
     'ai:cancel-application',
+    'ai:company-deep-dive',
     'auditor:get-pending-questions',
     'auditor:get-learned-criteria',
     'auditor:save-criteria',

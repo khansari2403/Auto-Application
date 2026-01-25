@@ -335,7 +335,7 @@ export function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage
   const raw = `${job?.job_title || ''} ${job?.required_skills || ''} ${job?.description || ''}`.trim();
   const jobText = raw.toLowerCase();
 
-  // 1) Robust language detection via franc (supports many languages)
+  // 1) Baseline language detection via franc (supports many languages)
   // franc returns ISO-639-3 (e.g., deu, eng, fra). If it cannot detect, returns 'und'.
   let lang3 = franc(raw || '');
   const iso6393ToLanguageName: Record<string, string> = {
@@ -359,10 +359,9 @@ export function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage
 
   let targetLanguage = iso6393ToLanguageName[lang3] || 'ENGLISH';
 
-  // 2) Heuristic override for German job ads.
-  // Many German postings contain English terms ("Backend Developer", tech stack, etc.)
-  // which can trick franc into returning 'eng'. If we see strong German signals in the
-  // text, we force the language to German regardless of franc's guess.
+  // 2) Heuristic override for German job ads (kept as a safe fallback for tests and
+  // non-LLM environments). When we have an LLM (Thinker), we prefer the
+  // determineJobLanguageUsingLLM helper instead of this function.
   const germanSignals = [
     'kenntnisse', 'erfahrung', 'aufgaben', 'profil', 'wir bieten', 'bewerbung', 'anschreiben', 'lebenslauf',
     'm/w/d', 'ihr profil', 'ihre aufgaben', 'anforderungen', 'qualifikation', 'teamfähigkeit', 'selbständig',
@@ -377,6 +376,92 @@ export function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage
 
   const isGerman = targetLanguage === 'GERMAN';
   return { isGerman, targetLanguage, lang3 };
+}
+
+// Preferred helper when an LLM (Thinker) is available: ask the same model that
+// writes the documents to also decide the job language so Brain A and Brain B
+// share the same view.
+export async function determineJobLanguageUsingLLM(
+  job: any,
+  thinker: any,
+  callAI: Function
+): Promise<{ isGerman: boolean; targetLanguage: string; lang3: string }> {
+  try {
+    if (!thinker || !callAI) {
+      // Fallback to baseline franc-based detection
+      return detectJobLanguage(job);
+    }
+
+    const raw = `${job?.job_title || ''} ${job?.required_skills || ''} ${job?.description || ''}`.trim();
+
+    const prompt = `You are the same AI model that will generate CVs and letters for this job seeker.\n\n` +
+      `Your FIRST task is to detect the MAIN language of this job posting.\n\n` +
+      `RULES:\n` +
+      `- Focus on full sentences and paragraphs, not on individual buzzwords, tools or English job titles.\n` +
+      `- Ignore company names, product names, brand names and acronyms.\n` +
+      `- If 80% or more of the normal text sentences are in one language, choose that as the language.\n` +
+      `- Do NOT guess based only on location or company name.\n\n` +
+      `Return ONLY valid JSON with this exact shape (no explanations, no markdown):\n` +
+      `{\n  "lang3": "deu|eng|fra|spa|ita|nld|por|pol|tur|ara|hin|zho|jpn|kor",\n  "language": "GERMAN|ENGLISH|FRENCH|SPANISH|ITALIAN|DUTCH|PORTUGUESE|POLISH|TURKISH|ARABIC|HINDI|CHINESE|JAPANESE|KOREAN"\n}\n\n` +
+      `JOB TEXT:\n${raw.substring(0, 8000)}`;
+
+    const rawResp = await callAI(thinker, prompt);
+    if (!rawResp || String(rawResp).startsWith('Error:')) {
+      return detectJobLanguage(job);
+    }
+
+    const text = String(rawResp || '').trim();
+    const cleaned = text
+      .replace(/```json/gi, '')
+      .replace(/```/g, '')
+      .trim();
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    const jsonText = match ? match[0] : cleaned;
+
+    let parsed: any;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch {
+      return detectJobLanguage(job);
+    }
+
+    const lang3 = (parsed.lang3 || parsed.code || '').toLowerCase() || 'und';
+    let language = String(parsed.language || '').toUpperCase();
+
+    // Normalize to our internal labels
+    const iso6393ToLanguageName: Record<string, string> = {
+      deu: 'GERMAN',
+      eng: 'ENGLISH',
+      fra: 'FRENCH',
+      spa: 'SPANISH',
+      ita: 'ITALIAN',
+      nld: 'DUTCH',
+      por: 'PORTUGUESE',
+      rus: 'RUSSIAN',
+      ukr: 'UKRAINIAN',
+      pol: 'POLISH',
+      tur: 'TURKISH',
+      ara: 'ARABIC',
+      hin: 'HINDI',
+      zho: 'CHINESE',
+      jpn: 'JAPANESE',
+      kor: 'KOREAN'
+    };
+
+    if (!language || language === 'UNKNOWN') {
+      language = iso6393ToLanguageName[lang3] || 'ENGLISH';
+    }
+
+    const targetLanguage = language in iso6393ToLanguageName
+      ? language
+      : (iso6393ToLanguageName[lang3] || language || 'ENGLISH');
+
+    const isGerman = targetLanguage === 'GERMAN';
+    return { isGerman, targetLanguage, lang3 };
+  } catch (e) {
+    console.error('determineJobLanguageUsingLLM failed, falling back to franc:', e);
+    return detectJobLanguage(job);
+  }
 }
 
 function getJobDateFolder(job: any, isGerman: boolean): string {
@@ -1340,8 +1425,10 @@ export async function generateCompanyDeepDive(job: any, userId: number, callAI: 
 export async function generateTailoredDocs(job: any, userId: number, thinker: any, auditor: any, options: any, callAI: Function) {
   const db = getDatabase();
 
-  // Define language variables ONCE at top-level scope (fixes ReferenceError class of bugs)
-  const { isGerman, targetLanguage, lang3 } = detectJobLanguage(job);
+  // Define language variables ONCE at top-level scope using the SAME brain (Thinker)
+  // that will write the documents. This keeps language detection (Brain A) and
+  // writing (Brain B) aligned.
+  const { isGerman, targetLanguage, lang3 } = await determineJobLanguageUsingLLM(job, thinker, callAI);
   const dateFolder = getJobDateFolder(job, isGerman);
 
   // Get profile based on Thinker's source settings and normalize fields

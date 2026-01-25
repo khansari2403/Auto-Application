@@ -37,6 +37,8 @@ export function JobSearch({ userId }: { userId: number }) {
     manualReview: true
   });
   const [showInfo, setShowInfo] = useState(false);
+  const [companyDeepDives, setCompanyDeepDives] = useState<Record<number, any>>({});
+  const [deepDiveLoadingId, setDeepDiveLoadingId] = useState<number | null>(null);
 
   const allColumns = [
     { id: 'job_title', label: 'Job Title & URL' },

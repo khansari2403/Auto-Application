@@ -468,6 +468,26 @@ function AIModelsSection({ userId }: { userId: number }) {
                     </div>
                   )}
 
+                  {isDetective && (
+                    <div style={{ background: '#fffde7', padding: '15px', borderRadius: '10px', border: '1px solid #ffeb3b', marginBottom: '15px' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: '#f57f17' }}>
+                        🕵️ Detective Deep Dive Level
+                      </label>
+                      <p style={{ fontSize: '11px', color: '#666', marginBottom: '10px' }}>
+                        Controls how deep the Detective goes when researching companies for your applications.
+                      </p>
+                      <select
+                        style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ffeb3b', background: '#fff' }}
+                        value={formData.deepDiveLevel}
+                        onChange={(e) => handleInputChange('deepDiveLevel', e.target.value)}
+                      >
+                        <option value='light'>🌤️ Light (fast, short summaries)</option>
+                        <option value='normal'>🌤️ Normal (balanced)</option>
+                        <option value='deep'>🌊 Deep (slower, very detailed)</option>
+                      </select>
+                    </div>
+                  )}
+
                   {!isThinker && isWritingRole && (
                     <>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>Word Limit</label>

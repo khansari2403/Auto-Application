@@ -402,7 +402,7 @@ export async function determineJobLanguageUsingLLM(
       `- If 80% or more of the normal text sentences are in one language, choose that as the language.\n` +
       `- Do NOT guess based only on location or company name.\n\n` +
       `Return ONLY valid JSON with this exact shape (no explanations, no markdown):\n` +
-      `{\n  "lang3": "deu|eng|fra|spa|ita|nld|por|pol|tur|ara|hin|zho|jpn|kor",\n  "language": "GERMAN|ENGLISH|FRENCH|SPANISH|ITALIAN|DUTCH|PORTUGUESE|POLISH|TURKISH|ARABIC|HINDI|CHINESE|JAPANESE|KOREAN"\n}\n\n` +
+      `{\n  "lang3": "deu|eng|fra|spa|ita|nld|por|pol|tur|ara|hin|zho|jpn|kor",\n  "language": "GERMAN|ENGLISH|FRENCH|SPANISH|ITALIAN|DUTCH|PORTUGUESE|POLISH|TURKISH|ARABIC|HINDI|CHINESE|JAPANESE|KOREAN",\n  "confidence": 0.0-1.0 (how sure you are about this main language, 1.0 = completely sure)\n}\n\n` +
       `JOB TEXT:\n${raw.substring(0, 8000)}`;
 
     const rawResp = await callAI(thinker, prompt);

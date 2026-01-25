@@ -37,6 +37,7 @@ export function registerAIModelsHandlers(): string[] {
         motivation_letter_word_limit: data.motivationLetterWordLimit,
         cover_letter_word_limit: data.coverLetterWordLimit,
         cv_page_limit: data.cvPageLimit,
+        deep_dive_level: data.deepDiveLevel,
         status: 'active',
         user_id: data.userId || 1
       };
@@ -86,6 +87,8 @@ export function registerAIModelsHandlers(): string[] {
       if (data.cover_letter_word_limit !== undefined) dbData.cover_letter_word_limit = data.cover_letter_word_limit;
       if (data.cvPageLimit !== undefined) dbData.cv_page_limit = data.cvPageLimit;
       if (data.cv_page_limit !== undefined) dbData.cv_page_limit = data.cv_page_limit;
+      if (data.deepDiveLevel !== undefined) dbData.deep_dive_level = data.deepDiveLevel;
+      if (data.deep_dive_level !== undefined) dbData.deep_dive_level = data.deep_dive_level;
       if (data.status !== undefined) dbData.status = data.status;
       if (data.last_test_status !== undefined) dbData.last_test_status = data.last_test_status;
       if (data.last_test_message !== undefined) dbData.last_test_message = data.last_test_message;

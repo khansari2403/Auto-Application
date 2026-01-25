@@ -1202,6 +1202,140 @@ function saveDocumentFile(
   return filePath;
 }
 
+// Type for structured company deep dive
+interface CompanyDeepDiveSummary {
+  missionVision: string;
+  productsServices: string;
+  targetMarkets: string;
+  cultureValues: string;
+  rawText: string;
+  depth: 'light' | 'normal' | 'deep';
+}
+
+async function buildCompanyDeepDive(job: any, userId: number, callAI: Function): Promise<CompanyDeepDiveSummary> {
+  const db = getDatabase();
+  const models = await getAllQuery('SELECT * FROM ai_models');
+
+  // Prefer Detective, fall back to Thinker if not configured
+  const detectiveModel = models.find((m: any) => m.role === 'Detective' && m.status === 'active');
+  const thinkerModel = models.find((m: any) => m.role === 'Thinker' && m.status === 'active');
+  const model = detectiveModel || thinkerModel;
+
+  if (!model) {
+    return {
+      missionVision: '',
+      productsServices: '',
+      targetMarkets: '',
+      cultureValues: '',
+      rawText: '',
+      depth: 'normal'
+    };
+  }
+
+  const deepDiveLevel = (model.deep_dive_level || 'normal').toLowerCase();
+  const depth: 'light' | 'normal' | 'deep' =
+    deepDiveLevel === 'light' || deepDiveLevel === 'deep' ? deepDiveLevel : 'normal';
+
+  // Reuse existing scraper-based research as raw context
+  let scrapedInfo = '';
+  try {
+    await logAction(userId, 'ai_detective', `🔍 Detective researching ${job.company_name}...`, 'in_progress');
+    scrapedInfo = await getCompanyInfo(job.company_name, userId, callAI);
+  } catch (e: any) {
+    console.error('Detective research failed:', e?.message || e);
+  }
+
+  const jobContext = `Job Title: ${job.job_title || 'N/A'}\n` +
+    `Company: ${job.company_name || 'N/A'}\n` +
+    `Location: ${job.location || 'N/A'}\n` +
+    `Summary from job ad: ${(job.description || '').substring(0, 1000)}`;
+
+  const functionalPrompt = model.functional_prompt || '';
+
+  const depthInstruction = depth === 'light'
+    ? 'Keep each section extremely short (1-2 concise sentences).'
+    : depth === 'deep'
+      ? 'Provide rich but focused detail for each section (2 short paragraphs max).'
+      : 'Provide a balanced level of detail for each section (3-5 sentences).';
+
+  const prompt = `You are "Detective", the company research specialist in an AI job application team.
+
+USER PREFERENCES (always respect these when relevant):
+${functionalPrompt || 'No additional preferences provided.'}
+
+TASK:
+Analyze the company based on the job context and any scraped website information.
+
+Return ONLY valid JSON (no markdown, no commentary) with this exact shape:
+{
+  "mission_vision": "...",
+  "products_services": "...",
+  "target_markets": "...",
+  "culture_values": "..."
+}
+
+${depthInstruction}
+Focus on information that is relevant for tailoring CVs and motivation/cover letters.
+
+JOB CONTEXT:
+${jobContext}
+
+SCRAPED COMPANY INFO (may be empty):
+${scrapedInfo || 'No additional info scraped.'}`;
+
+  let missionVision = '';
+  let productsServices = '';
+  let targetMarkets = '';
+  let cultureValues = '';
+
+  try {
+    const raw = await callAI(model, prompt);
+    if (raw && typeof raw === 'string') {
+      const cleaned = raw
+        .replace(/```json/gi, '')
+        .replace(/```/g, '')
+        .trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      const jsonText = match ? match[0] : cleaned;
+      const parsed = JSON.parse(jsonText);
+      missionVision = parsed.mission_vision || parsed.missionVision || '';
+      productsServices = parsed.products_services || parsed.productsServices || '';
+      targetMarkets = parsed.target_markets || parsed.targetMarkets || '';
+      cultureValues = parsed.culture_values || parsed.cultureValues || '';
+    }
+  } catch (e: any) {
+    console.error('Failed to parse Detective deep dive response:', e?.message || e);
+  }
+
+  const combinedRaw = [scrapedInfo, missionVision, productsServices, targetMarkets, cultureValues]
+    .filter(Boolean)
+    .join('\n\n');
+
+  return {
+    missionVision,
+    productsServices,
+    targetMarkets,
+    cultureValues,
+    rawText: combinedRaw || scrapedInfo || '',
+    depth
+  };
+}
+
+export async function generateCompanyDeepDive(job: any, userId: number, callAI: Function): Promise<CompanyDeepDiveSummary> {
+  const deepDive = await buildCompanyDeepDive(job, userId, callAI);
+
+  try {
+    await runQuery('UPDATE job_listings', {
+      id: String(job.id),
+      company_deep_dive: JSON.stringify(deepDive)
+    });
+  } catch (e: any) {
+    console.error('Failed to persist company deep dive:', e?.message || e);
+  }
+
+  return deepDive;
+}
+
 // Main document generation function
 export async function generateTailoredDocs(job: any, userId: number, thinker: any, auditor: any, options: any, callAI: Function) {
   const db = getDatabase();
@@ -1228,11 +1362,12 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
   const coverLetterWordLimit = thinker?.cover_letter_word_limit || '280';
   const cvPageLimit = thinker?.cv_page_limit || '2';
 
-  // Step 0: Research Company
+  // Step 0: Research Company (via Detective / Thinker)
   let companyResearch = '';
+  let companyDeepDive: CompanyDeepDiveSummary | null = null;
   try {
-    await logAction(userId, 'ai_thinker', `🔍 Researching ${job.company_name} mission and history...`, 'in_progress');
-    companyResearch = await getCompanyInfo(job.company_name, userId, callAI);
+    companyDeepDive = await buildCompanyDeepDive(job, userId, callAI);
+    companyResearch = companyDeepDive.rawText || 'Research unavailable.';
   } catch (e) {
     console.error('Research failed:', e);
     companyResearch = 'Research unavailable.';
@@ -1386,6 +1521,7 @@ function buildThinkerPrompt(args: {
   userProfile: any;
   job: any;
   companyResearch: string;
+  companyDeepDive?: CompanyDeepDiveSummary | null;
   feedback: string;
   constraints: {
     motivationLetterWordLimit: string;

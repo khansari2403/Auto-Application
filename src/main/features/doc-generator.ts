@@ -1038,11 +1038,47 @@ export function generateCVHTML(
 
     flush();
 
-    return entries
-      .map((entryLines, idx) => {
+    // Sort entries in reverse chronological order based on the year in the
+    // date line (exp-dates). If parsing fails, keep original order.
+    const entriesWithKey = entries.map((entryLines, idx) => {
+      const dateLine = entryLines.find(l => l.includes('exp-dates')) || '';
+      const yearMatch = dateLine.match(/(19|20)\d{2}/g);
+      // Take the first year as start year; higher = more recent
+      const year = yearMatch && yearMatch.length > 0 ? parseInt(yearMatch[0], 10) : 0;
+      return { lines: entryLines, originalIndex: idx, sortKey: year || 0 };
+    });
+
+    entriesWithKey.sort((a, b) => {
+      if (b.sortKey !== a.sortKey) return b.sortKey - a.sortKey;
+      return a.originalIndex - b.originalIndex;
+    });
+
+    return entriesWithKey
+      .map((entry, idx) => {
+        const entryLines = entry.lines;
         const dateLines = entryLines.filter(l => l.includes('exp-dates'));
-        const otherLines = entryLines.filter(l => !l.includes('exp-dates'));
-        const ordered = [...dateLines, ...otherLines];
+        const companyLines = entryLines.filter(l => l.includes('exp-company'));
+        const locationLines = entryLines.filter(l => l.includes('exp-location'));
+        const roleLines = entryLines.filter(l => l.includes('exp-role'));
+        const taskLines = entryLines.filter(l => l.includes('exp-tasks'));
+        const used = new Set<string>();
+        const markUsed = (arr: string[]) => arr.forEach(l => used.add(l));
+        markUsed(dateLines);
+        markUsed(companyLines);
+        markUsed(locationLines);
+        markUsed(roleLines);
+        markUsed(taskLines);
+        const otherLines = entryLines.filter(l => !used.has(l));
+
+        const ordered = [
+          ...dateLines,
+          ...companyLines,
+          ...locationLines,
+          ...roleLines,
+          ...taskLines,
+          ...otherLines,
+        ];
+
         return `<div class="exp-entry${idx > 0 ? ' exp-entry--spaced' : ''}">${ordered.join('')}</div>`;
       })
       .join('');

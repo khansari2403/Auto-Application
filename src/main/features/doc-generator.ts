@@ -1068,16 +1068,22 @@ export function generateCVHTML(
         markUsed(locationLines);
         markUsed(roleLines);
         markUsed(taskLines);
+
+        const extractText = (html: string): string => html.replace(/<[^>]+>/g, '').trim();
+        const titleText = roleLines.length ? extractText(roleLines[0]) : '';
+        const companyText = companyLines.length ? extractText(companyLines[0]) : '';
+        const titleCompanyLine = (titleText || companyText)
+          ? `<div class="exp-title-company"><span class="exp-role">${titleText}</span>${companyText ? ' ' : ''}<span class="exp-company">${companyText}</span></div>`
+          : '';
+
         const otherLines = entryLines.filter(l => !used.has(l));
 
-        const ordered = [
-          ...dateLines,
-          ...companyLines,
-          ...locationLines,
-          ...roleLines,
-          ...taskLines,
-          ...otherLines,
-        ];
+        const ordered: string[] = [];
+        ordered.push(...dateLines);
+        if (titleCompanyLine) ordered.push(titleCompanyLine);
+        ordered.push(...locationLines);
+        ordered.push(...taskLines);
+        ordered.push(...otherLines);
 
         return `<div class="exp-entry${idx > 0 ? ' exp-entry--spaced' : ''}">${ordered.join('')}</div>`;
       })

@@ -166,6 +166,29 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
     await saveSettings({ min_compatibility: value });
   };
 
+  const handleDeepAutoDiveChange = async (mode: 'off' | 'yellow_plus' | 'green_plus' | 'gold_only') => {
+    setDeepAutoDiveMode(mode);
+    await saveSettings({ deep_auto_dive_mode: mode });
+  };
+
+  const handleDetectiveLevelChange = async (level: string) => {
+    setDetectiveSettings(prev => prev ? { ...prev, level } : { level, prompt: '' });
+    try {
+      const modelsRes = await (window as any).electron.invoke('ai-models:get-all');
+      if (modelsRes?.success && Array.isArray(modelsRes.data)) {
+        const detective = modelsRes.data.find((m: any) => m.role === 'Detective' && m.status === 'active');
+        if (detective) {
+          await (window as any).electron.invoke('ai-models:update', {
+            id: detective.id,
+            deepDiveLevel: level
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to update Detective deep dive level:', e);
+    }
+  };
+
   const getCompatibilityColor = (level: string) => {
     switch (level) {
       case 'gold': return 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)';

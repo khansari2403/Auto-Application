@@ -1039,7 +1039,12 @@ export function generateCVHTML(
     flush();
 
     return entries
-      .map((entryLines, idx) => `<div class="exp-entry${idx > 0 ? ' exp-entry--spaced' : ''}">${entryLines.join('')}</div>`)
+      .map((entryLines, idx) => {
+        const dateLines = entryLines.filter(l => l.includes('exp-dates'));
+        const otherLines = entryLines.filter(l => !l.includes('exp-dates'));
+        const ordered = [...dateLines, ...otherLines];
+        return `<div class="exp-entry${idx > 0 ? ' exp-entry--spaced' : ''}">${ordered.join('')}</div>`;
+      })
       .join('');
   };
 
@@ -1191,10 +1196,13 @@ export function generateCVHTML(
       padding-bottom: 4px;
     }
     .main-content { font-size: 11.5px; line-height: 1.7; }
-    .exp-entry { margin-bottom: 4px; }
-    .exp-entry--spaced { margin-top: 10px; }
-    .exp-role { font-weight: 600; font-size: 12px; margin-bottom: 2px; }
+    .exp-entry { margin-bottom: 10px; }
+    .exp-entry--spaced { margin-top: 14px; }
+    .exp-role { font-weight: 600; font-size: 12.5px; margin-bottom: 2px; }
     .exp-row, .exp-text { font-size: 11px; margin: 1px 0; }
+    .exp-dates { font-size: 10.5px; font-style: italic; color: #666; margin-bottom: 2px; }
+    .exp-company { font-weight: 600; }
+    .exp-location { color: #555; }
     .exp-label { font-weight: 600; }
     .exp-value { margin-left: 4px; }
   </style>

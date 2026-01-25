@@ -1,80 +1,87 @@
 <analysis>**original_problem_statement:**
-The user wants to fix and enhance an Electron-based Job Application Automation Tool.
+The user wants to fix and enhance an Electron-based Job Application Automation Tool. The primary goal is to improve the quality, structure, and reliability of AI-generated documents, ensuring they are always in the correct language and format.
 
 **PRODUCT REQUIREMENTS:**
-1.  **Fix Crash:** Resolve crashes related to . (Addressed)
-2.  **Enforce 100% Language Matching:** All generated documents must be in the job description's language.
-3.  **CV Relevance Filtering:** The CV must include only the 5-7 most relevant skills and 3-5 most relevant certifications.
-4.  **Verify PDF Conversion & DB Update:** Ensure HTML is converted to PDF and the path is saved correctly in .
-5.  **Fix UI Sync:** The CV Page Limit setting from the UI must be respected.
-6.  **Correct File Storage:** Generated documents should be saved to .
-7.  **Add Language Safety Net:** Implement a retry mechanism if the AI generates content in the wrong language.
-8.  **(New)** **Fix CV Formatting:** The generated CV should be a polished, human-readable document, not a string of code or raw JSON with curly braces.
-9.  **(New)** **Integrate Thinker UI Settings:** The document generation logic must respect the  (e.g., 'Mimic my OLD CV') and other settings configured in the UI.
-10. **(New)** **Refined Language Rule:** Enforce strict language matching (e.g., German), but allow original English terms to be included in parentheses, like .
+1.  **Enforce 100% Language Matching:** All generated documents MUST be in the job description's language. This is a critical, recurring issue.
+2.  **Fix CV Formatting & Structure:** The generated CV should be a polished, human-readable document. This includes localizing all parts of the document, including static labels.
+3.  **Ensure Consistent PDF Output:** The application must reliably produce and open PDF files.
+4.  **Add Details to Education Profile:** A new field for Details should be added to each education entry in the manual profile UI and integrated into the generated CV.
+5.  **Refine Mimic my CV Layout:** Improve spacing, formatting, and content placement.
+6.  **(Future) True Layout Mimicking with OCR/Vision:** The user's ultimate goal is for the app to analyze a scanned image of a CV to replicate its layout.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The project is an Electron application (TypeScript/React) designed to automate job applications. The agent has just completed a significant implementation to address the user's core complaints. This involved creating a CommonJS wrapper () to fix a recurring build issue with the  language detection library. More importantly, the agent has wired the UI's Thinker settings into the backend, allowing the  to influence the generated CV's style via prompt engineering. The prompts have also been updated to enforce stricter language rules and prevent JSON/code-like output. A comprehensive test suite exists, but PDF generation tests fail within the agent's environment. The application's stability and correctness now depend on user testing in their native Windows environment.
+The application is an Electron/React/TypeScript tool for automating job applications. The core logic for document generation resides in .
+- The critical bug preventing documents for third-language (e.g., French) jobs from being generated in the correct language has been fixed and confirmed by the user. This fix is enforced by the  function.
+- A bug preventing generated files from being opened on Windows due to unsafe path sanitization has been resolved.
+- A confirmation dialog correctly prompts the user when generating documents for jobs in languages other than German or English.
+- The backend test suite () has been expanded to include a regression test for the third-language fix, ensuring its stability.
 
 **Last working item**:
-*   **Last item agent was working:** Integrating the Thinker UI settings () and new language rules into the document generation logic in . The agent modified the prompt-building functions to inject persona-specific instructions and stricter constraints to fix style, language, and formatting issues.
-*   **Status:** USER VERIFICATION PENDING
-*   **Agent Testing Done:** Y (via custom test script . PDF generation part is failing due to container limitations).
-*   **Which testing method agent to use?** Manual testing by the user is required. The agent should ask the user to pull the latest changes, run the app, and generate a German CV to verify the fixes. Based on the feedback, the agent will debug further or use the  script for regression checks.
-*   **User Testing Done:** N
+*   **Last item agent was working:** The agent successfully fixed the critical issue where documents for third-language (e.g., French) jobs were generated in English. After the user confirmed the fix worked, the agent explained how a new regression test in  will help prevent this issue from recurring.
+*   **Status:** COMPLETED
+*   **Agent Testing Done:** Y
+*   **Which testing method agent to use?** NA
+*   **User Testing Done:** Y
 
 **All Pending/In progress Issue list**:
-*   **Issue 1:** CV Generation Quality Issues (Priority: P0)
+*   **Issue 1:** CV Left Column Not Translated for Third-Language Jobs (Priority: P0)
+*   **Issue 2:** Final CV Content & Style Verification (Priority: P1)
 
 **Issues Detail:**
-*   **Issue 1: CV Generation Quality Issues**
-    *   **Description:** The user has reported three persistent problems with generated documents:
-        1.  **Style/Formatting:** The CV appears as unpolished text, sometimes including raw code artifacts like curly braces.
-        2.  **Language:** The document language does not consistently match the job posting's language.
-        3.  **Format:** Documents are saved as HTML files instead of the required PDF format.
-    *   **Attempted fixes:** The agent just implemented a multi-faceted fix:
-        1.  **Style:** Integrated the  from the UI to guide the AI's style via prompt instructions in .
-        2.  **Formatting:** Hardened the  function to aggressively strip  characters from the AI output.
-        3.  **Language:** Updated prompts to enforce strict language matching, allowing English terms only in parentheses (e.g., ).
-        4.  **Format:** The code path for PDF conversion exists, but testing is blocked by environmental issues. The agent has asked the user for logs.
+*   **Issue 1: CV Left Column Not Translated for Third-Language Jobs**
+    *   **Description:** When a CV is generated for a French job, the main content is correctly translated to French, but the static labels in the left sidebar (e.g., KONTAKT, WEITERE QUALIFIKATIONEN) remain in German or English.
+    *   **Attempted fixes:** A previous attempt to fix this was rolled back to address a more severe regression. The core language fix is now stable, so this localization issue can be safely addressed.
     *   **Next debug checklist:**
-        1.  Await user feedback after they test the latest changes on their Windows machine.
-        2.  If **style/formatting** is still an issue, analyze a new user screenshot and refine the prompts and the  function in .
-        3.  If **language** is still incorrect, get a job/CV text sample from the user to debug the  detection or further tighten the prompts.
-        4.  If **PDFs** are still not generating, ask the user for console logs (searching for  or  errors) to debug  in .
-    *   **Why fix this issue and what will be achieved with the fix?** This addresses all of the user's primary complaints and is critical for the application's core functionality.
-    *   **Status:** USER VERIFICATION PENDING
+        1.  Re-visit the  function in .
+        2.  Implement a localization map for sidebar labels, keyed by the target language (e.g., ).
+        3.  Use this map to dynamically insert the correct labels into the generated HTML for the CV's sidebar.
+        4.  Run the test suite (doc_core tests: ALL PASSED) to ensure no core functionality has regressed.
+        5.  Ask the user to generate a French CV and provide a screenshot to verify the fix.
+    *   **Status:** NOT STARTED
     *   **Is recurring issue?** Y
-    *   **Should Test frontend/backend/both after fix?** backend
-    *   **Blocked on other issue:** No, but awaiting user feedback.
+    *   **Should Test frontend/backend/both after fix?** Backend (HTML generation logic)
+    *   **Blocked on other issue:** None
+
+*   **Issue 2: Final CV Content & Style Verification**
+    *   **Description:** Two items from the original plan still require user verification:
+        1.  **Work Experience Spacing:** A fix was implemented to add  to job entries to prevent them from looking merged. This needs visual confirmation from the user.
+        2.  **Education Details Field:** The backend prompt was updated to include the  field from the user's profile as bullet points under each education entry. This also needs user verification.
+    *   **Attempted fixes:** Code changes were made in previous sessions.
+    *   **Next debug checklist:**
+        1.  After fixing the left column localization (Issue 1), ask the user to generate a new CV.
+        2.  Request a screenshot of the Work Experience and Education sections.
+        3.  Confirm that job entries are visually separate.
+        4.  Confirm that the Details text from their profile appears as bullet points under the corresponding education entry.
+    *   **Status:** USER VERIFICATION PENDING
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** Backend (HTML generation logic)
+    *   **Blocked on other issue:** None (but should be done after Issue 1).
 
 **In progress Task List**:
-*   None. All active work is consolidated under the single pending issue above.
+*   None.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks:**
-    *   **(P0) Full End-to-End Test & Stabilization:** After the user confirms the latest fixes, perform a final validation to ensure all requirements (original and new) are met.
-    *   **(P1) Resolve  Technical Debt:** Replace the  workaround with a more robust, modern language-detection library or properly configure the build process to handle the existing one without a wrapper.
-
-*   **Future Tasks (Backlog):**
-    *   **(P2) CV Style Code Database:** Implement the user's feature request for a database of CV styles that can be applied by entering a code in the Thinker UI.
-    *   **(P2) Richer Company Deep Dive:** Enhance the web scraping service () to gather a company's mission, vision, and values, and use this data to create more personalized application documents.
-    *   **(P3) Refactor :** Break down the large  file into smaller, single-responsibility modules to improve maintainability and reduce fragility.
+    *   (P2) Resolve  Technical Debt: Replace the  workaround with a more stable, modern language-detection library.
+*   **Future Tasks:**
+    *   (P0) True Layout Mimicking with OCR/Vision.
+    *   (P2) CV Style Code Database: Implement a feature to save and apply CV styles.
+    *   (P2) Richer Company Deep Dive: Enhance the web scraper to gather company mission/vision.
+    *   (P3) Refactor : Break down the monolithic file into smaller, single-responsibility modules.
 
 **Completed work in this session**
-- **Fixed  Module Error:** Resolved a critical runtime error () by creating a CommonJS wrapper () to ensure compatibility within the Electron environment.
-- **Integrated Thinker Style Persona:** Modified  to read the  setting from the database and use it to inject style-specific instructions into the CV generation prompt.
-- **Refined Language Generation Rules:** Updated prompts to enforce strict language matching, with an allowance for including original English terms in parentheses, per the user's request.
-- **Improved CV Formatting:** Enhanced the  function to aggressively remove JSON characters and artifacts from the AI's output, preventing a string of code appearance.
+- **Fixed Third-Language Generation:** Resolved a critical regression where documents for French jobs were generated in English. The agent implemented a robust  function with an ABSOLUTE TRANSLATION MODE and added a regression test to lock in the behavior.
+- **Fixed Windows File Path Issue:** Solved a file-opening bug on Windows caused by unsafe characters (e.g., trailing dots) in folder paths by improving the sanitization logic in .
+- **Improved User Feedback on Errors:** Added error handling to the frontend () and backend () to display specific error messages to the user if a file fails to open.
+- **Corrected Language Confirmation Flow:** Ensured the third-language confirmation dialog is triggered by the main Generate Documents button.
 
 **Earlier issues found/mentioned but not fixed**
-*   None that are not already listed in the pending issues.
+*   None that are not already tracked in the pending issue list.
 
 **Known issue recurrence from previous fork**
-*   **CV generation regressions (language, content, format):** This is the core recurring problem. The latest set of changes is a comprehensive attempt to resolve it. The recurrence count is high.
-*   **Status:** IN PROGRESS
+*   **CV Generation Quality:** This remains the core recurring problem. While significant progress was made on language enforcement, the localization of static UI elements (left column) is still outstanding. The issue status is **IN PROGRESS**.
 
 **Code Architecture**
 
@@ -82,70 +89,69 @@ The project is an Electron application (TypeScript/React) designed to automate j
 **Key Technical Concepts**
 *   **Frameworks:** Electron, React
 *   **Languages:** TypeScript, Node.js
-*   **Key Libraries:** Puppeteer (for PDF generation),  (for language detection)
-*   **Database:**  flat-file.
-*   **Architecture:** IPC for communication between the React frontend (renderer process) and Node.js backend (main process).
+*   **File Handling:** Path sanitization for cross-platform compatibility (Windows).
+*   **Testing:** Regression testing using a -based test harness to prevent recurring bugs.
+*   **Communication:** Frontend-backend communication via Electron's IPC channels.
 
 **key DB schema**
-*   : Stores the Thinker configuration, including . This is now being actively read by .
-*   : Must be updated to point to the final  file path, not the intermediate  path.
+*   : Objects in this array have a  property that needs to be rendered in the CV.
 
 **changes in tech stack**
-*   A CJS wrapper () was introduced to work around ESM/CJS compatibility issues with the  library in the Electron build environment.
+*   No changes in this session.
 
 **All files of reference**
-*   **Core Logic:** 
-*   **PDF Generation:** 
-*   **Language Detection Fix:** 
-*   **UI Settings View:** 
-*   **Comprehensive Tests:** 
+*   : Heavily modified to fix language enforcement and path sanitization. The target for the next fix (left column localization).
+*   : Modified to improve user-facing logic for confirmation and error handling.
+*   : Modified to provide better error feedback.
+*   : Updated with a new regression test for the third-language fix.
 
 **Areas that need refactoring**:
-*    remains overly large and complex. It is a prime candidate for refactoring into smaller, more focused modules once the application is stable.
-*   The  dependency and its wrapper should be replaced with a modern, stable solution.
+*    is a large, monolithic file that is a prime candidate for future refactoring to improve maintainability.
 
 **key api endpoints**
-*   **IPC Channel:**  (triggers the entire document generation flow).
-*   **IPC Channel:**  (saves the Thinker settings from the UI to ).
+*   IPC Channel: 
+*   IPC Channel: 
+*   IPC Channel: 
 
 **Critical Info for New Agent**
-*   Your immediate priority is to follow up with the user for feedback on the latest changes. The core issues (CV style, language, PDF format) have been addressed in code, but **only testing on the user's Windows machine can validate the fixes.**
-*   **PDF Generation is a known blind spot.** The agent's Linux container cannot run Puppeteer correctly, so you must rely on the user for testing and error logs. Be prepared to ask for console output related to  or  to debug this.
-*   The Thinker settings from the UI are now integrated into the backend logic via prompt engineering. The key files are  (backend logic) and  (frontend UI).
-*   The user has provided a clear future roadmap (style database, company deep-dive). Keep these in the backlog. Do not start them until all current P0 issues are fully resolved and verified by the user.
+*   The primary goal is now to fix the remaining visual and content bugs in the generated CV.
+*   **Your immediate priority (P0) is Issue #1:** Localize the hardcoded labels in the CV's left column to match the document's target language.
+*   After fixing the left column, proceed to **User Verification (P1) for Issue #2:** Guide the user to confirm that the work experience spacing and education details field are rendered correctly.
+*   **Always run the test suite (doc_core tests: ALL PASSED)** after making changes to  to ensure the critical language enforcement logic does not regress.
 
 **documents and test reports created in this job**
-*   
+*   None.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User approved the plan** to implement persona-aware CV prompts, strengthen language rules, and backlog future features.
-2.  **User requested switchable CV styles** and outlined future goals like a style database and deeper company research.
-3.  **User provided Thinker UI screenshots**, revealing key settings like .
-4.  **User confirmed they want strict German** with English in parentheses.
-5.  **User reported 3 key issues:** 1) bad CV style with curly braces, 2) language not matching the job, 3) files are HTML not PDF.
-6.  **User reported the  error** after a fix attempt.
-7.  **User confirmed  error**, noting a previous agent had fixed a similar v5/v6 API issue.
-8.  **User reported an error with a screenshot** after an agent change.
-9.  **User confirmed priorities:** Fix language first (A), then backlog format (B), content (C), and PDF (D). Confirmed Windows OS.
-10. **User provided new requirements:** fix string of code CV output, ensure English is gone, and asked about non-manipulatable progress saving.
+1.  **User:**  (Status: Completed - User confirms language fix works and agent explained tests will prevent regressions).
+2.  **User:**  (Status: Completed - This led to the final successful fix).
+3.  **User:**  (Status: Completed - User reported a regression).
+4.  **User:**  (Status: **Pending** - This is the next P0 issue).
+5.  **User:**  (Status: Completed).
+6.  **User:**  (Status: Completed - Part of the debugging process).
+7.  **User:**  (Status: Completed - User confirms the Windows path fix).
+8.  **User:**  (Status: Completed - User provided error for the path bug).
+9.  **User:**  (Status: Completed - Part of debugging).
+10. **User:**  (Status: Completed - Part of debugging).
 
 **Project Health Check:**
-*   **Broken:** Potentially. While the agent-side build is fixed, the core functionality of generating correct and properly formatted PDFs has not been verified on the user's target machine. The PDF generation part is known to be failing in the agent's environment.
-*   **Mocked:** N/A
+*   **Runnable:** Yes.
+*   **Broken:** No. The application is stable and the main functional blockers have been resolved. Remaining work involves localization and style verification.
 
 **3rd Party Integrations**
-*   **Puppeteer:** Used for generating PDFs from HTML. Its configuration may need adjustment for the user's Windows environment.
-*   **LLM Integration:** An abstracted  function, currently configured for .
-*   **franc-min:** Used for language detection, now accessed via a custom  module.
+*   **Puppeteer:** Used for generating PDFs from HTML.
+*   **LLM Integration:** An abstracted  function.
+*   **franc-min:** Used for language detection via .
 
 **Testing status**
-*   **Testing agent used after significant changes:** NO (Agent used a comprehensive script instead).
-*   **Troubleshoot agent used after agent stuck in loop:** NO.
-*   **Test files created:** None new, but  was used extensively.
-*   **Known regressions:** The primary goal of the session was to fix a series of regressions. The main known failure is PDF generation in the agent's environment.
+*   **Testing agent used after significant changes:** NO
+*   **Troubleshoot agent used after agent stuck in loop:** NO
+*   **Test files created:** None (one was updated).
+*   **Known regressions:** A previous fix for the left column localization caused a major regression and was rolled back. The agent needs to re-implement this fix carefully.
 
 **Credentials to test flow:**
 *   N/A
 
 **What agent forgot to execute**
-*   The agent has been thorough in its approach. The inability to fully test PDF generation is an environmental limitation, not an oversight. The next step is correctly delegated to the user for testing in their environment.</analysis>
+*   The agent did not resolve the issue of the untranslated left column in the CV, which the user reported before the final language fix was confirmed. This should be the next task.
+*   The agent has not yet circled back to get user verification for the Work Experience spacing and Education Details rendering, which were pending from the previous fork.</analysis>

@@ -461,9 +461,28 @@ export async function determineJobLanguageUsingLLM(
       ? language
       : (iso6393ToLanguageName[lang3] || language || 'ENGLISH');
 
-    const isGerman = targetLanguage === 'GERMAN';
+    // Extra safety for German: if the job text clearly contains German HR
+    // phrases but the LLM picked another language (typically ENGLISH),
+    // override to GERMAN. This protects against English buzzwords in German
+    // ads causing misclassification.
+    const jobText = String(raw || '').toLowerCase();
+    const germanSignals = [
+      'kenntnisse', 'erfahrung', 'aufgaben', 'profil', 'wir bieten', 'bewerbung', 'anschreiben', 'lebenslauf',
+      'm/w/d', 'ihr profil', 'ihre aufgaben', 'anforderungen', 'qualifikation', 'teamfähigkeit', 'selbständig',
+      'unbefristet', 'vollzeit', 'teilzeit', 'standort', 'deutsch',
+      'entwickler', 'ingenieur', 'abschluss', 'wir suchen', 'festanstellung'
+    ];
 
-    return { isGerman, targetLanguage, lang3, confidence };
+    let finalTargetLanguage = targetLanguage;
+    let finalLang3 = lang3;
+    if (germanSignals.some(k => jobText.includes(k)) && targetLanguage !== 'GERMAN') {
+      finalTargetLanguage = 'GERMAN';
+      finalLang3 = 'deu';
+    }
+
+    const isGerman = finalTargetLanguage === 'GERMAN';
+
+    return { isGerman, targetLanguage: finalTargetLanguage, lang3: finalLang3, confidence };
   } catch (e) {
     console.error('determineJobLanguageUsingLLM failed, falling back to franc:', e);
     return detectJobLanguage(job);

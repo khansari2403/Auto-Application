@@ -488,6 +488,42 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
             Only auto-apply to jobs that meet minimum compatibility score from HR AI
           </p>
 
+          {detectiveSettings && (
+            <div style={{
+              marginBottom: '16px',
+              padding: '10px',
+              background: 'var(--card-bg)',
+              borderRadius: '8px',
+              border: '1px dashed var(--border)'
+            }}>
+              <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>🕵️ Detective Settings</span>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Deep Dive Level:</span>
+                <select
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border)',
+                    fontSize: '11px'
+                  }}
+                  value={detectiveSettings.level}
+                  onChange={(e) => handleDetectiveLevelChange(e.target.value)}
+                >
+                  <option value='light'>🌤️ Light</option>
+                  <option value='normal'>🌤️ Normal</option>
+                  <option value='deep'>🌊 Deep</option>
+                </select>
+              </div>
+              {detectiveSettings.prompt && (
+                <div style={{ fontSize: '11px', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>
+                  "{detectiveSettings.prompt.substring(0, 80)}{detectiveSettings.prompt.length > 80 ? '...' : ''}"
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ 
             opacity: autoApplyEnabled ? 1 : 0.5,
             pointerEvents: autoApplyEnabled ? 'auto' : 'none'

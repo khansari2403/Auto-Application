@@ -40,6 +40,25 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
         setStartTime(result.data.schedule_start || '09:00');
         setEndTime(result.data.schedule_end || '14:00');
         setMinCompatibility(result.data.min_compatibility || 'green');
+        setDeepAutoDiveMode(result.data.deep_auto_dive_mode || 'off');
+      }
+
+      // Load Detective settings (Deep Dive Level + Functional Prompt preview)
+      try {
+        const modelsRes = await (window as any).electron.invoke('ai-models:get-all');
+        if (modelsRes?.success && Array.isArray(modelsRes.data)) {
+          const detective = modelsRes.data.find((m: any) => m.role === 'Detective' && m.status === 'active');
+          if (detective) {
+            setDetectiveSettings({
+              level: detective.deep_dive_level || 'normal',
+              prompt: detective.functional_prompt || ''
+            });
+          } else {
+            setDetectiveSettings(null);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load Detective settings:', e);
       }
     } catch (e) {
       console.error('Failed to load settings:', e);

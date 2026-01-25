@@ -25,7 +25,8 @@ function AIModelsSection({ userId }: { userId: number }) {
     // Thinker-specific settings
     thinkerSource: 'all', // 'linkedin' | 'manual' | 'uploaded_cv' | 'all'
     motivationLetterWordLimit: '450', // Word limit for motivation letters
-    coverLetterWordLimit: '280', cvPageLimit: '2' // Word limit for cover letters
+    coverLetterWordLimit: '280', cvPageLimit: '2', // Word limit for cover letters
+    deepDiveLevel: 'normal'
   });
   
   // Test results tracking

@@ -316,6 +316,7 @@ function AIModelsSection({ userId }: { userId: number }) {
                 <option value='Secretary'>📧 The Secretary</option>
                 <option value='Observer'>👁️ The Observer</option>
                 <option value='AI Mouse'>🖱️ AI Mouse</option>
+                <option value='Detective'>🕵️ The Detective (Company Deep Dive)</option>
               </select>
 
               <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>2. API Key</label>

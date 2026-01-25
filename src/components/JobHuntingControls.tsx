@@ -610,6 +610,96 @@ export function JobHuntingControls({ userId, onSettingsChange }: Props) {
             </div>
           </div>
 
+          {/* Deep Auto Dive Mode */}
+          <div style={{ marginTop: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '10px', color: 'var(--text-primary)' }}>
+              Deep Auto Dive Mode
+            </label>
+            
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {/* Off */}
+              <button
+                onClick={() => handleDeepAutoDiveChange('off')}
+                style={{
+                  flex: '1 1 120px',
+                  padding: '12px 8px',
+                  borderRadius: '8px',
+                  border: deepAutoDiveMode === 'off' ? '2px solid var(--text-secondary)' : '1px solid var(--border)',
+                  background: deepAutoDiveMode === 'off' ? 'var(--bg-tertiary)' : 'var(--card-bg)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>Off</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Manual only</div>
+              </button>
+
+              {/* Yellow+ */}
+              <button
+                onClick={() => handleDeepAutoDiveChange('yellow_plus')}
+                style={{
+                  flex: '1 1 120px',
+                  padding: '12px 8px',
+                  borderRadius: '8px',
+                  border: deepAutoDiveMode === 'yellow_plus' ? '2px solid #FF9800' : '1px solid var(--border)',
+                  background: deepAutoDiveMode === 'yellow_plus' ? 'rgba(255, 193, 7, 0.15)' : 'var(--card-bg)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>Yellow+</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Fair & above</div>
+              </button>
+
+              {/* Green+ */}
+              <button
+                onClick={() => handleDeepAutoDiveChange('green_plus')}
+                style={{
+                  flex: '1 1 120px',
+                  padding: '12px 8px',
+                  borderRadius: '8px',
+                  border: deepAutoDiveMode === 'green_plus' ? '2px solid #4CAF50' : '1px solid var(--border)',
+                  background: deepAutoDiveMode === 'green_plus' ? 'rgba(76, 175, 80, 0.15)' : 'var(--card-bg)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>Green+</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Good & above</div>
+              </button>
+
+              {/* Gold Only */}
+              <button
+                onClick={() => handleDeepAutoDiveChange('gold_only')}
+                style={{
+                  flex: '1 1 120px',
+                  padding: '12px 8px',
+                  borderRadius: '8px',
+                  border: deepAutoDiveMode === 'gold_only' ? '2px solid #FFD700' : '1px solid var(--border)',
+                  background: deepAutoDiveMode === 'gold_only' ? 'rgba(255, 215, 0, 0.15)' : 'var(--card-bg)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>Gold Only</div>
+                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>Perfect only</div>
+              </button>
+            </div>
+
+            {deepAutoDiveMode !== 'off' && (
+              <div style={{ 
+                marginTop: '8px', 
+                padding: '8px', 
+                background: 'var(--info-light)', 
+                borderRadius: '6px',
+                fontSize: '11px',
+                color: 'var(--info)'
+              }}>
+                🕵️ Deep dive will auto-run for jobs with <strong>{deepAutoDiveMode.replace('_', ' ')}</strong> compatibility
+              </div>
+            )}
+          </div>
+
           {autoApplyEnabled && (
             <div style={{ 
               marginTop: '12px', 

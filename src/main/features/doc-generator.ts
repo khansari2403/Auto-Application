@@ -1586,6 +1586,12 @@ Required Skills: ${job.required_skills || 'N/A'}
 COMPANY RESEARCH:
 ${companyResearch || 'No additional company research available. Focus on what can be inferred from the job description.'}
 
+STRUCTURED COMPANY DEEP DIVE (if available):
+Mission & Vision: ${companyDeepDive?.missionVision || 'N/A'}
+Products & Services: ${companyDeepDive?.productsServices || 'N/A'}
+Target Customers / Markets: ${companyDeepDive?.targetMarkets || 'N/A'}
+Culture & Values: ${companyDeepDive?.cultureValues || 'N/A'}
+
 ${feedback ? `PREVIOUS FEEDBACK FROM AUDITOR: ${feedback}
 Please fix these issues in the new version.` : ''}
 `;

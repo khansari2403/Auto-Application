@@ -427,6 +427,11 @@ export async function determineJobLanguageUsingLLM(
 
     const lang3 = (parsed.lang3 || parsed.code || '').toLowerCase() || 'und';
     let language = String(parsed.language || '').toUpperCase();
+    let confidenceRaw = parsed.confidence;
+    let confidence = 1.0;
+    if (typeof confidenceRaw === 'number' && confidenceRaw >= 0 && confidenceRaw <= 1) {
+      confidence = confidenceRaw;
+    }
 
     // Normalize to our internal labels
     const iso6393ToLanguageName: Record<string, string> = {

@@ -1234,11 +1234,12 @@ export function generateCVHTML(
     .main-content { font-size: 11.5px; line-height: 1.7; }
     .exp-entry { margin-bottom: 10px; }
     .exp-entry--spaced { margin-top: 14px; }
-    .exp-role { font-weight: 600; font-size: 12.5px; margin-bottom: 2px; }
-    .exp-row, .exp-text { font-size: 11px; margin: 1px 0; }
-    .exp-dates { font-size: 10.5px; font-style: italic; color: #666; margin-bottom: 2px; }
+    .exp-title-company { font-size: 12.5px; font-weight: 600; margin-bottom: 0; }
+    .exp-role { font-weight: 600; }
+    .exp-row, .exp-text { font-size: 11px; margin: 0; }
+    .exp-dates { font-size: 10.5px; font-style: italic; color: #666; margin-bottom: 0; }
     .exp-company { font-weight: 600; }
-    .exp-location { color: #555; }
+    .exp-location { color: #555; margin-bottom: 0; }
     .exp-label { font-weight: 600; }
     .exp-value { margin-left: 4px; }
   </style>

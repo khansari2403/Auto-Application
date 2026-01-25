@@ -1539,6 +1539,7 @@ function buildThinkerPrompt(args: {
     userProfile,
     job,
     companyResearch,
+    companyDeepDive,
     feedback,
     constraints
   } = args;

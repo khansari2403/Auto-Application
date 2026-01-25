@@ -166,7 +166,8 @@ function AIModelsSection({ userId }: { userId: number }) {
       wordLimit: '300', strictness: 'Balanced', functionalPrompt: '',
       cvStylePersona: 'Classic', referenceCvId: '', cvStyleCode: '',
       auditorSource: 'all', thinkerSource: 'all',
-      motivationLetterWordLimit: '450', coverLetterWordLimit: '280', cvPageLimit: '2'
+      motivationLetterWordLimit: '450', coverLetterWordLimit: '280', cvPageLimit: '2',
+      deepDiveLevel: 'normal'
     });
     setAvailableModels([]);
     setRecommendations({ Speed: [], Cost: [], Quality: [] });

@@ -894,7 +894,7 @@ function normalizeCvText(content: string, isGerman: boolean): string {
 }
 
 // Generate CV HTML with full profile - supports multiple languages
-// When cvStylePersona is "Mimic my CV" and language is German, we use a
+// When CV Style Persona is "Use my manually input profile" and language is German, we use a
 // two-column Lebenslauf-style layout: left = Kontakt/Sprachen/Qualifikationen,
 // right = main CV content.
 export function generateCVHTML(
@@ -907,7 +907,7 @@ export function generateCVHTML(
 ): string {
   const lang = (targetLanguage || (isGerman ? 'GERMAN' : 'ENGLISH')).toUpperCase();
   const persona = (cvStylePersona || 'Classic').toLowerCase();
-  const isMimicPersona = persona.includes('mimic');
+  const isMimicPersona = persona.includes('mimic'); // internal flag for "Use my manually input profile" style
 
   // Multi-language labels for section headers
   const labels: Record<string, Record<string, string>> = {
@@ -1750,7 +1750,7 @@ function buildThinkerPrompt(args: {
 ${languageHardRule}
 
 CV STYLE PERSONA: ${cvStylePersona}
-${referenceCvId ? `REFERENCE CV ID: ${referenceCvId} (mimic section order and headings when persona is "Mimic my CV").` : ''}
+${referenceCvId ? `REFERENCE CV ID: ${referenceCvId} (use section order and headings from the selected reference CV when CV Style Persona is "Use my manually input profile").` : ''}
 
 PAGE LIMIT: ${cvPageLimit} A4 pages maximum (applies to ALL documents).
 

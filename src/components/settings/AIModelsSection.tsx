@@ -366,7 +366,7 @@ function AIModelsSection({ userId }: { userId: number }) {
                     <option value='Modern'>The Modern</option>
                     <option value='Academic'>The Academic</option>
                     <option value='Minimalist'>The Minimalist</option>
-                    {isThinker && <option value='Mimic my CV'>Mimic my OLD CV</option>}
+                    {isThinker && <option value='Mimic my CV'>Use my manually input profile</option>}
                   </select>
 
                   {isThinker && formData.cvStylePersona === 'Mimic my CV' ? (

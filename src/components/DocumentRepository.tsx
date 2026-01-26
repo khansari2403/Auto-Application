@@ -10,7 +10,11 @@ export function DocumentRepository({ userId }: { userId: number }) {
     try {
       const result = await (window as any).electron.invoke('docs:get-all', userId);
       if (result?.success) {
-        setDocs(result.data || []);
+        const allDocs = result.data || [];
+        // Show only user-uploaded documents here. Generated job documents are
+        // stored and browsed via the Storage Settings / Stored Documents view.
+        const uploadedDocs = allDocs.filter((doc: any) => !doc.job_id);
+        setDocs(uploadedDocs);
         setError(null);
       } else {
         setDocs([]);

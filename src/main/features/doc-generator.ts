@@ -98,8 +98,14 @@ async function getProfileByThinkerSource(userId: number, thinker: any): Promise<
       break;
     case 'all':
     default:
-      // Combine all sources (default behavior)
-      selectedProfile = baseProfile;
+      // Combine all sources (default behavior). Prefer manual profile when it
+      // exists so the user can control CV content via the Manual Profile
+      // screen without changing existing Thinker settings.
+      if (manualProfile) {
+        selectedProfile = manualProfile;
+      } else {
+        selectedProfile = baseProfile;
+      }
       break;
   }
   
@@ -1750,7 +1756,7 @@ function buildThinkerPrompt(args: {
 ${languageHardRule}
 
 CV STYLE PERSONA: ${cvStylePersona}
-${referenceCvId ? `REFERENCE CV ID: ${referenceCvId} (use section order and headings from the selected reference CV when CV Style Persona is "Use my manually input profile").` : ''}
+${referenceCvId ? `REFERENCE CV ID: ${referenceCvId} (use section order and headings from the selected reference CV when CV Style Persona is "Uploaded CV").` : ''}
 
 PAGE LIMIT: ${cvPageLimit} A4 pages maximum (applies to ALL documents).
 

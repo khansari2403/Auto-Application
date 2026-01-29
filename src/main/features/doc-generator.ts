@@ -1832,13 +1832,14 @@ WORK EXPERIENCE & EDUCATION ENTRY FORMAT (VERY IMPORTANT FOR LAYOUT):
   3) "Standort: <Stadt, Land>" (or "Location: <City, Country>")
   4) A single line with the job title/role (no label, just the title text)
   5) Optional: one line starting with "Aufgaben:" or "Responsibilities:" followed by a short summary or bullets of the tasks.
-- For EACH education entry, use a similar pattern:
+- For EACH education entry, use a similar pattern, but with STRICT order and no duplicate labels:
   1) "Zeitraum: <Start Jahr> - <Ende Jahr oder Heute>"
-  2) "Unternehmen: <Hochschule / Schule>" (or "Company/Institution" equivalent)
-  3) "Standort: <Stadt, Land>" (or "Location: <City, Country>")
+  2) "Unternehmen: <Hochschule / Schule>" (or "Company/Institution" equivalent) on its own line (DO NOT mix this with Aufgaben).
+  3) "Standort: <Stadt, Land>" (or "Location: <City, Country>") on its own line.
   4) A single line with the degree/title only.
-  5) If there are education details (thesis, focus, courses), you may start a line with "Aufgaben:" / "Tätigkeiten:" / "Responsibilities:" and then list them.
-- Do NOT prefix the title line with any label. Only the date/company/location and tasks lines use labels.
+  5) If there are education details (thesis, focus, courses), use ONE line starting with "Aufgaben:" / "Tätigkeiten:" / "Responsibilities:" and then list them. Do NOT repeat "Aufgaben" twice for the same education entry.
+- Do NOT prefix the degree/title line with any label. Only the date/company/location and tasks lines use labels.
+- Never write placeholder words like "Unbekannt" for missing fields; simply omit the line if you don't have data.
 
 LANGUAGE ENFORCEMENT:
 - Every heading and every sentence in the CV MUST be written in the SAME LANGUAGE as the job description (${targetLanguage}).

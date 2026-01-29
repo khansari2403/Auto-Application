@@ -1859,8 +1859,13 @@ ${cvStyleGuidance}
 
 ${baseContext}
 
+CV EXPERIENCE COVERAGE (STRICT):
+- You MUST include ALL work experiences that appear in the profile.Experiences list, unless you hit a hard page limit.
+- Always include the MOST RECENT role as the first entry in the work experience section.
+- Preserve the chronological order (newest first) as much as possible.
+
 RELEVANCE RULE:
-- Include ONLY skills and certifications that are DIRECTLY RELEVANT to this specific job.
+- For skills and certifications, include ONLY those that are DIRECTLY RELEVANT to this specific job.
 - If a certification or skill has no connection to the job requirements, OMIT IT.
 - Quality over quantity. A focused CV is better than a long list of irrelevant items.
 

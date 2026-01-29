@@ -1063,10 +1063,30 @@ export function generateCVHTML(
       .map((entry, idx) => {
         const entryLines = entry.lines;
         const dateLines = entryLines.filter(l => l.includes('exp-dates'));
-        const companyLines = entryLines.filter(l => l.includes('exp-company'));
+        let companyLines = entryLines.filter(l => l.includes('exp-company'));
         const locationLines = entryLines.filter(l => l.includes('exp-location'));
         const roleLines = entryLines.filter(l => l.includes('exp-role'));
-        const taskLines = entryLines.filter(l => l.includes('exp-tasks'));
+        let taskLines = entryLines.filter(l => l.includes('exp-tasks'));
+
+        const extractText = (html: string): string => html.replace(/<[^>]+>/g, '').trim();
+        const isUnknownLine = (html: string): boolean => extractText(html).toLowerCase() === 'unbekannt';
+
+        // Heuristic fix: if there is no company line but the FIRST tasks line
+        // looks like it only contains an institution name, treat it as
+        // company and keep the remaining tasks as actual Aufgaben.
+        if (companyLines.length === 0 && taskLines.length > 0) {
+          const firstTask = taskLines[0];
+          let firstText = extractText(firstTask);
+          firstText = firstText.replace(/^Aufgaben:\s*/i, '').replace(/^Responsibilities:\s*/i, '').trim();
+          if (firstText && firstText.length > 0 && !/[\.\!\?]/.test(firstText)) {
+            companyLines = [`<div class="exp-row exp-company">${firstText}</div>`];
+            taskLines = taskLines.slice(1);
+          }
+        }
+
+        // Remove "Unbekannt" placeholder lines from tasks
+        taskLines = taskLines.filter(l => !isUnknownLine(l));
+
         const used = new Set<string>();
         const markUsed = (arr: string[]) => arr.forEach(l => used.add(l));
         markUsed(dateLines);
@@ -1075,14 +1095,14 @@ export function generateCVHTML(
         markUsed(roleLines);
         markUsed(taskLines);
 
-        const extractText = (html: string): string => html.replace(/<[^>]+>/g, '').trim();
         const titleText = roleLines.length ? extractText(roleLines[0]) : '';
         const companyText = companyLines.length ? extractText(companyLines[0]) : '';
         const titleCompanyLine = (titleText || companyText)
           ? `<div class="exp-title-company"><span class="exp-role">${titleText}</span>${companyText ? ' ' : ''}<span class="exp-company">${companyText}</span></div>`
           : '';
 
-        const otherLines = entryLines.filter(l => !used.has(l));
+        // Remove "Unbekannt" placeholder lines from any remaining lines
+        const otherLines = entryLines.filter(l => !used.has(l) && !isUnknownLine(l));
 
         const ordered: string[] = [];
         ordered.push(...dateLines);

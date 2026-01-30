@@ -993,14 +993,52 @@ export function generateCVHTML(
 
   const formatContent = (text: string): string => text ? text.replace(/\n/g, '<br>') : '';
 
+  // --- Sorting Helper ---
+  const sortDesc = (a: any, b: any) => {
+    const getYear = (d: string | number) => {
+      if (!d) return 0;
+      const m = String(d).match(/\d{4}/);
+      return m ? parseInt(m[0], 10) : 0;
+    };
+    const isPresent = (d: string | number) => /present|heute|now|current|bis heute/i.test(String(d || ''));
+    
+    // Compare end dates first
+    const endA = a.endDate || a.end_date || a.to || a.end || a.endYear || a.end_year || '';
+    const endB = b.endDate || b.end_date || b.to || b.end || b.endYear || b.end_year || '';
+    
+    if (isPresent(endA) && !isPresent(endB)) return -1;
+    if (!isPresent(endA) && isPresent(endB)) return 1;
+    if (isPresent(endA) && isPresent(endB)) return 0;
+    
+    const yearEndA = getYear(endA);
+    const yearEndB = getYear(endB);
+    
+    if (yearEndA !== yearEndB) return yearEndB - yearEndA;
+    
+    // If end years same, compare start years
+    const startA = a.startDate || a.start_date || a.from || a.start || a.startYear || a.start_year || '';
+    const startB = b.startDate || b.start_date || b.from || b.start || b.startYear || b.start_year || '';
+    
+    return getYear(startB) - getYear(startA);
+  };
+
   // Deterministic Renderers
   const renderExperiences = () => {
-    const exps = userProfile?.experiences || [];
+    let exps = userProfile?.experiences || [];
     if (!Array.isArray(exps) || exps.length === 0) return '';
+
+    // Create a copy and sort it (preserve indices for mapping rewritten content if possible? 
+    // Wait, rewritten keys are indices 0, 1, 2... based on ORIGINAL order sent to LLM.
+    // The LLM was sent the data in `formatExperiencesForPrompt`.
+    // If that function sends them in the original order, then key "0" corresponds to original index 0.
+    // So we must attach the original index to the item BEFORE sorting, so we can look up the correct rewrite.
+    const expsWithIdx = exps.map((e: any, i: number) => ({ ...e, _originalIndex: i }));
+    expsWithIdx.sort(sortDesc);
     
-    return exps.map((exp: any, idx: number) => {
-        // Use rewritten description if available, else fallback to profile data
-        const rawDesc = rewritten.experiences?.[String(idx)] || exp.description || exp.details || '';
+    return expsWithIdx.map((exp: any, idx: number) => {
+        // Use rewritten description if available using ORIGINAL index
+        const originalIdx = exp._originalIndex;
+        const rawDesc = rewritten.experiences?.[String(originalIdx)] || exp.description || exp.details || '';
         const desc = rawDesc.replace(/^<ul>/, '<ul class="exp-list">'); // add class for styling if needed
 
         const start = exp.startDate || exp.start_date || exp.from || exp.start || '';
@@ -1026,11 +1064,15 @@ export function generateCVHTML(
   };
 
   const renderEducations = () => {
-    const edus = userProfile?.educations || [];
+    let edus = userProfile?.educations || [];
     if (!Array.isArray(edus) || edus.length === 0) return '';
 
-    return edus.map((edu: any, idx: number) => {
-        const rawDesc = rewritten.educations?.[String(idx)] || edu.details || edu.description || '';
+    const edusWithIdx = edus.map((e: any, i: number) => ({ ...e, _originalIndex: i }));
+    edusWithIdx.sort(sortDesc);
+
+    return edusWithIdx.map((edu: any, idx: number) => {
+        const originalIdx = edu._originalIndex;
+        const rawDesc = rewritten.educations?.[String(originalIdx)] || edu.details || edu.description || '';
         const desc = rawDesc;
         
         const start = edu.startYear || edu.start_year || edu.from || edu.start || '';
@@ -1064,6 +1106,7 @@ export function generateCVHTML(
     const leftSkills = userProfile?.skills || [];
     const leftCerts = userProfile?.licenses || [];
     const leftLangs = userProfile?.languages || [];
+    const photo = userProfile?.photo || ''; // Base64 or URL
     
     // Helper to extract strings from objects if needed
     const getVal = (x: any) => typeof x === 'string' ? x : (x.name || x.title || JSON.stringify(x));
@@ -1109,6 +1152,17 @@ export function generateCVHTML(
         </div>`;
     }
 
+    // Photo styling
+    const photoStyle = `
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin: 0 auto 20px auto;
+      display: block;
+      border: 3px solid #e0e0e0;
+    `;
+
     return `<!DOCTYPE html>
 <html lang="${htmlLang}">
 <head>
@@ -1119,7 +1173,7 @@ export function generateCVHTML(
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Inter', sans-serif; line-height: 1.6; color: #1a1a1a; max-width: 900px; margin: 0 auto; padding: 30px 40px; background: #fff; }
     .cv-grid { display: grid; grid-template-columns: 30% 70%; gap: 24px; }
-    .sidebar { border-right: 2px solid #e0e0e0; padding-right: 18px; }
+    .sidebar { border-right: 2px solid #e0e0e0; padding-right: 18px; display: flex; flex-direction: column; align-items: stretch; }
     .sidebar-header { text-align: center; margin-bottom: 24px; }
     .sidebar-name { font-size: 20px; font-weight: 700; color: #0077b5; margin-bottom: 4px; }
     .sidebar-title-main { font-size: 13px; color: #555; }
@@ -1162,6 +1216,7 @@ export function generateCVHTML(
 <body>
   <div class="cv-grid">
     <aside class="sidebar">
+      ${photo ? `<img src="${photo}" alt="Profile Photo" style="${photoStyle}">` : ''}
       <div class="sidebar-header">
         <div class="sidebar-name">${userProfile?.name || 'Ihr Name'}</div>
         <div class="sidebar-title-main">${userProfile?.title || ''}</div>

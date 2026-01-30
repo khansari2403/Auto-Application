@@ -1915,40 +1915,39 @@ LANGUAGE ENFORCEMENT:
   })();
 
   const prompts: Record<string, string> = {
-    cv: `You are a professional CV/Resume writer. Create a tailored CV for this job application.
-
+    cv: `You are a professional CV content optimizer.
 ${languageHardRule}
 
-CRITICAL LANGUAGE REQUIREMENT: You MUST write the entire CV in ${targetLanguage}. This includes all section headings, job descriptions, and summaries. You may keep original English job titles or technical terms in parentheses after their translation (e.g., "Projektmanager (Project Manager)"), but the main sentence language must remain ${targetLanguage}.
+TASK:
+Rewrite the candidate's professional summary and experience descriptions to perfectly match the target job.
+You are generating VALID JSON data that will be fed into a strict HTML layout engine.
+You are NOT generating the full layout yourself.
 
-${cvStyleGuidance}
+OUTPUT FORMAT:
+Return a VALID JSON object with this exact structure:
+{
+  "summary": "Rewritten professional summary...",
+  "experiences": {
+    "0": "<ul><li>Rewritten bullet point 1...</li><li>Rewritten bullet point 2...</li></ul>",
+    "1": "..."
+  },
+  "educations": {
+    "0": "<ul><li>Rewritten details...</li></ul>"
+  }
+}
 
-${baseContext}
+KEYS:
+- "experiences": Keys are the indices (0, 1, 2...) matching the order of experiences provided in the prompt.
+- "educations": Keys are the indices matching the order of educations provided.
+- "summary": A tailored professional summary.
 
-CV EXPERIENCE COVERAGE (STRICT):
-- You MUST include ALL work experiences that appear in the profile.Experiences list, unless you hit a hard page limit.
-- Always include the MOST RECENT role as the first entry in the work experience section.
-- Preserve the chronological order (newest first) as much as possible.
-
-RELEVANCE RULE:
-- For skills and certifications, include ONLY those that are DIRECTLY RELEVANT to this specific job.
-- If a certification or skill has no connection to the job requirements, OMIT IT.
-- Quality over quantity. A focused CV is better than a long list of irrelevant items.
-
-CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
-1. DO NOT fabricate or hallucinate any information - use ONLY data from the provided profile
-2. DO NOT invent job titles, companies, dates, or achievements not in the profile
-3. DO NOT include any JSON formatting or markdown code blocks
-4. DO NOT add meta-commentary like "Here is your CV"
-
-NOTE: CV generation is NOT subject to word limits.
-
-PAGE LIMIT REQUIREMENT:
-- Keep the CV within ${cvPageLimit} A4 pages.
-- If you must shorten, keep only the most relevant experiences and the TOP 5-7 skills and TOP 3-5 certifications (already provided above).
-
-REQUIREMENTS:
-1. Tailor the CV specifically to the job requirements.
+RULES:
+1. Return ONLY valid JSON. Do not include markdown code fences (\`\`\`).
+2. The values must be HTML snippets (e.g. <ul><li>...</li></ul>) or plain text.
+3. Every word must be in ${targetLanguage}.
+4. Do NOT invent new experiences or educations.
+5. Do NOT output the full CV. Only the content map.
+`,1. Tailor the CV specifically to the job requirements.
 2. RELEVANCE FILTER: Your profile contains many skills and certifications. You MUST ONLY include those that are DIRECTLY RELEVANT to this specific position. If a skill or certification is not mentioned or implied as useful in the job description, DO NOT include it. A concise, relevant CV is mandatory. DO NOT list more than 5-7 key skills and 3-5 relevant certifications.
 3. Highlight relevant experiences and skills that match the job description - but ONLY from the provided profile.
 3. Use action verbs and quantify achievements where the data exists in the profile

@@ -1664,18 +1664,23 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
         throw new Error(rawContent || 'AI returned empty content');
       }
 
-      let content = cleanAIOutput(rawContent);
-
-      // Safety net: verify the AI body language matches the JD language.
-      // If mismatch, automatically retry ONCE with extra-strict language instructions.
-      content = await ensureTargetLanguageOrRetry({
-        content,
-        lang3,
-        targetLanguage,
-        callAI,
-        thinker,
-        originalPrompt: thinkerPrompt
-      });
+      let content = rawContent;
+      if (type.key === 'cv') {
+        // For CVs, we expect JSON. Only strip markdown fences.
+        content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
+      } else {
+        content = cleanAIOutput(rawContent);
+        // Safety net: verify the AI body language matches the JD language.
+        // If mismatch, automatically retry ONCE with extra-strict language instructions.
+        content = await ensureTargetLanguageOrRetry({
+          content,
+          lang3,
+          targetLanguage,
+          callAI,
+          thinker,
+          originalPrompt: thinkerPrompt
+        });
+      }
 
       // For letters, ensure we never double greeting/closing
       if (type.key === 'motivation_letter' || type.key === 'cover_letter') {

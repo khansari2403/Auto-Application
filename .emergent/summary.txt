@@ -1,157 +1,162 @@
 <analysis>**original_problem_statement:**
-The user wants to fix and enhance an Electron-based Job Application Automation Tool. The primary goal is to improve the quality, structure, and reliability of AI-generated documents, ensuring they are always in the correct language and format.
+The user's primary goal is to improve the quality, structure, and reliability of AI-generated documents, particularly the CV. This has involved several phases:
+1.  **Fixing Language Generation:** Ensure documents are created in the correct language of the job ad. (Largely complete, but with some regressions).
+2.  **Company Deep Dive Feature:** Introduce a Detective AI member to research companies and use that data to tailor application documents. (Mostly complete, but auto-apply integration is not fully testable).
+3.  **Improve CV Layout Quality:** Fix the formatting, structure, and content faithfulness of the generated CV, especially the Work Experience and Education sections, to make it professional and accurate based on the user's Manual Profile. This is the current focus.
 
 **PRODUCT REQUIREMENTS:**
-1.  **Enforce 100% Language Matching:** All generated documents MUST be in the job description's language. This is a critical, recurring issue.
-2.  **Fix CV Formatting & Structure:** The generated CV should be a polished, human-readable document. This includes localizing all parts of the document, including static labels.
-3.  **Ensure Consistent PDF Output:** The application must reliably produce and open PDF files.
-4.  **Add Details to Education Profile:** A new field for Details should be added to each education entry in the manual profile UI and integrated into the generated CV.
-5.  **Refine Mimic my CV Layout:** Improve spacing, formatting, and content placement.
-6.  **(Future) True Layout Mimicking with OCR/Vision:** The user's ultimate goal is for the app to analyze a scanned image of a CV to replicate its layout.
+1.  **CV Content Fidelity:** The generated CV must faithfully represent all data from the user's Manual Profile, especially all work experiences, in the correct reverse-chronological order.
+2.  **Professional CV Layout:** The CV layout must be clean, structured, and visually hierarchical. Specific formatting for titles, companies, dates, and descriptions has been requested.
+3.  **Correct Language & Content:** Documents must be generated in the correct language. Deep dive research should be used to tailor content but must not override the document's target language.
+4.  **UI/UX Clarity:** The application's settings and options should be clear. For example, separating the concepts of content source (Manual Profile) from style persona (Uploaded CV).
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is an Electron/React/TypeScript tool for automating job applications. The core logic for document generation resides in .
-- The critical bug preventing documents for third-language (e.g., French) jobs from being generated in the correct language has been fixed and confirmed by the user. This fix is enforced by the  function.
-- A bug preventing generated files from being opened on Windows due to unsafe path sanitization has been resolved.
-- A confirmation dialog correctly prompts the user when generating documents for jobs in languages other than German or English.
-- The backend test suite () has been expanded to include a regression test for the third-language fix, ensuring its stability.
+The application is an Electron/React/TypeScript job automation tool.
+- **Content Source:** The CV generator is now configured to correctly use the Manual Profile data from the database as its primary source of content.
+- **Company Deep Dive:** The Detective feature is integrated. UI controls exist in the Job Hunting Controls panel to set the deep dive level and configure which job compatibility bands (Gold+, Green+, etc.) should trigger it automatically. The backend logic in  respects this setting during document generation.
+- **CV Layout Engine:** The Mimic my CV persona (now renamed Uploaded CV in the UI) uses a complex parser () to turn the LLM's free-text output for Work Experience and Education into a two-column HTML layout. This parser has been repeatedly patched with heuristics to fix formatting issues, but it remains the primary source of layout bugs.
+- **Duplicate Header:** A duplicate name/title block that appeared in both the sidebar and the main column of the CV has been removed from the main column.
 
 **Last working item**:
-*   **Last item agent was working:** The agent successfully fixed the critical issue where documents for third-language (e.g., French) jobs were generated in English. After the user confirmed the fix worked, the agent explained how a new regression test in  will help prevent this issue from recurring.
-*   **Status:** COMPLETED
-*   **Agent Testing Done:** Y
-*   **Which testing method agent to use?** NA
-*   **User Testing Done:** Y
+- **Last item agent was working:** Removing the duplicate Name + Professional Title header from the main content area of the CV, so it only appears in the left sidebar. This was a direct response to the user's feedback on the last generated CV.
+- **Status:** USER VERIFICATION PENDING
+- **Agent Testing Done:** Y
+- **Which testing method agent to use?** screenshot tool (to verify the visual layout of the generated CV).
+- **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1:** CV Left Column Not Translated for Third-Language Jobs (Priority: P0)
-*   **Issue 2:** Final CV Content & Style Verification (Priority: P1)
+- **Issue 1:** Work Experience section layout is incorrect and messy. (P0)
+- **Issue 2:** CV left-column labels are not translated for third languages. (P1)
+- **Issue 3:** Final verification of Education section layout. (P1)
 
 **Issues Detail:**
-*   **Issue 1: CV Left Column Not Translated for Third-Language Jobs**
-    *   **Description:** When a CV is generated for a French job, the main content is correctly translated to French, but the static labels in the left sidebar (e.g., KONTAKT, WEITERE QUALIFIKATIONEN) remain in German or English.
-    *   **Attempted fixes:** A previous attempt to fix this was rolled back to address a more severe regression. The core language fix is now stable, so this localization issue can be safely addressed.
-    *   **Next debug checklist:**
-        1.  Re-visit the  function in .
-        2.  Implement a localization map for sidebar labels, keyed by the target language (e.g., ).
-        3.  Use this map to dynamically insert the correct labels into the generated HTML for the CV's sidebar.
-        4.  Run the test suite (doc_core tests: ALL PASSED) to ensure no core functionality has regressed.
-        5.  Ask the user to generate a French CV and provide a screenshot to verify the fix.
-    *   **Status:** NOT STARTED
-    *   **Is recurring issue?** Y
-    *   **Should Test frontend/backend/both after fix?** Backend (HTML generation logic)
-    *   **Blocked on other issue:** None
+- **Issue 1: Work Experience section layout is incorrect and messy.**
+    - **Description:** Despite multiple attempts to fix it, the  section in the generated CV is still structurally incorrect. The order of elements (date, company, title), spacing, and descriptions are jumbled. The LLM's free-text output is not consistently structured, causing the HTML parser to fail.
+    - **Attempted fixes:**
+        1.  Adding strict formatting rules to the LLM prompt.
+        2.  Adding labeled fields (e.g., , ) to the profile data within the prompt.
+        3.  Adding parser-side heuristics in  to re-order lines and correct common LLM errors.
+    - **Next debug checklist:** The current approach of parsing free-text is proving unreliable.
+        1.  Modify  to no longer rely on parsing the LLM's free-text output for the Work Experience layout.
+        2.  Instead, iterate directly over the  array.
+        3.  For each experience object, render its properties (, , , , ) into a hard-coded HTML structure with dedicated CSS classes. This makes the layout deterministic and robust.
+        4.  The LLM should only be responsible for generating the *content* of the description, not the structural layout.
+    - **Why fix this issue and what will be achieved with the fix?** This is the user's main point of frustration and the biggest remaining quality issue. A deterministic layout will produce a professional, reliable CV every time.
+    - **Status:** IN PROGRESS
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** Backend (HTML generation logic) & Frontend (visual verification with screenshot tool).
+    - **Blocked on other issue:** None.
 
-*   **Issue 2: Final CV Content & Style Verification**
-    *   **Description:** Two items from the original plan still require user verification:
-        1.  **Work Experience Spacing:** A fix was implemented to add  to job entries to prevent them from looking merged. This needs visual confirmation from the user.
-        2.  **Education Details Field:** The backend prompt was updated to include the  field from the user's profile as bullet points under each education entry. This also needs user verification.
-    *   **Attempted fixes:** Code changes were made in previous sessions.
-    *   **Next debug checklist:**
-        1.  After fixing the left column localization (Issue 1), ask the user to generate a new CV.
-        2.  Request a screenshot of the Work Experience and Education sections.
-        3.  Confirm that job entries are visually separate.
-        4.  Confirm that the Details text from their profile appears as bullet points under the corresponding education entry.
-    *   **Status:** USER VERIFICATION PENDING
-    *   **Is recurring issue?** N
-    *   **Should Test frontend/backend/both after fix?** Backend (HTML generation logic)
-    *   **Blocked on other issue:** None (but should be done after Issue 1).
+- **Issue 2: CV left-column labels are not translated for third languages.**
+    - **Description:** When a CV is generated for a job in a third language (e.g., French), static labels in the left sidebar like KONTAKT or WEITERE QUALIFIKATIONEN remain in German. This was on the original backlog and is the next item after layout is fixed.
+    - **Attempted fixes:** None in this session.
+    - **Next debug checklist:**
+        1. In , create a simple localization map for the sidebar labels: .
+        2. Use this map to dynamically select and render the labels based on the .
+    - **Why fix this issue and what will be achieved with the fix?** It's a key part of ensuring documents are 100% in the target language.
+    - **Status:** NOT STARTED
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** Backend (HTML generation logic).
+    - **Blocked on other issue:** None.
+
+- **Issue 3: Final verification of Education section layout.**
+    - **Description:** Similar to Work Experience, the Education section had formatting issues (Unbekannt placeholders, wrong order). The agent applied parser-side heuristics to fix this. While the last CV showed improvement, the user's main focus shifted to Work Experience. This needs a final check.
+    - **Attempted fixes:** Added parser-side heuristics in  to fix common errors (re-interpreting  as the institution, dropping  lines).
+    - **Next debug checklist:** After fixing Issue 1, generate a new CV and ask the user to verify if the Education section is now acceptable. If not, apply the same deterministic rendering solution proposed for Work Experience.
+    - **Status:** USER VERIFICATION PENDING
+    - **Is recurring issue?** Y
+    - **Should Test frontend/backend/both after fix?** Backend (HTML generation logic).
+    - **Blocked on other issue:** Issue 1.
 
 **In progress Task List**:
-*   None.
+- None.
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks:**
-    *   (P2) Resolve  Technical Debt: Replace the  workaround with a more stable, modern language-detection library.
-*   **Future Tasks:**
-    *   (P0) True Layout Mimicking with OCR/Vision.
-    *   (P2) CV Style Code Database: Implement a feature to save and apply CV styles.
-    *   (P2) Richer Company Deep Dive: Enhance the web scraper to gather company mission/vision.
-    *   (P3) Refactor : Break down the monolithic file into smaller, single-responsibility modules.
+    *   (P1) Resolve  Technical Debt: Replace the  workaround.
+*   **Future Tasks (Backlog):**
+    *   (P0) True Layout Mimicking with OCR/Vision: The user's ultimate goal for CV generation.
+    *   (P1) Auditor Learning Centre Intelligence: Enhance the Auditor to de-duplicate questions and use profile data to avoid asking what it already knows (e.g., MS Office vs. EDV Kenntnisse).
+    *   (P2) Add Language & Proficiency to Manual Profile: Allow users to specify their language skills directly in their main profile, not just search profiles.
+    *   (P2) Implement External CV Pipeline: Build an alternative CV rendering engine using Reactive Resume, PDFMake, and Paged.js as an optional, advanced feature.
+    *   (P2) Comprehensive Profile from Uploaded CVs: Build a feature for the LLM to read all uploaded CVs and consolidate them into a single, comprehensive user profile.
+    *   (P3) Refactor .
 
 **Completed work in this session**
-- **Fixed Third-Language Generation:** Resolved a critical regression where documents for French jobs were generated in English. The agent implemented a robust  function with an ABSOLUTE TRANSLATION MODE and added a regression test to lock in the behavior.
-- **Fixed Windows File Path Issue:** Solved a file-opening bug on Windows caused by unsafe characters (e.g., trailing dots) in folder paths by improving the sanitization logic in .
-- **Improved User Feedback on Errors:** Added error handling to the frontend () and backend () to display specific error messages to the user if a file fails to open.
-- **Corrected Language Confirmation Flow:** Ensured the third-language confirmation dialog is triggered by the main Generate Documents button.
-
-**Earlier issues found/mentioned but not fixed**
-*   None that are not already tracked in the pending issue list.
-
-**Known issue recurrence from previous fork**
-*   **CV Generation Quality:** This remains the core recurring problem. While significant progress was made on language enforcement, the localization of static UI elements (left column) is still outstanding. The issue status is **IN PROGRESS**.
+- **CV Content Source:** Ensured the CV generator correctly uses the user's Manual Profile as the primary data source.
+- **CV Style Persona Renaming:** Renamed the confusing Mimic my CV / Use my manually input profile persona to Uploaded CV in the UI to clarify its role as a *style* reference, not a *content* source.
+- **Labeled Prompt Data:** Modified the Thinker prompt to send profile data (experiences, education) as clearly labeled text blocks instead of raw JSON, to help the AI better understand the fields.
+- **Deep Auto Dive Logic:** Wired the Deep Auto Dive Mode from the UI to the backend, so the Detective feature is automatically triggered based on job compatibility score, as configured by the user.
+- **UI for Detective:** Added UI controls for Deep Auto Dive mode and synchronized the Detective Deep Dive Level setting across the AI Models and Job Hunting panels.
+- **Language Detection:** Improved language detection by adding a confidence score and German-specific heuristics to the LLM-based detector, making the third-language confirmation dialog smarter.
+- **CV Layout Fixes:**
+    - Removed the duplicate Name/Title block from the main CV column.
+    - Applied several parser-side heuristics to  to partially fix layout issues in the Education section.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-*   **Frameworks:** Electron, React
-*   **Languages:** TypeScript, Node.js
-*   **File Handling:** Path sanitization for cross-platform compatibility (Windows).
-*   **Testing:** Regression testing using a -based test harness to prevent recurring bugs.
-*   **Communication:** Frontend-backend communication via Electron's IPC channels.
+- **Frameworks:** Electron, React
+- **Languages:** TypeScript
+- **Core Problem:** The fundamental challenge is the fragility of using an LLM to generate free-form text that must then be reverse-engineered (parsed) into a strict HTML structure. This approach is prone to errors when the LLM deviates even slightly from the expected format.
 
 **key DB schema**
-*   : Objects in this array have a  property that needs to be rendered in the CV.
+- **user_profile:** Stores profile data. The  field ('manual', 'linkedin') is critical for selecting the right content.
+- **ai_models:** Configures AI team members like Thinker and Detective. Contains  and the new .
+- **settings:** Global app settings, including .
 
 **changes in tech stack**
-*   No changes in this session.
+- None.
 
 **All files of reference**
-*   : Heavily modified to fix language enforcement and path sanitization. The target for the next fix (left column localization).
-*   : Modified to improve user-facing logic for confirmation and error handling.
-*   : Modified to provide better error feedback.
-*   : Updated with a new regression test for the third-language fix.
+- : The most heavily modified file. It contains the CV generation logic, prompt building, and the problematic  layout parser.
+- : UI panel for configuring the Detective/deep dive feature.
+- : UI for editing the user's Manual Profile.
+- : UI for configuring the Thinker AI, including the renamed CV Style Persona.
 
 **Areas that need refactoring**:
-*    is a large, monolithic file that is a prime candidate for future refactoring to improve maintainability.
+- The  function in  is overly complex and fragile. It's filled with heuristics to patch up malformed LLM output. This entire approach should be replaced with a deterministic rendering method that iterates over the structured profile data directly.
 
 **key api endpoints**
-*   IPC Channel: 
-*   IPC Channel: 
-*   IPC Channel: 
+- IPC : Triggers document generation.
+- IPC : Detects job ad language.
+- IPC  / : Manages global settings like .
 
 **Critical Info for New Agent**
-*   The primary goal is now to fix the remaining visual and content bugs in the generated CV.
-*   **Your immediate priority (P0) is Issue #1:** Localize the hardcoded labels in the CV's left column to match the document's target language.
-*   After fixing the left column, proceed to **User Verification (P1) for Issue #2:** Guide the user to confirm that the work experience spacing and education details field are rendered correctly.
-*   **Always run the test suite (doc_core tests: ALL PASSED)** after making changes to  to ensure the critical language enforcement logic does not regress.
-
-**documents and test reports created in this job**
-*   None.
+The user is highly focused on CV quality and is frustrated by the inconsistent layout of the Work Experience section. The current method of parsing free-text from the LLM is the root cause and has proven unreliable despite multiple patches. **Do not continue patching the parser.** The next step must be to refactor the CV generation to be deterministic. For the Work Experience and Education sections, iterate directly over the structured data from  and  within , rendering each field into a hard-coded HTML structure. This will permanently fix the layout issues and make the system robust.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User:**  (Status: Completed - User confirms language fix works and agent explained tests will prevent regressions).
-2.  **User:**  (Status: Completed - This led to the final successful fix).
-3.  **User:**  (Status: Completed - User reported a regression).
-4.  **User:**  (Status: **Pending** - This is the next P0 issue).
-5.  **User:**  (Status: Completed).
-6.  **User:**  (Status: Completed - Part of the debugging process).
-7.  **User:**  (Status: Completed - User confirms the Windows path fix).
-8.  **User:**  (Status: Completed - User provided error for the path bug).
-9.  **User:**  (Status: Completed - Part of debugging).
-10. **User:**  (Status: Completed - Part of debugging).
+1.  **User:** Provided a full CV output showing the layout is still very messy and pointed out a duplicate header. (Status: Addressed - Duplicate header removed).
+2.  **Agent:** Explained the duplicate header is removed and asked for verification. (Status: Pending - User has not responded to this specific fix).
+3.  **User:** Expressed frustration with the CV layout, stating it's not improving and the Thinker seems to misunderstand the fields. Requested labels for each field in the Manual Profile UI. (Status: Addressed - Agent explained labels are present in the prompt now, not the UI).
+4.  **User:** Clarified they don't see labels in the Manual Profile UI itself. (Status: Addressed - Agent explained the UI already has labels above inputs, and the new labels are internal to the prompt).
+5.  **User:** Pointed out Education section is good now, but Work Experience is still messy. (Status: Addressed - Agent acknowledged the issue).
+6.  **User:** Said do what it needs to be done, make it stricter regarding the Work Experience formatting. (Status: In Progress - The agent's next action should be a structural fix).
+7.  **User:** Provided a full CV output showing messy formatting again. (Status: Addressed - Agent acknowledged and implemented a fix by removing duplicate header).
+8.  **User:** Provided a specific, desired layout for work experience entries. (Status: Addressed - Agent attempted to implement this via parser changes).
+9.  **User:** Pointed out a mistake in the agent's understanding of the desired layout. (Status: Addressed - Agent corrected the implementation).
+10. **User:** Stated the layout is still messed up and provided a screenshot, also noting the latest entry should be on top. (Status: Addressed - Agent implemented sorting and re-ordering).
 
 **Project Health Check:**
-*   **Runnable:** Yes.
-*   **Broken:** No. The application is stable and the main functional blockers have been resolved. Remaining work involves localization and style verification.
+- **Runnable:** Yes.
+- **Broken:** The core CV generation feature is highly unreliable in its layout formatting, leading to significant user dissatisfaction. It is a critical bug.
 
 **3rd Party Integrations**
-*   **Puppeteer:** Used for generating PDFs from HTML.
-*   **LLM Integration:** An abstracted  function.
-*   **franc-min:** Used for language detection via .
+- **Puppeteer:** Used for converting generated HTML to PDF.
+- **LLM Integration:** Abstracted via a  function.
+- **franc-min:** Used as a fallback for language detection.
 
 **Testing status**
-*   **Testing agent used after significant changes:** NO
-*   **Troubleshoot agent used after agent stuck in loop:** NO
-*   **Test files created:** None (one was updated).
-*   **Known regressions:** A previous fix for the left column localization caused a major regression and was rolled back. The agent needs to re-implement this fix carefully.
+- **Testing agent used after significant changes:** NO
+- **Troubleshoot agent used after agent stuck in loop:** NO
+- **Test files created:** None.
+- **Known regressions:** CV layout formatting remains a persistent, recurring issue.
 
 **Credentials to test flow:**
-*   N/A
+- N/A.
 
 **What agent forgot to execute**
-*   The agent did not resolve the issue of the untranslated left column in the CV, which the user reported before the final language fix was confirmed. This should be the next task.
-*   The agent has not yet circled back to get user verification for the Work Experience spacing and Education Details rendering, which were pending from the previous fork.</analysis>
+- The agent has repeatedly tried to fix the CV layout by patching the LLM prompt and the free-text parser. It has failed to recognize that this approach is fundamentally flawed and has not moved to a more robust, deterministic rendering solution, which is the necessary next step to solve the user's core problem.</analysis>

@@ -956,313 +956,158 @@ export function generateCVHTML(
   const persona = (cvStylePersona || 'Classic').toLowerCase();
   const isMimicPersona = persona.includes('mimic'); // internal flag for "Use my manually input profile" style
 
-  // Multi-language labels for section headers
+  // 1. Parsing JSON content from AI (New Deterministic Engine)
+  let rewritten: { summary?: string; experiences?: Record<string, string>; educations?: Record<string, string> } = {};
+  try {
+     const jsonClean = content.trim().replace(/^```json\s*/i, '').replace(/\s*```$/, '');
+     if (jsonClean.startsWith('{')) {
+       rewritten = JSON.parse(jsonClean);
+     }
+  } catch (e) {
+     console.error('Failed to parse CV JSON content:', e);
+  }
+
+  // Multi-language labels
   const labels: Record<string, Record<string, string>> = {
     GERMAN: { summary: 'Berufsprofil', experience: 'Berufserfahrung', education: 'Ausbildung', skills: 'Kenntnisse', certifications: 'Zertifizierungen', languages: 'Sprachkenntnisse', present: 'Heute' },
     ENGLISH: { summary: 'Professional Summary', experience: 'Work Experience', education: 'Education', skills: 'Skills', certifications: 'Certifications', languages: 'Languages', present: 'Present' },
-    FRENCH: { summary: 'Profil Professionnel', experience: 'Expérience', education: 'Formation', skills: 'Compétences', certifications: 'Certifications', languages: 'Langues', present: 'Présent' },
-    SPANISH: { summary: 'Perfil Profesional', experience: 'Experiencia', education: 'Educación', skills: 'Habilidades', certifications: 'Certificaciones', languages: 'Idiomas', present: 'Presente' }
+    FRENCH: { summary: 'Profil Professionnel', experience: 'Expérience Professionnelle', education: 'Formation', skills: 'Compétences', certifications: 'Certifications', languages: 'Langues', present: 'Présent' },
+    SPANISH: { summary: 'Perfil Profesional', experience: 'Experiencia Laboral', education: 'Educación', skills: 'Habilidades', certifications: 'Certificaciones', languages: 'Idiomas', present: 'Presente' },
+    ITALIAN: { summary: 'Profilo Professionale', experience: 'Esperienza Lavorativa', education: 'Istruzione', skills: 'Competenze', certifications: 'Certificazioni', languages: 'Lingue', present: 'Presente' },
+    DUTCH: { summary: 'Professioneel Profiel', experience: 'Werkervaring', education: 'Opleiding', skills: 'Vaardigheden', certifications: 'Certificeringen', languages: 'Talen', present: 'Heden' }
   };
   const l = labels[lang] || labels.ENGLISH;
 
-  // Sidebar label localization (contact, extra qualifications, certifications)
   const sidebarLabels: Record<string, { contact: string; extras: string; certs: string }> = {
-    GERMAN: {
-      contact: 'Kontakt',
-      extras: 'Weitere Qualifikationen',
-      certs: 'Zertifizierungen',
-    },
-    ENGLISH: {
-      contact: 'Contact',
-      extras: 'Additional Qualifications',
-      certs: 'Certifications',
-    },
-    FRENCH: {
-      contact: 'Contact',
-      extras: 'Compétences complémentaires',
-      certs: 'Certifications',
-    },
-    SPANISH: {
-      contact: 'Contacto',
-      extras: 'Competencias adicionales',
-      certs: 'Certificaciones',
-    },
+    GERMAN: { contact: 'Kontakt', extras: 'Weitere Qualifikationen', certs: 'Zertifizierungen' },
+    ENGLISH: { contact: 'Contact', extras: 'Additional Qualifications', certs: 'Certifications' },
+    FRENCH: { contact: 'Contact', extras: 'Compétences', certs: 'Certifications' },
+    SPANISH: { contact: 'Contacto', extras: 'Competencias', certs: 'Certificaciones' },
+    ITALIAN: { contact: 'Contatti', extras: 'Competenze', certs: 'Certificazioni' },
+    DUTCH: { contact: 'Contact', extras: 'Vaardigheden', certs: 'Certificeringen' }
   };
   const sidebar = sidebarLabels[lang] || sidebarLabels.ENGLISH;
-
-  // HTML lang attribute mapping
-  const htmlLangMap: Record<string, string> = {
-    GERMAN: 'de',
-    ENGLISH: 'en',
-    FRENCH: 'fr',
-    SPANISH: 'es',
-  };
+  
+  const htmlLangMap: Record<string, string> = { GERMAN: 'de', ENGLISH: 'en', FRENCH: 'fr', SPANISH: 'es', ITALIAN: 'it', DUTCH: 'nl' };
   const htmlLang = htmlLangMap[lang] || 'en';
 
-  // Normalize JSON-ish CV outputs into readable text when necessary
-  let normalizedContent = normalizeCvText(content, lang === 'GERMAN');
+  const formatContent = (text: string): string => text ? text.replace(/\n/g, '<br>') : '';
 
-  const skills = userProfile?.skills || [];
-  const certifications = userProfile?.licenses || [];
-  const languages = userProfile?.languages || [];
+  // Deterministic Renderers
+  const renderExperiences = () => {
+    const exps = userProfile?.experiences || [];
+    if (!Array.isArray(exps) || exps.length === 0) return '';
+    
+    return exps.map((exp: any, idx: number) => {
+        // Use rewritten description if available, else fallback to profile data
+        const rawDesc = rewritten.experiences?.[String(idx)] || exp.description || exp.details || '';
+        const desc = rawDesc.replace(/^<ul>/, '<ul class="exp-list">'); // add class for styling if needed
 
-  const formatContent = (text: string): string => text.replace(/\n/g, '<br>');
+        const start = exp.startDate || exp.start_date || exp.from || exp.start || '';
+        const end = exp.endDate || exp.end_date || exp.to || exp.end || '';
+        const dateRange = (start) + (end ? ` - ${end}` : '');
+        const finalDate = dateRange.replace(/Present/i, l.present).replace(/Heute/i, l.present);
+        
+        const title = exp.title || exp.role || exp.position || 'N/A';
+        const company = exp.company || exp.employer || 'N/A';
+        const location = exp.location || exp.city || '';
 
-  // Format work experience/education content into grouped entries (for mimic persona)
-  const formatExperienceContent = (text: string): string => {
-    const rawLines = String(text || '')
-      .split(/\r?\n/)
-      .map(l => l.trim())
-      .filter(l => l.length > 0);
-
-    const labelPattern = /^(Unternehmen|Company|Firma|Standort|Location|Ort|Zeitraum|Period|Dates?|Aufgaben|Responsibilities?|Tätigkeiten)\s*:\s*(.+)$/i;
-
-    type LineKind = 'none' | 'title' | 'meta' | 'tasks' | 'body';
-
-    const entries: string[][] = [];
-    let current: string[] = [];
-    let lastKind: LineKind = 'none';
-
-    const flush = () => {
-      if (current.length > 0) {
-        entries.push(current);
-        current = [];
-      }
-    };
-
-    for (let i = 0; i < rawLines.length; i++) {
-      let line = rawLines[i];
-      let l = line.replace(/^\-\s*/, ''); // remove leading dash used as bullet
-      l = l.replace(/^\*+/, '').replace(/\*+$/, ''); // strip simple markdown bold markers
-
-      const m = l.match(labelPattern);
-      if (m) {
-        const rawLabel = m[1];
-        const value = m[2];
-        const labelKey = rawLabel.toLowerCase();
-
-        if (labelKey.startsWith('aufgaben') || labelKey.startsWith('responsibilit') || labelKey.startsWith('tätig')) {
-          current.push(`<div class="exp-row exp-tasks"><span class="exp-label">${rawLabel}:</span><span class="exp-value"> ${value}</span></div>`);
-          lastKind = 'tasks';
-          continue;
-        }
-
-        if (labelKey.startsWith('unternehmen') || labelKey.startsWith('company') || labelKey.startsWith('firma')) {
-          current.push(`<div class="exp-row exp-company">${value}</div>`);
-          lastKind = 'meta';
-          continue;
-        }
-        if (labelKey.startsWith('standort') || labelKey.startsWith('location') || labelKey.startsWith('ort')) {
-          current.push(`<div class="exp-row exp-location">${value}</div>`);
-          lastKind = 'meta';
-          continue;
-        }
-        if (labelKey.startsWith('zeitraum') || labelKey.startsWith('period') || labelKey.startsWith('date')) {
-          current.push(`<div class="exp-row exp-dates">${value}</div>`);
-          lastKind = 'meta';
-          continue;
-        }
-
-        current.push(`<div class="exp-row">${value}</div>`);
-        lastKind = 'meta';
-        continue;
-      }
-
-      const likelyTitle =
-        current.length === 0 && entries.length === 0 && i === 0
-          ? true
-          : (lastKind === 'body' || lastKind === 'tasks') && /[A-ZÄÖÜ][^.!?]{2,80}$/.test(l);
-
-      if (likelyTitle) {
-        flush();
-        current.push(`<div class="exp-role">${l}</div>`);
-        lastKind = 'title';
-      } else {
-        current.push(`<div class="exp-text">${l}</div>`);
-        lastKind = 'body';
-      }
-    }
-
-    flush();
-
-    // Sort entries in reverse chronological order based on the year in the
-    // date line (exp-dates). If parsing fails, keep original order.
-    const entriesWithKey = entries.map((entryLines, idx) => {
-      const dateLine = entryLines.find(l => l.includes('exp-dates')) || '';
-      const yearMatch = dateLine.match(/(19|20)\d{2}/g);
-      // Take the first year as start year; higher = more recent
-      const year = yearMatch && yearMatch.length > 0 ? parseInt(yearMatch[0], 10) : 0;
-      return { lines: entryLines, originalIndex: idx, sortKey: year || 0 };
-    });
-
-    entriesWithKey.sort((a, b) => {
-      if (b.sortKey !== a.sortKey) return b.sortKey - a.sortKey;
-      return a.originalIndex - b.originalIndex;
-    });
-
-    return entriesWithKey
-      .map((entry, idx) => {
-        const entryLines = entry.lines;
-        const dateLines = entryLines.filter(l => l.includes('exp-dates'));
-        let companyLines = entryLines.filter(l => l.includes('exp-company'));
-        const locationLines = entryLines.filter(l => l.includes('exp-location'));
-        const roleLines = entryLines.filter(l => l.includes('exp-role'));
-        let taskLines = entryLines.filter(l => l.includes('exp-tasks'));
-
-        const extractText = (html: string): string => html.replace(/<[^>]+>/g, '').trim();
-        const isUnknownLine = (html: string): boolean => extractText(html).toLowerCase() === 'unbekannt';
-
-        // Heuristic fix: if there is no company line but the FIRST tasks line
-        // looks like it only contains an institution name, treat it as
-        // company and keep the remaining tasks as actual Aufgaben.
-        if (companyLines.length === 0 && taskLines.length > 0) {
-          const firstTask = taskLines[0];
-          let firstText = extractText(firstTask);
-          firstText = firstText.replace(/^Aufgaben:\s*/i, '').replace(/^Responsibilities:\s*/i, '').trim();
-          if (firstText && firstText.length > 0 && !/[\.\!\?]/.test(firstText)) {
-            companyLines = [`<div class="exp-row exp-company">${firstText}</div>`];
-            taskLines = taskLines.slice(1);
-          }
-        }
-
-        // Remove "Unbekannt" placeholder lines from tasks
-        taskLines = taskLines.filter(l => !isUnknownLine(l));
-
-        const used = new Set<string>();
-        const markUsed = (arr: string[]) => arr.forEach(l => used.add(l));
-        markUsed(dateLines);
-        markUsed(companyLines);
-        markUsed(locationLines);
-        markUsed(roleLines);
-        markUsed(taskLines);
-
-        const titleText = roleLines.length ? extractText(roleLines[0]) : '';
-        const companyText = companyLines.length ? extractText(companyLines[0]) : '';
-        const titleCompanyLine = (titleText || companyText)
-          ? `<div class="exp-title-company"><span class="exp-role">${titleText}</span>${companyText ? ' ' : ''}<span class="exp-company">${companyText}</span></div>`
-          : '';
-
-        // Remove "Unbekannt" placeholder lines from any remaining lines
-        const otherLines = entryLines.filter(l => !used.has(l) && !isUnknownLine(l));
-
-        const ordered: string[] = [];
-        ordered.push(...dateLines);
-        if (titleCompanyLine) ordered.push(titleCompanyLine);
-        ordered.push(...locationLines);
-        ordered.push(...taskLines);
-        ordered.push(...otherLines);
-
-        return `<div class="exp-entry${idx > 0 ? ' exp-entry--spaced' : ''}">${ordered.join('')}</div>`;
-      })
-      .join('');
+        return `
+        <div class="exp-entry${idx > 0 ? ' exp-entry--spaced' : ''}">
+           <div class="exp-dates">${finalDate}</div>
+           <div class="exp-title-company">
+             <span class="exp-role">${title}</span>
+             <span class="exp-company"> | ${company}</span>
+           </div>
+           ${location ? `<div class="exp-location">${location}</div>` : ''}
+           <div class="exp-description">${formatContent(desc)}</div>
+        </div>`;
+    }).join('');
   };
 
-  const formatSectionBody = (body: string, title: string): string => {
-    const t = String(title || '').toUpperCase();
-    if (t.includes('BERUFLICHER WERDEGANG') || t.includes('BERUFSERFAHRUNG') || t.includes('WORK EXPERIENCE')) {
-      return formatExperienceContent(body);
-    }
-    if (t.includes('BILDUNG') || t.includes('AUSBILDUNG') || t.includes('EDUCATION')) {
-      return formatExperienceContent(body);
-    }
-    return formatContent(body);
+  const renderEducations = () => {
+    const edus = userProfile?.educations || [];
+    if (!Array.isArray(edus) || edus.length === 0) return '';
+
+    return edus.map((edu: any, idx: number) => {
+        const rawDesc = rewritten.educations?.[String(idx)] || edu.details || edu.description || '';
+        const desc = rawDesc;
+        
+        const start = edu.startYear || edu.start_year || edu.from || edu.start || '';
+        const end = edu.endYear || edu.end_year || edu.to || edu.end || '';
+        const dateRange = (start) + (end ? ` - ${end}` : '');
+        const finalDate = dateRange.replace(/Present/i, l.present).replace(/Heute/i, l.present);
+        
+        const degree = edu.degree || edu.title || edu.program || 'N/A';
+        const school = edu.school || edu.institution || edu.university || 'N/A';
+        const location = edu.location || edu.city || '';
+
+        return `
+        <div class="exp-entry${idx > 0 ? ' exp-entry--spaced' : ''}">
+           <div class="exp-dates">${finalDate}</div>
+           <div class="exp-title-company">
+             <span class="exp-role">${degree}</span>
+             <span class="exp-company"> | ${school}</span>
+           </div>
+           ${location ? `<div class="exp-location">${location}</div>` : ''}
+           <div class="exp-description">${formatContent(desc)}</div>
+        </div>`;
+    }).join('');
   };
 
-  const localizeSectionTitle = (title: string): string => {
-    const upper = String(title || '').toUpperCase().trim();
-    if (lang === 'GERMAN') {
-      if (upper.includes('WORK EXPERIENCE')) return 'BERUFLICHER WERDEGANG';
-      if (upper.includes('BERUFLICHER WERDEGANG') || upper.includes('BERUFSERFAHRUNG')) return 'BERUFLICHER WERDEGANG';
-      if (upper.includes('EDUCATION')) return 'BILDUNG';
-      if (upper.includes('PROFESSIONAL SUMMARY') || upper.includes('SUMMARY') || upper === 'BERUFSPROFIL') return 'BERUFSPROFIL';
-      if (upper.includes('SKILLS')) return 'WEITERE QUALIFIKATIONEN';
-      if (upper.includes('LANGUAGES')) return 'SPRACHKENNTNISSE';
-    }
-    return title;
-  };
-
-  // Special two-column layout for "Mimic my CV" (all languages)
+  const summaryText = rewritten.summary || userProfile?.summary || '';
+  
+  // =========================================================
+  // LAYOUT 1: MIMIC / UPLOADED CV (Two Columns)
+  // =========================================================
   if (isMimicPersona) {
-    const leftSkills = Array.isArray(skills) ? skills : [];
-    const leftCerts = Array.isArray(certifications) ? certifications : [];
-    const leftLangs = Array.isArray(languages) ? languages : [];
+    const leftSkills = userProfile?.skills || [];
+    const leftCerts = userProfile?.licenses || [];
+    const leftLangs = userProfile?.languages || [];
+    
+    // Helper to extract strings from objects if needed
+    const getVal = (x: any) => typeof x === 'string' ? x : (x.name || x.title || JSON.stringify(x));
 
-    // Parse main content into sections based on "##" (or "###") headings (added by the prompt).
-    // Be tolerant of missing space after hashes, e.g. "##Berufsprofil".
-    const sectionRegex = /^#{2,3}\s*(.+)$/gm;
-    const sections: { title: string; body: string }[] = [];
-    let lastIndex = 0;
-    let currentTitle: string | null = null;
-    let match: RegExpExecArray | null;
-
-    while ((match = sectionRegex.exec(normalizedContent)) !== null) {
-      if (currentTitle) {
-        const body = normalizedContent.slice(lastIndex, match.index).trim();
-        if (body) {
-          sections.push({ title: currentTitle, body });
-        }
-      }
-      currentTitle = match[1].trim();
-      lastIndex = sectionRegex.lastIndex;
-    }
-
-    if (currentTitle) {
-      const body = normalizedContent.slice(lastIndex).trim();
-      if (body) {
-        sections.push({ title: currentTitle, body });
-      }
-    }
-
-    // Ensure summary-style section (Berufsprofil/Professional Summary) appears first when present
-    if (sections.length > 1) {
-      const summaryIndex = sections.findIndex(sec => {
-        const t = String(sec.title || '').toUpperCase();
-        return t.includes('BERUFSPROFIL') || t.includes('PROFESSIONAL SUMMARY') || t === 'SUMMARY';
-      });
-      if (summaryIndex > 0) {
-        const [summary] = sections.splice(summaryIndex, 1);
-        sections.unshift(summary);
-      }
-    }
-
-    let mainSectionsHtml: string;
-    if (sections.length === 0) {
-      // Fallback: single summary section with all content
-      mainSectionsHtml = `
-      <div class="main-section">
-        <div class="main-section-title">${l.summary}</div>
-        <div class="main-content">${formatContent(normalizedContent)}</div>
-      </div>`;
-    } else {
-      mainSectionsHtml = sections
-        .map(sec => {
-          const localizedTitle = localizeSectionTitle(sec.title);
-          return `
-      <div class="main-section">
-        <div class="main-section-title">${localizedTitle}</div>
-        <div class="main-content">${formatSectionBody(sec.body, localizedTitle)}</div>
-      </div>`;
-        })
-        .join('\n');
-    }
-
-    const skillsHTML = leftSkills.length
-      ? `<div class="sidebar-section"><div class="sidebar-title">${sidebar.extras}</div><div class="tag-list">${leftSkills
-          .map((s: string) => `<span class="tag">${s}</span>`)
-          .join('')}</div></div>`
+    const skillsHTML = Array.isArray(leftSkills) && leftSkills.length
+      ? `<div class="sidebar-section"><div class="sidebar-title">${sidebar.extras}</div><div class="tag-list">${leftSkills.map(s => `<span class="tag">${getVal(s)}</span>`).join('')}</div></div>`
+      : '';
+      
+    const certsHTML = Array.isArray(leftCerts) && leftCerts.length
+      ? `<div class="sidebar-section"><div class="sidebar-title">${sidebar.certs}</div><div class="tag-list">${leftCerts.map(c => `<span class="tag tag--cert">${getVal(c)}</span>`).join('')}</div></div>`
+      : '';
+      
+    const langsHTML = Array.isArray(leftLangs) && leftLangs.length
+      ? `<div class="sidebar-section"><div class="sidebar-title">${l.languages.toUpperCase()}</div><ul class="list">${leftLangs.map(ln => `<li>${getVal(ln)}</li>`).join('')}</ul></div>`
       : '';
 
-    const certsHTML = leftCerts.length
-      ? `<div class="sidebar-section"><div class="sidebar-title">${sidebar.certs}</div><div class="tag-list">${leftCerts
-          .map((c: string) => `<span class="tag tag--cert">${c}</span>`)
-          .join('')}</div></div>`
-      : '';
-
-    const langsHTML = leftLangs.length
-      ? `<div class="sidebar-section"><div class="sidebar-title">${l.languages}</div><ul class="list">${leftLangs
-          .map((ln: string) => `<li>${ln}</li>`)
-          .join('')}</ul></div>`
-      : '';
+    // Build Main Sections
+    let mainSectionsHtml = '';
+    
+    if (summaryText) {
+        mainSectionsHtml += `
+        <div class="main-section">
+            <div class="main-section-title">${l.summary}</div>
+            <div class="main-content">${formatContent(summaryText)}</div>
+        </div>`;
+    }
+    
+    const expHtml = renderExperiences();
+    if (expHtml) {
+        mainSectionsHtml += `
+        <div class="main-section">
+            <div class="main-section-title">${l.experience}</div>
+            <div class="main-content">${expHtml}</div>
+        </div>`;
+    }
+    
+    const eduHtml = renderEducations();
+    if (eduHtml) {
+        mainSectionsHtml += `
+        <div class="main-section">
+            <div class="main-section-title">${l.education}</div>
+            <div class="main-content">${eduHtml}</div>
+        </div>`;
+    }
 
     return `<!DOCTYPE html>
 <html lang="${htmlLang}">
@@ -1290,9 +1135,6 @@ export function generateCVHTML(
     .list li { margin-bottom: 2px; }
 
     .main { padding-left: 6px; }
-    .main-name { font-size: 26px; font-weight: 700; color: #0077b5; margin-bottom: 2px; }
-    .main-title { font-size: 14px; color: #555; margin-bottom: 10px; }
-    .main-contact { font-size: 11px; color: #666; margin-bottom: 18px; }
     .main-section { margin-bottom: 20px; }
     .main-section-title {
       font-size: 14px;
@@ -1305,16 +1147,16 @@ export function generateCVHTML(
       padding-bottom: 4px;
     }
     .main-content { font-size: 11.5px; line-height: 1.7; }
-    .exp-entry { margin-bottom: 10px; }
-    .exp-entry--spaced { margin-top: 14px; }
-    .exp-title-company { font-size: 12.5px; font-weight: 600; margin-bottom: 0; }
-    .exp-role { font-weight: 600; }
-    .exp-row, .exp-text { font-size: 11px; margin: 0; }
-    .exp-dates { font-size: 10.5px; font-style: italic; color: #666; margin-bottom: 0; }
-    .exp-company { font-weight: 600; }
-    .exp-location { color: #555; margin-bottom: 0; }
-    .exp-label { font-weight: 600; }
-    .exp-value { margin-left: 4px; }
+    .exp-entry { margin-bottom: 12px; }
+    .exp-entry--spaced { margin-top: 16px; }
+    .exp-dates { font-size: 10.5px; font-style: italic; color: #666; margin-bottom: 2px; }
+    .exp-title-company { font-size: 12.5px; margin-bottom: 2px; }
+    .exp-role { font-weight: 700; color: #000; }
+    .exp-company { font-weight: 600; color: #444; }
+    .exp-location { font-size: 11px; color: #666; margin-bottom: 4px; }
+    .exp-description { margin-top: 4px; }
+    .exp-description ul { padding-left: 18px; margin: 0; }
+    .exp-description li { margin-bottom: 2px; }
   </style>
 </head>
 <body>
@@ -1322,7 +1164,7 @@ export function generateCVHTML(
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-name">${userProfile?.name || 'Ihr Name'}</div>
-        <div class="sidebar-title-main">${userProfile?.title || 'Projektmanager'}</div>
+        <div class="sidebar-title-main">${userProfile?.title || ''}</div>
       </div>
       <div class="sidebar-section">
         <div class="sidebar-title">${sidebar.contact}</div>
@@ -1344,17 +1186,23 @@ export function generateCVHTML(
 </html>`;
   }
 
-  // Default single-column layout (existing behaviour) for all other personas
+  // =========================================================
+  // LAYOUT 2: CLASSIC / SINGLE COLUMN
+  // =========================================================
+  const skills = userProfile?.skills || [];
+  const certifications = userProfile?.licenses || [];
+  const getVal = (x: any) => typeof x === 'string' ? x : (x.name || x.title || JSON.stringify(x));
+
   const skillsHTML = Array.isArray(skills) && skills.length
-    ? `<div class="skills-list">${skills.map((s: string) => `<span class="skill-tag">${s}</span>`).join('')}</div>`
+    ? `<div class="section"><div class="section-title">${l.skills}</div><div class="skills-list">${skills.map(s => `<span class="skill-tag">${getVal(s)}</span>`).join('')}</div></div>`
     : '';
 
   const certsHTML = Array.isArray(certifications) && certifications.length
-    ? `<div class="skills-list">${certifications.map((c: string) => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${c}</span>`).join('')}</div>`
+    ? `<div class="section"><div class="section-title">${l.certifications}</div><div class="skills-list">${certifications.map(c => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${getVal(c)}</span>`).join('')}</div></div>`
     : '';
 
   return `<!DOCTYPE html>
-<html lang="${lang === 'GERMAN' ? 'de' : 'en'}">
+<html lang="${htmlLang}">
 <head>
   <meta charset="UTF-8">
   <title>CV - ${userProfile?.name || 'Applicant'}</title>
@@ -1370,6 +1218,14 @@ export function generateCVHTML(
     .content { font-size: 14px; line-height: 1.7; }
     .skills-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .skill-tag { background: #e3f2fd; color: #0077b5; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 500; }
+    
+    .exp-entry { margin-bottom: 15px; }
+    .exp-dates { float: right; color: #666; font-size: 13px; }
+    .exp-role { font-weight: 700; font-size: 15px; }
+    .exp-company { font-weight: 600; color: #444; }
+    .exp-location { font-size: 13px; color: #666; display: inline-block; margin-left: 10px; }
+    .exp-description { margin-top: 5px; }
+    .exp-description ul { margin-left: 20px; }
   </style>
 </head>
 <body>
@@ -1382,26 +1238,32 @@ export function generateCVHTML(
     </div>
   </div>
   
-  <div class="content">
-    ${formatContent(normalizedContent)}
-  </div>
-  
-  ${skillsHTML ? `
-  <div class="section" style="margin-top: 25px;">
-    <div class="section-title">${l.skills}</div>
-    ${skillsHTML}
-  </div>
-  ` : ''}
-  
-  ${certsHTML ? `
+  ${summaryText ? `
   <div class="section">
-    <div class="section-title">${l.certifications}</div>
-    ${certsHTML}
+    <div class="section-title">${l.summary}</div>
+    <div class="content">${formatContent(summaryText)}</div>
+  </div>` : ''}
+
+  <div class="section">
+    <div class="section-title">${l.experience}</div>
+    <div class="content">
+      ${renderExperiences()}
+    </div>
   </div>
-  ` : ''}
+
+  <div class="section">
+    <div class="section-title">${l.education}</div>
+    <div class="content">
+      ${renderEducations()}
+    </div>
+  </div>
+  
+  ${skillsHTML}
+  ${certsHTML}
 </body>
 </html>`;
 }
+
 
 // Save document to file with organized directory structure
 function saveDocumentFile(

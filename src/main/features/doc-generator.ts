@@ -1814,32 +1814,7 @@ RULES:
 3. Every word must be in ${targetLanguage}.
 4. Do NOT invent new experiences or educations.
 5. Do NOT output the full CV. Only the content map.
-`,1. Tailor the CV specifically to the job requirements.
-2. RELEVANCE FILTER: Your profile contains many skills and certifications. You MUST ONLY include those that are DIRECTLY RELEVANT to this specific position. If a skill or certification is not mentioned or implied as useful in the job description, DO NOT include it. A concise, relevant CV is mandatory. DO NOT list more than 5-7 key skills and 3-5 relevant certifications.
-3. Highlight relevant experiences and skills that match the job description - but ONLY from the provided profile.
-3. Use action verbs and quantify achievements where the data exists in the profile
-4. Keep it ATS-friendly (no tables, columns, graphics)
-5. Include contact information at the top (from the profile)
-6. LANGUAGE: You MUST write the entire document in ${targetLanguage}, which is the language of the job description. Every heading and sentence must be in ${targetLanguage} (except occasional untranslatable names or tool names).
-7. For third-language jobs (neither German nor English), if you find yourself starting to answer in English, STOP and rewrite the entire document in ${targetLanguage}.
-8. Structure: Contact Info, Professional Summary, Work Experience, Education, Skills, Certifications, Languages
-
-ATS OPTIMIZATION:
-- IMPORTANT: Include relevant KEYWORDS from the job description in your CV where they genuinely apply
-- If the job mentions specific tools, technologies, or skills that relate to your experience, use those exact terms
-- Mirror the language and terminology used in the job posting where appropriate
-- If there are skill gaps, don't fabricate - instead, emphasize transferable skills and related experience
-
-STRUCTURE:
-- CONTACT: Name, Title, Email, Phone, Location (from profile)
-- PROFESSIONAL SUMMARY: 3-4 sentences summarizing experience relevant to this role. If there's a skill gap, briefly mention eagerness to apply existing skills to new challenges.
-- WORK EXPERIENCE: List jobs from profile with title, company, dates, and bullet points
-- EDUCATION: List each degree from the profile with school, degree, years, and, if the entry has a "details" field (skills, syllabi, thesis, etc.), add 1-3 short bullet points directly under that education item based on that text
-- SKILLS: List skills from profile, prioritizing those matching job requirements
-- CERTIFICATIONS: List certifications from profile
-- LANGUAGES: List languages from profile
-
-OUTPUT FORMAT: Return ONLY the CV content in clean text format. Use clear section headings. NEVER use JSON, code blocks, or curly braces.`,
+`,
 
     motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter.
 

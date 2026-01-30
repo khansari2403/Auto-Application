@@ -1725,8 +1725,6 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
         console.error('[PDF] Auto-PDF conversion error:', pdfErr?.message || pdfErr);
         await logAction(userId, 'pdf', `❌ PDF error: ${pdfErr?.message || 'Unknown'}`, 'failed', false);
       }
-
-    }
     } catch (e: any) {
       console.error(`Error generating ${type.key}:`, e);
       await runQuery('UPDATE job_listings', {

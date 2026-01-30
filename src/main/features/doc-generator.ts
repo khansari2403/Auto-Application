@@ -532,6 +532,47 @@ function normalizeProfileArrays(profile: any): any {
   };
 }
 
+function formatExperiencesForPrompt(experiences: any[]): string {
+  if (!Array.isArray(experiences) || experiences.length === 0) return 'None provided.';
+  return experiences
+    .map((exp, idx) => {
+      if (!exp || typeof exp === 'string') {
+        return `EXPERIENCE #${idx + 1}:\n- Raw: ${String(exp || '').trim()}`;
+      }
+      const title = exp.title || exp.role || exp.position || 'N/A';
+      const company = exp.company || exp.employer || 'N/A';
+      const location = exp.location || exp.city || exp.place || 'N/A';
+      const start = exp.startDate || exp.start_date || exp.from || exp.start || '';
+      const end = exp.endDate || exp.end_date || exp.to || exp.end || '';
+      const period = (start || end) ? `${start || ''}${start || end ? ' - ' : ''}${end || ''}` : 'N/A';
+      const description = exp.description || exp.details || '';
+
+      return `EXPERIENCE #${idx + 1}:\n- Title: ${title}\n- Company: ${company}\n- Location: ${location}\n- Period: ${period}\n- Description: ${description}`;
+    })
+    .join('\n\n');
+}
+
+function formatEducationsForPrompt(educations: any[]): string {
+  if (!Array.isArray(educations) || educations.length === 0) return 'None provided.';
+  return educations
+    .map((edu, idx) => {
+      if (!edu || typeof edu === 'string') {
+        return `EDUCATION #${idx + 1}:\n- Raw: ${String(edu || '').trim()}`;
+      }
+      const degree = edu.degree || edu.title || edu.program || 'N/A';
+      const school = edu.school || edu.institution || edu.university || 'N/A';
+      const location = edu.location || edu.city || edu.place || 'N/A';
+      const start = edu.startYear || edu.start_year || edu.from || edu.start || '';
+      const end = edu.endYear || edu.end_year || edu.to || edu.end || '';
+      const period = (start || end) ? `${start || ''}${start || end ? ' - ' : ''}${end || ''}` : 'N/A';
+      const details = edu.details || edu.description || '';
+
+      return `EDUCATION #${idx + 1}:\n- Degree: ${degree}\n- Institution: ${school}\n- Location: ${location}\n- Period: ${period}\n- Details: ${details}`;
+    })
+    .join('\n\n');
+}
+
+
 function tokenize(text: string): string[] {
   return String(text || '')
     .toLowerCase()

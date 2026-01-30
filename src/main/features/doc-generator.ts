@@ -1828,9 +1828,15 @@ Location: ${userProfile?.location || 'N/A'}
 Email: ${userProfile?.email || 'N/A'}
 Phone: ${userProfile?.phone || 'N/A'}
 Summary: ${userProfile?.summary || 'N/A'}
-Experiences: ${JSON.stringify(userProfile?.experiences || [])}
+
+PROFILE EXPERIENCES (LABELED, DO NOT CONFUSE FIELDS):
+${formatExperiencesForPrompt(userProfile?.experiences || [])}
+
 Skills (ONLY these 5-7): ${JSON.stringify(userProfile?.skills || [])}
-Education: ${JSON.stringify(userProfile?.educations || [])}
+
+PROFILE EDUCATION (LABELED, DO NOT CONFUSE FIELDS):
+${formatEducationsForPrompt(userProfile?.educations || [])}
+
 Certifications (ONLY these 3-5): ${JSON.stringify(userProfile?.licenses || [])}
 Languages: ${JSON.stringify(userProfile?.languages || [])}
 

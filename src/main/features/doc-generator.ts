@@ -1560,52 +1560,94 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
         [`${type.key}_rejection_reason`]: null
       });
 
-      const thinkerPrompt = buildThinkerPrompt({
-        docKey: type.key,
-        docLabel: type.label,
-        userProfile: filteredProfile,
-        job,
-        companyResearch,
-        companyDeepDive,
-        feedback: '',
-        constraints: {
-          motivationLetterWordLimit,
-          coverLetterWordLimit,
-          cvPageLimit,
-          targetLanguage,
-          isGerman,
-          cvStylePersona: thinker?.cv_style_persona || thinker?.cvStylePersona || 'Classic',
-          referenceCvId: thinker?.reference_cv_id || thinker?.referenceCvId || ''
+      let attempts = 0;
+      const maxAttempts = 3;
+      let currentFeedback = '';
+      let isVerified = false;
+      let finalContent = '';
+
+      // Retry Loop for Auditor Verification
+      while (attempts < maxAttempts && !isVerified) {
+        attempts++;
+        
+        if (attempts > 1) {
+           await logAction(userId, 'ai_auditor', `🔄 Auditor requested changes. Retrying (${attempts}/${maxAttempts})...`, 'in_progress');
         }
-      });
 
-      const rawContent = await callAI(thinker, thinkerPrompt);
-      if (!rawContent || String(rawContent).startsWith('Error:')) {
-        throw new Error(rawContent || 'AI returned empty content');
-      }
-
-      let content = rawContent;
-      if (type.key === 'cv') {
-        // For CVs, we expect JSON. Only strip markdown fences.
-        content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
-      } else {
-        content = cleanAIOutput(rawContent);
-        // Safety net: verify the AI body language matches the JD language.
-        // If mismatch, automatically retry ONCE with extra-strict language instructions.
-        content = await ensureTargetLanguageOrRetry({
-          content,
-          lang3,
-          targetLanguage,
-          callAI,
-          thinker,
-          originalPrompt: thinkerPrompt
+        const thinkerPrompt = buildThinkerPrompt({
+          docKey: type.key,
+          docLabel: type.label,
+          userProfile: filteredProfile,
+          job,
+          companyResearch,
+          companyDeepDive,
+          feedback: currentFeedback,
+          constraints: {
+            motivationLetterWordLimit,
+            coverLetterWordLimit,
+            cvPageLimit,
+            targetLanguage,
+            isGerman,
+            cvStylePersona: thinker?.cv_style_persona || thinker?.cvStylePersona || 'Classic',
+            referenceCvId: thinker?.reference_cv_id || thinker?.referenceCvId || ''
+          }
         });
+
+        const rawContent = await callAI(thinker, thinkerPrompt);
+        if (!rawContent || String(rawContent).startsWith('Error:')) {
+          throw new Error(rawContent || 'AI returned empty content');
+        }
+
+        let content = rawContent;
+        if (type.key === 'cv') {
+          // For CVs, we expect JSON. Only strip markdown fences.
+          content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
+        } else {
+          content = cleanAIOutput(rawContent);
+          // Safety net: verify the AI body language matches the JD language.
+          // If mismatch, automatically retry ONCE with extra-strict language instructions.
+          content = await ensureTargetLanguageOrRetry({
+            content,
+            lang3,
+            targetLanguage,
+            callAI,
+            thinker,
+            originalPrompt: thinkerPrompt
+          });
+        }
+
+        // For letters, ensure we never double greeting/closing
+        if (type.key === 'motivation_letter' || type.key === 'cover_letter') {
+          content = stripLetterGreetingAndClosing(content, isGerman);
+        }
+
+        // AUDITOR CHECK
+        if (auditor) {
+            const auditorPrompt = buildVerificationPrompt(type.key, type.label, content, filteredProfile);
+            const auditorResponse = await callAI(auditor, auditorPrompt);
+            
+            if (auditorResponse && auditorResponse.includes("VERIFIED")) {
+                isVerified = true;
+                finalContent = content;
+                await logAction(userId, 'ai_auditor', `✅ Auditor approved ${type.label}`, 'info');
+            } else {
+                const reason = auditorResponse ? auditorResponse.replace("FABRICATION DETECTED:", "").trim() : "Unknown verification error";
+                currentFeedback = reason;
+                
+                if (attempts === maxAttempts) {
+                    finalContent = content;
+                    await logAction(userId, 'ai_auditor', `⚠️ Auditor validation failed after ${maxAttempts} attempts. Saving best effort.`, 'warning');
+                }
+            }
+        } else {
+            // No auditor configured, skip verification
+            isVerified = true;
+            finalContent = content;
+        }
       }
 
-      // For letters, ensure we never double greeting/closing
-      if (type.key === 'motivation_letter' || type.key === 'cover_letter') {
-        content = stripLetterGreetingAndClosing(content, isGerman);
-      }
+      let content = finalContent;
+      if (!content) throw new Error("Failed to generate content after Auditor checks.");
 
       await logAction(userId, 'ai_thinker', `✅ ${type.label} generated successfully`, 'completed', true);
 
@@ -1684,6 +1726,7 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
         await logAction(userId, 'pdf', `❌ PDF error: ${pdfErr?.message || 'Unknown'}`, 'failed', false);
       }
 
+    }
     } catch (e: any) {
       console.error(`Error generating ${type.key}:`, e);
       await runQuery('UPDATE job_listings', {

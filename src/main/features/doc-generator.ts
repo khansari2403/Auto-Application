@@ -1337,8 +1337,6 @@ export function generateCVHTML(
       ${certsHTML}
     </aside>
     <main class="main">
-      <div class="main-name">${userProfile?.name || 'Ihr Name'}</div>
-      <div class="main-title">${userProfile?.title || ''}</div>
       ${mainSectionsHtml}
     </main>
   </div>

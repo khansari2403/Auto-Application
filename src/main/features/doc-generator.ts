@@ -1000,23 +1000,33 @@ export function generateCVHTML(
   const sortDesc = (a: any, b: any) => {
     const getYear = (d: string | number) => {
       if (!d) return 0;
-      const m = String(d).match(/\d{4}/);
+      // Match 4 digits (19xx or 20xx) to avoid matching days/months
+      const m = String(d).match(/(?:19|20)\d{2}/);
       return m ? parseInt(m[0], 10) : 0;
     };
-    const isPresent = (d: string | number) => /present|heute|now|current|bis heute/i.test(String(d || ''));
+    // Enhanced present detection including "Seit", "Since", "Ongoing"
+    const isPresent = (d: string | number) => /present|heute|now|current|bis heute|seit|since|ongoing|laufend/i.test(String(d || ''));
     
     // Compare end dates first
     const endA = a.endDate || a.end_date || a.to || a.end || a.endYear || a.end_year || '';
     const endB = b.endDate || b.end_date || b.to || b.end || b.endYear || b.end_year || '';
     
-    if (isPresent(endA) && !isPresent(endB)) return -1;
-    if (!isPresent(endA) && isPresent(endB)) return 1;
-    if (isPresent(endA) && isPresent(endB)) return 0;
+    const presentA = isPresent(endA);
+    const presentB = isPresent(endB);
+
+    if (presentA && !presentB) return -1; // A is present (newer), comes first
+    if (!presentA && presentB) return 1;  // B is present (newer), comes first
+    if (presentA && presentB) {
+        // Both present: Compare start dates (Newest start first)
+        const startA = a.startDate || a.start_date || a.from || a.start || a.startYear || a.start_year || '';
+        const startB = b.startDate || b.start_date || b.from || b.start || b.startYear || b.start_year || '';
+        return getYear(startB) - getYear(startA);
+    }
     
     const yearEndA = getYear(endA);
     const yearEndB = getYear(endB);
     
-    if (yearEndA !== yearEndB) return yearEndB - yearEndA;
+    if (yearEndA !== yearEndB) return yearEndB - yearEndA; // Higher year (newer) first
     
     // If end years same, compare start years
     const startA = a.startDate || a.start_date || a.from || a.start || a.startYear || a.start_year || '';

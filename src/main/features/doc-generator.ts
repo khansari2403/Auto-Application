@@ -1096,16 +1096,16 @@ export function generateCVHTML(
 
   const formatContent = (text: string): string => text ? text.replace(/\n/g, '<br>') : '';
 
-  // Clean date strings: replace ] with - if present, and any other common mis-OCR chars
+  // Clean date strings: Remove ANY non-standard date characters (keep digits, letters, dot, hyphen, space)
   const cleanDate = (d: string | number | undefined): string => {
     if (!d) return '';
     let s = String(d).trim();
-    // Replace ] with -
-    s = s.replace(/\]/g, '-');
-    // Replace . with -
-    s = s.replace(/\./g, '-');
-    // Replace / with -
-    s = s.replace(/\//g, '-');
+    // Replace typical OCR garbage (], }, |, etc) with hyphen
+    s = s.replace(/[\]\}\)|\[\{\(]/g, '-');
+    // Replace standard separators with hyphen for consistency
+    s = s.replace(/[\.\/]/g, '-');
+    // Remove double hyphens
+    s = s.replace(/-+/g, '-');
     return s;
   };
 

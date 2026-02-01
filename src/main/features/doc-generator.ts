@@ -1417,6 +1417,7 @@ export function generateCVHTML(
 </body>
 </html>`;
 }
+}
 
 
 // Save document to file with organized directory structure

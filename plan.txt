@@ -1,0 +1,423 @@
+
+// 202: }).filter...;
+// 203: }
+// 204: }
+
+// Line 189: } else if (...) {
+// 190: try {
+// 196: } catch {
+// 203: } (close catch)
+// 204: } (close else if)
+
+// So lines 187-204 are balanced.
+// 187: if (...) { -> +1.
+// 189: } else if (...) { -> +1 (net).
+// 204: } -> -1.
+
+// So at 205, balance should be same as 186.
+// `robust_trace.py` said 180 mimic: 2.
+// So 186 is 2.
+// 205 is 2.
+
+// 210: const getLangVal = ... => { -> 3.
+// 214: }; -> 2.
+
+// 268 return: 2.
+// `return \`...` (template).
+// 343: `</html>\`;`
+// 344: `  }` -> 1.
+
+// So after `isMimicPersona` block (344), balance is 1.
+// This is correct (inside generateCVHTML).
+
+// Line 349: const skills ...
+// Line 361: return ... (template).
+// 421: </html>`;
+// 422: } -> 0.
+
+// So `new_generate_cv_v3.ts` SEEMS balanced. End: 0.
+// Why did `doc-generator.ts` fail with "Unexpected export"?
+// And why did `robust_check.py` output 1?
+// `robust_check.py` removed regex `/[^/\n]+/[gimsuy]*`.
+// `new_generate_cv_v3.ts` has regexes:
+// 16: `/^```json\s*/i` -> removed.
+// 16: `/\s*```$/` -> removed.
+// 48: `/\n/g` -> removed.
+// 53: `/\]/g` -> removed.
+// 1003: Match 4 digits. `/(?:19|20)\d{2}/` -> removed?
+// 1008: `/present|heute.../i` -> removed?
+// 199: `/^(.*?)\s*\((.*?)\)$/` -> removed?
+
+// Maybe one of them wasn't removed correctly?
+// Or maybe `robust_check.py` had a bug.
+
+// But `doc-generator.ts` FAILED build.
+// `doc-generator.ts` line 1619 `export async function generateCompanyDeepDive`.
+// This implies `generateCVHTML` didn't close.
+// `generateCVHTML` in `doc-generator.ts` ends at line 1419?
+// I used `replace_cv_v3.py`.
+// `final_content = source[:start_idx] + new_content + "\n\n" + source[end_idx:]`
+// `source[end_idx:]` started with `function saveDocumentFile`.
+// `new_content` ended with `}`.
+// So: `} \n\n function saveDocumentFile`.
+
+// Let's verify `doc-generator.ts` around the splice point using `view_file`.
+// We looked at 1415-1430.
+// 1418: </html>`;
+// 1419: }
+// 1420:
+// 1421:
+// 1422: // Save document...
+// 1423: function saveDocumentFile(
+
+// This looks perfectly fine.
+// `generateCVHTML` at 998.
+// `check_pre_func.py` said Bal 3 at 998.
+// This means nesting was 3 BEFORE `generateCVHTML` started.
+// THIS IS THE PROBLEM.
+// `generateCVHTML` is supposed to be top-level (exported).
+// If balance is 3, it's nested inside something else.
+
+// Previous functions:
+// `normalizeCvText` (936-989?).
+// `generateDocumentHTML` (716-929?).
+// `stripLetterGreetingAndClosing` (350-386?).
+// `validateAndFixCVLanguage` (307-348?).
+// `ensureTargetLanguageOrRetry` (182-304?).
+// `cleanAIOutput` (146-177?).
+// `buildVerificationPrompt` (118-143?).
+// `getProfileByThinkerSource` (65-113?).
+// `getDocsDir` (60).
+// `getOrganizedDocsDir` (37-57).
+// `getBaseDocsDir` (13-33).
+
+// `check_pre_func.py` output:
+// Line 1423: function saveDocumentFile( Bal: 3
+// Line 998: export function generateCVHTML( Bal: 3
+
+// So the nesting 3 comes from ABOVE 998.
+// `check_pre_validate.py` output:
+// Line 307: async function validateAndFixCVLanguage( Bal: 2
+// Line 349: Bal: 3
+// Line 350: function stripLetterGreetingAndClosing( ... Bal: 3
+
+// `validateAndFixCVLanguage` (307-348) increased balance by 1?
+// Starts at 2. Ends at 3.
+// Why?
+// 307: `async function ... {` -> 3.
+// 313: `try {` -> 4.
+// 340: `if (fixedRaw ... ) {` -> 5.
+// 342: `}` -> 4.
+// 343: `}` -> 3.
+// 345: `} catch {` -> 3.
+// 347: `}` -> 2.
+// 348: `}` -> 1? (Closing function).
+
+// If it starts at 2 (so function open -> 3).
+// And ends at 3.
+// It means it didn't close?
+// 348 is `}`.
+// My python script output: `Line 349 ... Bal: 3`.
+// Line 348 has `}`. So at end of 348 it decremented?
+// Python script prints AFTER loop over line chars.
+// So if 348 has `}`, it should have decremented.
+// If after 348 Bal is 3 (wait, my script printed Line 349 as Bal 3).
+// Line 349 is empty.
+// So after 348, Bal is 3.
+// Start of 307 was 2.
+// Function open -> 3.
+// Try -> 4.
+// Catch -> 4 (net).
+// Close catch -> 3.
+// Close function -> 2.
+// So it SHOULD return to 2.
+// If it returned to 3, one brace wasn't closed.
+
+// Let's check `validateAndFixCVLanguage` (307-348).
+// 324: `    if (detectedName !== ... ) {`
+// 325: `       console.log...`
+// 340: `       if (fixedRaw ... ) {`
+// 341: `          return ...`
+// 342: `       }`
+// 343: `    }` (Close if at 324).
+// 344: `    return jsonString;`
+// 345: `  } catch (e) {`
+// 347: `  }` (Close catch).
+// 348: `}` (Close function).
+
+// It looks balanced.
+// Why did my script think it increased?
+// `const langMap: ... = { ... };` (Line 320).
+// 320: `{` -> +1.
+// 320: `}` -> -1.
+// Balanced.
+
+// Maybe `check_pre_validate.py` output `Line 307: ... Bal: 2`.
+// Line 307 contains `{`.
+// So BEFORE 307 it was 1?
+// `check_ensure_start.py` said `Line 304: } Bal: 2`.
+// So BEFORE `validateAndFixCVLanguage` (307), balance was 2.
+// This means nesting 2 levels deep.
+
+// We traced back to `ensureTargetLanguageOrRetry` (179).
+// Started at Bal 2.
+// `buildVerificationPrompt` (118).
+// Started at Bal 2.
+// `getProfileByThinkerSource` (65).
+// Started at Bal 2.
+// `getOrganizedDocsDir` (37).
+// Started at Bal 1.
+// `getBaseDocsDir` (13).
+// Started at Bal 1.
+
+// Wait. `getOrganizedDocsDir` (37) started at Bal 1.
+// `getBaseDocsDir` (13) started at Bal 1.
+// Line 1: Imports...
+// Line 13: `const getBaseDocsDir ...`
+// So Balance was 1 at Top Level?
+// Why?
+// Maybe `try { app = require...` at line 8?
+// 8: `try { app = require('electron').app; } catch (e) { app = (global as any).electronApp; }`
+// 8: `try {` -> 1. `} catch {` -> 1. `}` -> 0.
+// Balanced.
+
+// So at line 13, Bal should be 0.
+// But `check_top.py` said:
+// `Line 13: ... Bal: 1`.
+// Line 13 content: `const getBaseDocsDir = () => {`
+// It has `{`. So +1.
+// So output Bal 1 is correct (after line).
+// So start was 0.
+
+// `Line 37: ... Bal: 1`.
+// Line 37 content: `const getOrganizedDocsDir ... => {`
+// { -> +1.
+// Start was 0.
+// Output Bal 1.
+// Correct.
+
+// `Line 57: }; Bal: 2`.
+// Line 57 content: `};`
+// } -> -1.
+// If output is 2, input was 3.
+// Why did input become 3?
+// We suspected Line 40 regex: `/[<>:"/\\|?*]/g`.
+// And Line 46 `};`.
+// `check_top.py` said Line 46 Bal 2.
+// Line 39: `const sanitize ... {` -> Bal 2.
+// So between 39 and 46, Bal stayed 2 (output) -> input 3?
+// Or output 2 means input 3?
+// Line 46: `};` -> -1.
+// If output 2, input 3.
+// Line 39 output 2.
+// So between 39 and 46, balance increased by 1.
+// Line 40 has `[` and `]`. No `{`.
+// But my regex cleaner might be failing on `/[...]`.
+// The regex `/[<>:"/\\|?*]/g` contains a quote `"` inside `[]`.
+// My simple parser sees `"`. Starts string.
+// Eats until next `"`.
+// There is no next `"`.
+// So it eats `}` in line 46?
+// If it eats `}` in line 46, then `}` is NOT counted.
+// So balance does NOT decrease.
+// So Bal remains 2 (from line 39).
+// Then Line 57 `}` decrements to 1.
+// Then Line 60 `getDocsDir ... { ... }` -> Bal 1.
+// Line 65 `getProfile ... {` -> Bal 2.
+
+// SO: The Balance 2/3 persistence is a phantom artifact of my PYTHON PARSER failing on regex with quotes.
+// It does NOT mean the Typescript code is broken there.
+// `doc-generator.ts` is likely valid up to `generateCVHTML` insertion point.
+
+// The REAL issue is `generateCVHTML` insertion.
+// `new_generate_cv_v3.ts` was inserted.
+// We established `new_generate_cv_v3.ts` has Balance 0 (with robust parser).
+// But `replace_cv_v3.py` spliced it.
+// `final_content = source[:start_idx] + new_content + "\n\n" + source[end_idx:]`
+// `start_idx` = 998 (start of old generateCVHTML).
+// `end_idx` = 1423 (start of saveDocumentFile).
+// `new_content` has braces.
+// Old content between 998 and 1423 is replaced.
+// Old content had balanced braces? Yes.
+// New content has balanced braces? Yes (0).
+// So result should be balanced.
+
+// BUT `esbuild` failed with `Unexpected export`.
+// This error usually happens when you are inside a function and try to export.
+// This means `generateCVHTML` did NOT close.
+// This means my "0 balance" conclusion for `new_generate_cv_v3.ts` might be wrong OR `replace_cv_v3.py` missed the closing brace.
+
+// Re-check `replace_cv_v3.py`.
+// `end_idx` found `function saveDocumentFile`.
+// `source[end_idx:]` includes `function saveDocumentFile`.
+// `source[:start_idx]` excludes `generateCVHTML`.
+// `new_content` is `new_generate_cv_v3.ts`.
+// Does `new_generate_cv_v3.ts` have the final `}`?
+// `view_file` showed it ending at 422: `}`.
+// But `view_file` output was truncated? No, it showed 422 lines.
+// And `robust_trace.py` showed End: 0.
+
+// Let's suspect `new_generate_cv_v3.ts` has an extra `{` somewhere that `robust_trace` missed or miscounted.
+// `robust_trace` lines:
+// 190 try start: 4
+// 196 catch: 4
+// 306 try start: 2
+// 379 try start: 1 (Wait, line 379 try start?)
+// Line 379 in `new_generate_cv_v3.ts`:
+// 379: `.exp-entry { margin-bottom: 15px; }`
+// It's CSS inside a string!
+// `robust_trace` counted `{` inside CSS string.
+// My cleaner `clean_line` replaces strings `re.sub(r'`[^`]*`', '``', text)`.
+// But the CSS is inside a backtick string that SPANS LINES.
+// `clean_line` operates line-by-line.
+// It fails to remove multi-line backtick content.
+// So `{` inside CSS is counted!
+// This explains why my script results are garbage.
+
+// CSS `{` are counted.
+// CSS `}` are counted.
+// If CSS is valid, braces balance.
+// `body { ... }` -> { +1, } -1.
+// So even if counted, they balance out.
+// Unless I have unclosed CSS?
+// CSS in `new_generate_cv_v3.ts` looks valid.
+
+// So why did ESBuild fail?
+// Maybe the `replace_cv_v3.py` script logic:
+// `source[:start_idx]` -> includes everything UP TO `export function generateCVHTML`.
+// `new_content` -> starts with `export function generateCVHTML`.
+// `source[end_idx:]` -> starts with `function saveDocumentFile`.
+// Splice looks perfect.
+
+// Maybe `doc-generator.ts` has a BOM or encoding issue? Unlikely.
+
+// Let's try to "fix" the file by appending `}` to `doc-generator.ts` before the failing export?
+// No, that's blind.
+
+// Let's use `check_braces.py` (simple count) on the ACTUAL `doc-generator.ts` AFTER replacement.
+// We established simple count is confusing due to regex.
+// But we can check the *change* in balance around the splice.
+
+// I will re-apply the replacement (since I might have messed up `doc-generator.ts` with my debugging or it is in a bad state).
+// And then check.
+
+// Wait! `validateAndFixCVLanguage` was added *before* `generateCVHTML`.
+// If I use `replace_cv_v3.py`, it uses `start_idx = source.find('export function generateCVHTML(')`.
+// This finds the *current* position.
+// If I added `validate` before it, `start_idx` shifts. That's fine.
+// But `end_idx`?
+// `end_marker = 'function saveDocumentFile('`
+// `end_idx = source.find(end_marker)`
+// This finds the position of saveDocumentFile.
+// Everything between is replaced.
+// Since `validate` is before `generateCVHTML`, it is PRESERVED in `source[:start_idx]`.
+// So `validate` stays.
+
+// Is it possible `new_generate_cv_v3.ts` has a missing brace?
+// I will blindly add `}` at the end of `new_generate_cv_v3.ts` and try to build?
+// If it was balanced, adding `}` makes it unbalanced (negative).
+// If it was +1, adding `}` makes it 0.
+
+// Let's assume the previous `robust_check.py` (which removed regex/strings) was correct and Balance was 1.
+// Balance 1 means we need one `}`.
+// So `new_generate_cv_v3.ts` IS missing a `}`.
+// Where?
+// I checked `isMimicPersona` and `generateCVHTML` ends.
+// Maybe `sortDesc`?
+// Maybe `validateAndFixCVLanguage`? (No that's in doc-generator).
+
+// Let's look at `new_generate_cv_v3.ts` again.
+// Line 187: `if (Array.isArray(rawLangs)) {`
+// 189: `} else if (...) {`
+// 190: `try {`
+// 193: `if (...) {`
+// 195: `}`
+// 196: `} catch {`
+// 203: `}`
+// 204: `}`
+
+// Wait! Line 196 `} catch {`.
+// It closes `try` and opens `catch`.
+// Where does `catch` close?
+// Line 203.
+// Where does `else if` close?
+// Line 204.
+// So `try` block (190) is inside `else if`.
+// `try` (190) ... `catch` (196) ... `}` (203).
+// `else if` (189) ... `}` (204).
+// `if` (187) ... `}` (189 - implicitly by `else`).
+
+// Visually:
+// if (arr) { ... }
+// else if (str) {
+//    try { ... } catch { ... }
+// }
+
+// Looks correct.
+
+// What about `renderExperiences`?
+// 101: `const renderExperiences = () => {`
+// 139: `  };`
+// BUT `map` inside?
+// 112: `return expsWithIdx.map(...) => {`
+// 137: `}`
+// 138: `).join('')`
+// 139: `}`
+
+// What if I missed a brace in the HTML template string?
+// `div` tags don't affect JS balance.
+// `${ ... }` expressions DO.
+// `${finalDate}`
+// `${title}`
+// `${location ? ... : ''}`
+// `${formatContent(desc)}`
+
+// Look at line 135:
+// `${location ? `<div class="exp-location">${location}</div>` : ''}`
+// `${ ... }` -> balanced.
+// `${ ... }` inside -> balanced.
+
+// I suspect the issue might be `sortDesc` function.
+// 57: `const sortDesc = ... => {`
+// 98: `  };`
+// Inside:
+// 61: `getYear = ... => { ... };`
+// 86: `if (...) { ... }`
+// 91: `if (...) return ...;`
+
+// I'll try to just APPEND a `}` to `new_generate_cv_v3.ts` and apply.
+// If it works, great. If not, syntax error.
+
+// Actually, I can check the file `doc-generator.ts` after replacement.
+// If `generateCVHTML` ends with `}` and then `function saveDocumentFile`, it looks closed.
+// But if indent is wrong, maybe I missed it.
+
+// Let's add an extra `}` to `new_generate_cv_v3.ts` and re-run replacement.
+// This is the fastest way to verify "Balance 1" hypothesis.
+
+// Also, re: User's concern about proficiency.
+// My `new_generate_cv_v3.ts` handles it in `getLangVal` and `langsHTML`.
+// 210: `const getLangVal = (x: any) => { ... }`
+// 220: `${leftLangs.map(ln => `<li>${getLangVal(ln)}</li>`)...}`
+// This logic looks correct.
+
+// Re: Language mismatch.
+// I added `validateAndFixCVLanguage`.
+// I need to ensure it's actually called.
+// I modified the CV block to call it.
+// I need to double check if that modification persists after I overwrite `generateCVHTML`.
+// `replace_cv_v3.py` replaces from `generateCVHTML` to `saveDocumentFile`.
+// The CV block is inside `generateTailoredDocs`, which is AFTER `saveDocumentFile`.
+// Wait. `generateTailoredDocs` is at line 1585 (in original).
+// `generateCVHTML` is at 998.
+// So `generateTailoredDocs` is BELOW `generateCVHTML`.
+// My replacement `replace_cv_v3.py` touches `generateCVHTML`.
+// It does NOT touch `generateTailoredDocs`.
+// So my `fix_language_cv.py` changes to `generateTailoredDocs` should be safe/preserved.
+
+// So:
+// 1. Fix brace in `new_generate_cv_v3.ts` (Append `}`).
+// 2. Run `replace_cv_v3.py`.
+// 3. Verify `doc-generator.ts` builds.
+
+// Wait, I should verify `validateAndFixCVLanguage` exists first.

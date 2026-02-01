@@ -1,8 +1,4 @@
 
-// If Line 113 Bal is 2, then `getProfileByThinkerSource` didn't close.
-// It opens at 65.
-// Before 65 it should be 0.
-
 path = '/app/src/main/features/doc-generator.ts'
 with open(path, 'r', encoding='utf-8') as f:
     content = f.read()

@@ -1060,8 +1060,8 @@ export function generateCVHTML(
         const rawDesc = rewritten.experiences?.[String(originalIdx)] || exp.description || exp.details || '';
         const desc = rawDesc.replace(/^<ul>/, '<ul class="exp-list">'); // add class for styling if needed
 
-        const start = exp.startDate || exp.start_date || exp.from || exp.start || '';
-        const end = exp.endDate || exp.end_date || exp.to || exp.end || '';
+        const start = cleanDate(exp.startDate || exp.start_date || exp.from || exp.start || '');
+        const end = cleanDate(exp.endDate || exp.end_date || exp.to || exp.end || '');
         const dateRange = (start) + (end ? ` - ${end}` : '');
         const finalDate = dateRange.replace(/Present/i, l.present).replace(/Heute/i, l.present);
         

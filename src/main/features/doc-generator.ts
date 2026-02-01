@@ -1895,9 +1895,8 @@ LANGUAGE ENFORCEMENT:
 ${languageHardRule}
 
 TASK:
-Rewrite the candidate's professional summary and experience descriptions to perfectly match the target job.
+Rewrite the candidate's professional summary and experience descriptions to match the target job tone, BUT YOU MUST REMAIN FACTUALLY STRICT.
 You are generating VALID JSON data that will be fed into a strict HTML layout engine.
-You are NOT generating the full layout yourself.
 
 OUTPUT FORMAT:
 Return a VALID JSON object with this exact structure:
@@ -1917,12 +1916,12 @@ KEYS:
 - "educations": Keys are the indices matching the order of educations provided.
 - "summary": A tailored professional summary.
 
-RULES:
-1. Return ONLY valid JSON. Do not include markdown code fences (\`\`\`).
-2. The values must be HTML snippets (e.g. <ul><li>...</li></ul>) or plain text.
-3. Every word must be in ${targetLanguage}.
-4. Do NOT invent new experiences or educations.
-5. Do NOT output the full CV. Only the content map.
+RULES - STRICT FIDELITY (CRITICAL):
+1. **DO NOT HALLUCINATE SKILLS**: If the candidate's profile does NOT mention a specific hard skill (e.g., HTML, CSS, SQL, Python, SAP), YOU MUST NOT ADD IT, even if the job title suggests it.
+2. **NO IMPLIED TECHNOLOGIES**: Do not assume "Agile Project Leader" means "Web Developer". Do not assume "Manager" means "Budget Control" unless stated. Stick to the activities described in the input.
+3. **TRANSLATE & POLISH**: Your main job is to translate the content to ${targetLanguage} and make it sound professional/active. Do not invent new tasks.
+4. **FORMAT**: Return ONLY valid JSON. The values must be HTML snippets (e.g. <ul><li>...</li></ul>) or plain text.
+5. **LANGUAGE**: Every word must be in ${targetLanguage}.
 `,
 
     motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter.

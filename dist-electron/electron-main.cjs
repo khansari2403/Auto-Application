@@ -4535,7 +4535,6 @@ async function generateTailoredDocs(job, userId, thinker, auditor, options, call
   }
 }
 function buildThinkerPrompt(args) {
-  var _a, _b, _c, _d, _e, _f, _g, _h;
   const {
     docKey,
     docLabel,
@@ -4651,48 +4650,40 @@ LANGUAGE ENFORCEMENT:
     return `STYLE: Use a classic, professional CV layout similar to a traditional Word document. Clear sections, bullet points, and conservative formatting.`;
   })();
   const prompts = {
-    cv: `You are a strict CV Content Generator. Your ONLY job is to format the candidate's EXISTING profile data into structured JSON.
+    cv: `You are formatting an EXISTING CV into JSON. DO NOT generate new content.
 
-CRITICAL: You are a DATA FORMATTER, NOT a content creator. You MUST use ONLY the exact information from the USER PROFILE below.
+USER PROFILE DATA TO FORMAT:
+${formatExperiencesForPrompt((userProfile == null ? void 0 : userProfile.experiences) || [])}
 
-OUTPUT FORMAT (EXACT JSON STRUCTURE REQUIRED):
+${formatEducationsForPrompt((userProfile == null ? void 0 : userProfile.educations) || [])}
+
+SKILLS: ${JSON.stringify((userProfile == null ? void 0 : userProfile.skills) || [])}
+
+TASK: Convert the above profile data into this EXACT JSON structure:
+
 {
-  "summary": "2-3 sentence professional summary using ONLY profile data",
+  "summary": "Write 2-3 sentences using ONLY the job titles and experiences listed above",
   "experiences": {
-    "0": "<ul><li>Bullet 1 from profile</li><li>Bullet 2 from profile</li></ul>",
-    "1": "<ul><li>Bullets for second experience</li></ul>"
+    "0": "<ul><li>Reword the tasks from EXPERIENCE #1 description</li><li>Another task from EXPERIENCE #1</li></ul>",
+    "1": "<ul><li>Tasks from EXPERIENCE #2</li></ul>"
   },
   "educations": {
-    "0": "<ul><li>Details from profile</li></ul>",
-    "1": "<ul><li>Details for second education</li></ul>"
+    "0": "<ul><li>Reword details from EDUCATION #1</li></ul>",
+    "1": "<ul><li>Details from EDUCATION #2</li></ul>"
   }
 }
 
-IRON-CLAD RULES - VIOLATIONS = IMMEDIATE FAILURE:
+ABSOLUTE RULES:
+1. Create one "experiences" entry for EACH experience listed (0, 1, 2...)
+2. Create one "educations" entry for EACH education listed (0, 1, 2...)
+3. Use ONLY job titles shown above (do NOT change "Project Manager" to "IT Expert")
+4. Use ONLY companies shown above
+5. Use ONLY degrees shown above (do NOT invent "Computer Science" if not listed)
+6. Summary must mention actual job titles from experiences
+7. DO NOT add skills not in the SKILLS list
+8. Write in English
 
-1. **USE ONLY PROFILE DATA**: Every word must come from the USER PROFILE section below. You cannot add anything new.
-
-2. **EXPERIENCES**: 
-   - For EACH experience in the profile (index 0, 1, 2...), create an entry
-   - Use the EXACT job title from profile (e.g., "${((_b = (_a = userProfile == null ? void 0 : userProfile.experiences) == null ? void 0 : _a[0]) == null ? void 0 : _b.title) || "Project Manager"}")
-   - Use the EXACT company from profile (e.g., "${((_d = (_c = userProfile == null ? void 0 : userProfile.experiences) == null ? void 0 : _c[0]) == null ? void 0 : _d.company) || "CompanyName"}")
-   - Describe only tasks/achievements mentioned in the profile description
-   - DO NOT invent tasks like "software development" if profile says "project management"
-
-3. **EDUCATIONS**:
-   - Use EXACT degree from profile (e.g., "${((_f = (_e = userProfile == null ? void 0 : userProfile.educations) == null ? void 0 : _e[0]) == null ? void 0 : _f.degree) || "Bachelor"}")
-   - Use EXACT school from profile (e.g., "${((_h = (_g = userProfile == null ? void 0 : userProfile.educations) == null ? void 0 : _g[0]) == null ? void 0 : _h.school) || "University"}")
-   - DO NOT invent degrees like "Computer Science" if profile says something else
-
-4. **SKILLS IN SUMMARY**: 
-   - Only mention skills from this list: ${JSON.stringify((userProfile == null ? void 0 : userProfile.skills) || [])}
-   - DO NOT add skills like "Java", "Python", "React" if they're not in the list
-
-5. **LANGUAGE**: Write in English. Do not translate.
-
-6. **FORMAT**: Return ONLY the JSON object. No explanations, no markdown fences.
-
-NOW FORMAT THE PROFILE DATA BELOW:
+Return ONLY the JSON object:
 `,
     motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter.
 

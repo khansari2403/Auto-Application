@@ -1363,7 +1363,32 @@ export function generateCVHTML(
   // =========================================================
   const skills = userProfile?.skills || [];
   const certifications = userProfile?.licenses || [];
+  
+  let langs: any[] = [];
+  const rawLangs = userProfile?.languages;
+  if (Array.isArray(rawLangs)) {
+      langs = rawLangs;
+  } else if (typeof rawLangs === 'string') {
+      try {
+          langs = JSON.parse(rawLangs);
+          if (Array.isArray(langs) && typeof langs[0] === 'string') {
+              langs = langs.map(l => ({ language: l, level: '' }));
+          }
+      } catch {
+          langs = rawLangs.split(',').map(s => {
+              const match = s.trim().match(/^(.*?)\s*\((.*?)\)$/);
+              if (match) return { language: match[1], level: match[2] };
+              return { language: s.trim(), level: '' };
+          }).filter(x => x.language);
+      }
+  }
+
   const getVal = (x: any) => typeof x === 'string' ? x : (x.name || x.title || JSON.stringify(x));
+  const getLangVal = (x: any) => {
+      if (typeof x === 'string') return x;
+      if (x.language) return x.level ? `${x.language} (${x.level})` : x.language;
+      return x.name || x.title || JSON.stringify(x);
+  };
 
   const skillsHTML = Array.isArray(skills) && skills.length
     ? `<div class="section"><div class="section-title">${l.skills}</div><div class="skills-list">${skills.map(s => `<span class="skill-tag">${getVal(s)}</span>`).join('')}</div></div>`
@@ -1371,6 +1396,10 @@ export function generateCVHTML(
 
   const certsHTML = Array.isArray(certifications) && certifications.length
     ? `<div class="section"><div class="section-title">${l.certifications}</div><div class="skills-list">${certifications.map(c => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${getVal(c)}</span>`).join('')}</div></div>`
+    : '';
+
+  const langsHTML = Array.isArray(langs) && langs.length
+    ? `<div class="section"><div class="section-title">${l.languages}</div><div class="skills-list">${langs.map(ln => `<span class="skill-tag" style="background: #f5f5f5; color: #333;">${getLangVal(ln)}</span>`).join('')}</div></div>`
     : '';
 
   return `<!DOCTYPE html>

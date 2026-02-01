@@ -3952,17 +3952,17 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
     const leftSkills = (userProfile == null ? void 0 : userProfile.skills) || [];
     const leftCerts = (userProfile == null ? void 0 : userProfile.licenses) || [];
     let leftLangs = [];
-    const rawLangs = userProfile == null ? void 0 : userProfile.languages;
-    if (Array.isArray(rawLangs)) {
-      leftLangs = rawLangs;
-    } else if (typeof rawLangs === "string") {
+    const rawLangs2 = userProfile == null ? void 0 : userProfile.languages;
+    if (Array.isArray(rawLangs2)) {
+      leftLangs = rawLangs2;
+    } else if (typeof rawLangs2 === "string") {
       try {
-        leftLangs = JSON.parse(rawLangs);
+        leftLangs = JSON.parse(rawLangs2);
         if (Array.isArray(leftLangs) && typeof leftLangs[0] === "string") {
           leftLangs = leftLangs.map((l2) => ({ language: l2, level: "" }));
         }
       } catch {
-        leftLangs = rawLangs.split(",").map((s) => {
+        leftLangs = rawLangs2.split(",").map((s) => {
           const match = s.trim().match(/^(.*?)\s*\((.*?)\)$/);
           if (match) return { language: match[1], level: match[2] };
           return { language: s.trim(), level: "" };
@@ -3971,14 +3971,14 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
     }
     const photo = (userProfile == null ? void 0 : userProfile.photo) || "";
     const getVal2 = (x) => typeof x === "string" ? x : x.name || x.title || JSON.stringify(x);
-    const getLangVal = (x) => {
+    const getLangVal2 = (x) => {
       if (typeof x === "string") return x;
       if (x.language) return x.level ? `${x.language} (${x.level})` : x.language;
       return x.name || x.title || JSON.stringify(x);
     };
     const skillsHTML2 = Array.isArray(leftSkills) && leftSkills.length ? `<div class="sidebar-section"><div class="sidebar-title">${sidebar.extras}</div><div class="tag-list">${leftSkills.map((s) => `<span class="tag">${getVal2(s)}</span>`).join("")}</div></div>` : "";
     const certsHTML2 = Array.isArray(leftCerts) && leftCerts.length ? `<div class="sidebar-section"><div class="sidebar-title">${sidebar.certs}</div><div class="tag-list">${leftCerts.map((c) => `<span class="tag tag--cert">${getVal2(c)}</span>`).join("")}</div></div>` : "";
-    const langsHTML = Array.isArray(leftLangs) && leftLangs.length ? `<div class="sidebar-section"><div class="sidebar-title">${l.languages.toUpperCase()}</div><ul class="list">${leftLangs.map((ln) => `<li>${getLangVal(ln)}</li>`).join("")}</ul></div>` : "";
+    const langsHTML2 = Array.isArray(leftLangs) && leftLangs.length ? `<div class="sidebar-section"><div class="sidebar-title">${l.languages.toUpperCase()}</div><ul class="list">${leftLangs.map((ln) => `<li>${getLangVal2(ln)}</li>`).join("")}</ul></div>` : "";
     let mainSectionsHtml = "";
     if (summaryText) {
       mainSectionsHtml += `
@@ -4078,7 +4078,7 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
           ${(userProfile == null ? void 0 : userProfile.location) ? `<span>\u{1F4CD} ${userProfile.location}</span>` : ""}
         </div>
       </div>
-      ${langsHTML}
+      ${langsHTML2}
       ${skillsHTML2}
       ${certsHTML2}
     </aside>
@@ -4091,9 +4091,33 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
   }
   const skills = (userProfile == null ? void 0 : userProfile.skills) || [];
   const certifications = (userProfile == null ? void 0 : userProfile.licenses) || [];
+  let langs = [];
+  const rawLangs = userProfile == null ? void 0 : userProfile.languages;
+  if (Array.isArray(rawLangs)) {
+    langs = rawLangs;
+  } else if (typeof rawLangs === "string") {
+    try {
+      langs = JSON.parse(rawLangs);
+      if (Array.isArray(langs) && typeof langs[0] === "string") {
+        langs = langs.map((l2) => ({ language: l2, level: "" }));
+      }
+    } catch {
+      langs = rawLangs.split(",").map((s) => {
+        const match = s.trim().match(/^(.*?)\s*\((.*?)\)$/);
+        if (match) return { language: match[1], level: match[2] };
+        return { language: s.trim(), level: "" };
+      }).filter((x) => x.language);
+    }
+  }
   const getVal = (x) => typeof x === "string" ? x : x.name || x.title || JSON.stringify(x);
+  const getLangVal = (x) => {
+    if (typeof x === "string") return x;
+    if (x.language) return x.level ? `${x.language} (${x.level})` : x.language;
+    return x.name || x.title || JSON.stringify(x);
+  };
   const skillsHTML = Array.isArray(skills) && skills.length ? `<div class="section"><div class="section-title">${l.skills}</div><div class="skills-list">${skills.map((s) => `<span class="skill-tag">${getVal(s)}</span>`).join("")}</div></div>` : "";
   const certsHTML = Array.isArray(certifications) && certifications.length ? `<div class="section"><div class="section-title">${l.certifications}</div><div class="skills-list">${certifications.map((c) => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${getVal(c)}</span>`).join("")}</div></div>` : "";
+  const langsHTML = Array.isArray(langs) && langs.length ? `<div class="section"><div class="section-title">${l.languages}</div><div class="skills-list">${langs.map((ln) => `<span class="skill-tag" style="background: #f5f5f5; color: #333;">${getLangVal(ln)}</span>`).join("")}</div></div>` : "";
   return `<!DOCTYPE html>
 <html lang="${htmlLang}">
 <head>

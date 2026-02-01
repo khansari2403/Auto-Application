@@ -4524,7 +4524,11 @@ function buildThinkerPrompt(args) {
   const isGerman = constraints.isGerman;
   const cvStylePersona = (constraints.cvStylePersona || "Classic").toString();
   const referenceCvId = constraints.referenceCvId;
-  const languageHardRule = `ABSOLUTE LANGUAGE RULE: Output MUST be 100% in ${targetLanguage}. Do NOT mix languages, except that you may keep original English job titles or technical terms in parentheses AFTER their translation (e.g., "Projektleiter (Project Manager)"). If you output ANY other language outside such parentheses, the document is INVALID.`;
+  const languageHardRule = `ABSOLUTE LANGUAGE RULE: Output MUST be 100% in ${targetLanguage}. 
+  - Every single job description, summary, and detail MUST be in ${targetLanguage}.
+  - If the input profile has English text, YOU MUST TRANSLATE IT TO ${targetLanguage}.
+  - Do NOT mix languages.
+  - Exception: You may keep original English job titles or technical terms (like "Project Manager", "Python", "AWS") but the *sentences describing them* must be in ${targetLanguage}.`;
   const baseContext = `
 ${languageHardRule}
 

@@ -4012,7 +4012,7 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
 <html lang="${htmlLang}">
 <head>
   <meta charset="UTF-8">
-  <title>${lang === "GERMAN" ? "Lebenslauf" : "CV"} - ${(userProfile == null ? void 0 : userProfile.name) || "Bewerber"}</title>
+  <title>${lang === "GERMAN" ? "Lebenslauf" : lang === "FRENCH" ? "CV" : lang === "SPANISH" ? "Curr\xEDculum" : "CV"} - ${(userProfile == null ? void 0 : userProfile.name) || (lang === "GERMAN" ? "Bewerber" : "Applicant")}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }

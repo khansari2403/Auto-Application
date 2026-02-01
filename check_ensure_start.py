@@ -1,8 +1,4 @@
 
-// If Line 304 ends with Bal 2, then `ensureTargetLanguageOrRetry` ended with nesting level 2.
-// It opens at line 179.
-// Before 179 it should be 0.
-
 path = '/app/src/main/features/doc-generator.ts'
 with open(path, 'r', encoding='utf-8') as f:
     content = f.read()

@@ -2276,6 +2276,7 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 8. DO NOT invent company facts not mentioned in the research - if unsure, focus on what's in the job posting
 9. Output ONLY the letter BODY (main paragraphs). DO NOT include a date, recipient address, salutation (like "Dear...") or ANY closing/sign-off (like "Kind regards"). The system template will provide those automatically.
 10. If you include any greeting or closing, it will be treated as an error.
+11. Write in English. Translation to the target language will be handled separately.
 
 HANDLING SKILL GAPS (IMPORTANT):
 - If the candidate's profile doesn't perfectly match all job requirements, DO NOT reject or avoid the task
@@ -2300,11 +2301,10 @@ MUST INCLUDE:
 - At least 1 specific reference to the company (product, service, or value)
 - Smooth transitions between paragraphs
 - Professional but warm tone
-- Proper sign-off with full name
 - If skill gaps exist: Express enthusiasm to learn and adapt
 
 Length: Approximately ${motivationWordLimit} words. This is a formal document.
-LANGUAGE: You MUST write the entire document in ${targetLanguage}, the same language as the job description. Every sentence must be in ${targetLanguage} (except for names or fixed product/tool names).
+LANGUAGE: Write in English. The document will be translated to ${targetLanguage} in a separate step if needed.
 
 Return ONLY the motivation letter BODY (paragraphs). Start directly with the first paragraph and end with the final paragraph. No greeting, no sign-off, no date, no address.`,
 

@@ -565,7 +565,10 @@ function normalizeProfileArrays(profile: any): any {
     if (!field) return [];
     if (Array.isArray(field)) return field;
     if (typeof field === 'string') {
-      try { return JSON.parse(field); } catch { return []; }
+      try { return JSON.parse(field); } catch { 
+        // Fallback for comma-separated strings (backward compatibility)
+        return field.split(',').map(s => s.trim()).filter(Boolean);
+      }
     }
     return [];
   };

@@ -1461,6 +1461,7 @@ export function generateCVHTML(
   
   ${skillsHTML}
   ${certsHTML}
+  ${langsHTML}
 </body>
 </html>`;
 }

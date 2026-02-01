@@ -4177,6 +4177,7 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
   
   ${skillsHTML}
   ${certsHTML}
+  ${langsHTML}
 </body>
 </html>`;
 }

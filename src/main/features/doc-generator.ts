@@ -320,7 +320,7 @@ async function validateAndFixCVLanguage(
     const sampleText = parsed.summary || Object.values(parsed.experiences || {})[0] || '';
     if (!sampleText || sampleText.length < 10) return jsonString;
 
-    const detected = franc(sampleText);
+    const detected = await franc(sampleText);
     const langMap: Record<string, string> = {
       deu: 'GERMAN',
       eng: 'ENGLISH',

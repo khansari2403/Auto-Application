@@ -3255,7 +3255,7 @@ async function validateAndFixCVLanguage(jsonString, targetLanguage, callAI2, thi
     const parsed = JSON.parse(jsonString);
     const sampleText = parsed.summary || Object.values(parsed.experiences || {})[0] || "";
     if (!sampleText || sampleText.length < 10) return jsonString;
-    const detected = (0, import_franc_wrapper.franc)(sampleText);
+    const detected = await (0, import_franc_wrapper.franc)(sampleText);
     const langMap = {
       deu: "GERMAN",
       eng: "ENGLISH",

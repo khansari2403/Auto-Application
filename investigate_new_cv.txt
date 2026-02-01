@@ -1,0 +1,177 @@
+
+// Line 32: `  }` -> closes catch.
+// Line 33: `};` -> closes getBaseDocsDir.
+// So balance should be 0 after line 33.
+
+// Let's re-run trace.
+// Line 13: { -> 1.
+// Line 14: { -> 2.
+// Line 22: { -> 3.
+// Line 24: } -> 2.
+// Line 27: } { -> 2.
+// Line 30: if (...) fs...  (no braces).
+// Line 32: } -> 1.
+// Line 33: } -> 0.
+
+// My script said:
+// Line 13: Bal 1.
+// ...
+// Line 32: } Bal 1. (This matches logic).
+// So after 33, Bal should be 0.
+
+// Wait, my previous output check_top.py didn't print line 33.
+// It jumped to 37.
+// Line 37 starts with Bal 0?
+// Line 37: `const getOrganizedDocsDir ... {` -> Bal 1.
+// My script said: `Line 37 ... Bal: 1`.
+// This is correct.
+
+// Line 39: `const sanitize ... {` -> Bal 2.
+// Line 46: `};` -> Bal 1.
+// My script said `Line 46 ... Bal: 2`.
+// This means before 46 Bal was 3?
+// Where did it increase between 39 and 46?
+// Line 40: `let safe = ...`
+// Line 42: `safe = ...`
+// Line 44: `if (!safe) safe = ...`
+// None of these have `{`.
+
+// Wait! Line 40: `replace(/[<>:"/\\|?*]/g, '_');`
+// regex `/[<>:"/\\|?*]/g` contain `?`.
+// No braces.
+
+// Why did check_top.py say Bal 2 at line 46?
+// Line 39: { -> 2 (assuming start was 1).
+// Line 46: } -> 1.
+// So script saying Bal 2 means it thinks Bal was 3.
+// But start was 1?
+// Line 37 Bal: 1.
+// Line 39 Bal: 2.
+// Why did script output say Bal 2 at Line 39?
+// Line 39: const sanitize = (str: string) => { Bal: 2
+// Correct.
+
+// Line 46: }; Bal: 2
+// This implies NO decrease?
+// Or increase + decrease?
+// `};` has `}`. So -1.
+// If output is 2, input was 3.
+// Where did input become 3?
+
+// Maybe line 44: `if (!safe) safe = 'Unknown';`
+// My dumb parser might not handle something? No.
+
+// Maybe line 40 regex?
+// `/[<>:"/\\|?*]/g`
+// It has quotes inside regex? `"`
+// My parser handles quotes.
+// Does it handle regex literals?
+// No. It treats `/` as potential comment start.
+// `/[...`
+// `/[<` -> not `//` or `/*`.
+// `>:"` -> `"` starts quote!
+// The regex literal is interpreted as starting a string at `"`.
+// And the string ends at the next `"` or never?
+// Regex is `/[<>:"/\\|?*]/g`.
+// Quote starts at `:"`.
+// Next char `/` inside regex might be seen as...
+// Actually, `"` inside regex class `[]` is just a char.
+// But my parser sees `"` and enters string mode.
+// String mode eats everything until next `"`.
+// There is no next `"` in that line.
+// So `in_quote` remains True until... end of file?
+// Or newline?
+// JS strings can't span newlines (mostly, unless backtick).
+// But `"` strings must end on same line.
+// My parser might not handle newline reset for `"` strings.
+// Let's check `check_top.py` logic.
+// `if char == '"' ...`
+// It does NOT reset `in_quote` at newline.
+// It DOES reset `in_comment`.
+// So if `"` is open, it stays open.
+// This is the bug in my checker tool.
+
+// FIX CHECKER: Reset `in_quote` at newline if it's `"` or `'`. (Template literals `` ` `` can span).
+// But wait, the brace mismatch is REAL (the build failed).
+// So I need a reliable checker.
+
+// `new_generate_cv_v3.ts` failed balance check.
+// `find_brace_error.py` said Balance 1.
+// And it showed line 304 `}` having Bal 3.
+// Which means huge nesting.
+
+// Let's assume the regex issue is localized to my python script.
+// But the real Typescript code balance is 1.
+// And `doc-generator.ts` failing at 1619 export means `generateCVHTML` didn't close.
+
+// Let's look at `new_generate_cv_v3.ts` lines 300+.
+// Line 304: `}` Bal 3.
+// Line 344: `}` Bal 2.
+// Line 422: `}` Bal 1.
+// Final Bal 1.
+// This means `generateCVHTML` opened (Bal 1), but never returned to 0.
+// It returned to 1.
+// So we are missing one closing brace `}`.
+
+// Where?
+// Structure:
+// generateCVHTML {
+//   ...
+//   if (isMimicPersona) {
+//      ...
+//      return `...`;
+//   }
+//   ...
+//   return `...`;
+// }
+
+// If `isMimicPersona` block has `}` at 344.
+// And `return ...` at 361.
+// And `}` at 422.
+
+// Is `isMimicPersona` block properly closed?
+// Line 180: `if (isMimicPersona) {`
+// ...
+// Line 344: `  }`
+// If this `}` closes the `if`, then we are back to function scope.
+// Then the rest of code runs.
+// And finally `}` at 422 closes function.
+// So `generateCVHTML` should balance.
+
+// UNLESS `isMimicPersona` block opened more braces than it closed.
+// Let's check inside `isMimicPersona`.
+// `const skillsHTML = ... ? ... : ...;`
+// `const certsHTML = ... ? ... : ...;`
+// `const langsHTML = ... ? ... : ...;` (Line 218?)
+// `return \`<!DOCTYPE html> ... \`;`
+
+// Inside template literal (backticks):
+// `${ ... }` expressions.
+// `${photo ? ... : ''}`
+// `${userProfile?.email ? ... : ''}`
+// `${langsHTML}`
+// `${mainSectionsHtml}`
+
+// Wait. `mainSectionsHtml` creation.
+// Lines 223-241.
+// `if (summaryText) { ... }`
+// `const expHtml = renderExperiences();`
+// `if (expHtml) { ... }`
+// `const eduHtml = renderEducations();`
+// `if (eduHtml) { ... }`
+
+// Let's check `renderExperiences` (Line 101) and `renderEducations` (Line 141).
+// `const renderExperiences = () => { ... }`
+// Ends at 139?
+// Line 139: `  };`
+// `const renderEducations = () => { ... }`
+// Ends at 173?
+// Line 173: `  };`
+
+// If these are correct...
+// What about `sortDesc` at 57?
+// Ends at 97?
+// Line 97: `    return getYear(startB) - getYear(startA);`
+// Line 98: `  };`
+
+// Let's look at `new_generate_cv_v3.ts` lines 95-105.

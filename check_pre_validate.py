@@ -1,12 +1,4 @@
 
-// If Line 998 starts with Balance 3, then it is nested!
-// It should be 0.
-// This means previous functions were not closed.
-// Or previous edits left braces open.
-
-// I added `validateAndFixCVLanguage` at line 307.
-// Let's check balance before that.
-
 path = '/app/src/main/features/doc-generator.ts'
 with open(path, 'r', encoding='utf-8') as f:
     content = f.read()
@@ -62,6 +54,8 @@ for i, line in enumerate(lines):
     in_comment = False
     
     if i == 306:
-        print(f"Line 307 (start validate): {line.strip()} Bal: {balance}")
+        print(f"Line 307: {line.strip()} Bal: {balance}")
     if i == 348:
-        print(f"Line 349 (end validate): {line.strip()} Bal: {balance}")
+        print(f"Line 349: {line.strip()} Bal: {balance}")
+    if i == 349:
+        print(f"Line 350: {line.strip()} Bal: {balance}")

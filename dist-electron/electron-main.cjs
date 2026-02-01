@@ -4108,8 +4108,12 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
   const getVal = (x) => typeof x === "string" ? x : x.name || x.title || JSON.stringify(x);
   const getLangVal = (x) => {
     if (typeof x === "string") return x;
-    if (x.language) return x.level ? `${x.language} (${x.level})` : x.language;
-    return x.name || x.title || JSON.stringify(x);
+    if (x.language || x.name) {
+      const langName = x.language || x.name;
+      const level = x.level || x.proficiency || x.proficiency_level || x.fluency || "";
+      return level ? `${langName} (${level})` : langName;
+    }
+    return x.title || JSON.stringify(x);
   };
   const skillsHTML = Array.isArray(skills) && skills.length ? `<div class="section"><div class="section-title">${l.skills}</div><div class="skills-list">${skills.map((s) => `<span class="skill-tag">${getVal(s)}</span>`).join("")}</div></div>` : "";
   const certsHTML = Array.isArray(certifications) && certifications.length ? `<div class="section"><div class="section-title">${l.certifications}</div><div class="skills-list">${certifications.map((c) => `<span class="skill-tag" style="background: #fff3e0; color: #ef6c00;">${getVal(c)}</span>`).join("")}</div></div>` : "";

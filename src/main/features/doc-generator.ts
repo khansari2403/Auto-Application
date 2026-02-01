@@ -1496,8 +1496,13 @@ export function generateCVHTML(
   const getVal = (x: any) => typeof x === 'string' ? x : (x.name || x.title || JSON.stringify(x));
   const getLangVal = (x: any) => {
       if (typeof x === 'string') return x;
-      if (x.language) return x.level ? `${x.language} (${x.level})` : x.language;
-      return x.name || x.title || JSON.stringify(x);
+      if (x.language || x.name) {
+          const langName = x.language || x.name;
+          // Check multiple possible field names for proficiency level
+          const level = x.level || x.proficiency || x.proficiency_level || x.fluency || '';
+          return level ? `${langName} (${level})` : langName;
+      }
+      return x.title || JSON.stringify(x);
   };
 
   const skillsHTML = Array.isArray(skills) && skills.length

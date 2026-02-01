@@ -3799,6 +3799,28 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
     const jsonClean = content.trim().replace(/^```json\s*/i, "").replace(/\s*```$/, "");
     if (jsonClean.startsWith("{")) {
       rewritten = JSON.parse(jsonClean);
+      const cleanJsonArtifacts = (text) => {
+        if (!text) return text;
+        let cleaned = String(text);
+        cleaned = cleaned.replace(/^\s*\{\s*["']translated_text["']\s*:\s*["'](.+)["']\s*\}\s*$/s, "$1");
+        cleaned = cleaned.replace(/^\s*\{\s*["']translation["']\s*:\s*["'](.+)["']\s*\}\s*$/s, "$1");
+        cleaned = cleaned.replace(/^\s*\{\s*["']text["']\s*:\s*["'](.+)["']\s*\}\s*$/s, "$1");
+        cleaned = cleaned.replace(/\\"/g, '"').replace(/\\'/g, "'");
+        return cleaned.trim();
+      };
+      if (rewritten.summary) {
+        rewritten.summary = cleanJsonArtifacts(rewritten.summary);
+      }
+      if (rewritten.experiences && typeof rewritten.experiences === "object") {
+        for (const key of Object.keys(rewritten.experiences)) {
+          rewritten.experiences[key] = cleanJsonArtifacts(rewritten.experiences[key]);
+        }
+      }
+      if (rewritten.educations && typeof rewritten.educations === "object") {
+        for (const key of Object.keys(rewritten.educations)) {
+          rewritten.educations[key] = cleanJsonArtifacts(rewritten.educations[key]);
+        }
+      }
     }
   } catch (e) {
     console.error("Failed to parse CV JSON content:", e);

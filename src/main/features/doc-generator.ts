@@ -1092,6 +1092,42 @@ export function generateCVHTML(
      const jsonClean = content.trim().replace(/^```json\s*/i, '').replace(/\s*```$/, '');
      if (jsonClean.startsWith('{')) {
        rewritten = JSON.parse(jsonClean);
+       
+       // CRITICAL: Clean JSON artifacts from translated content
+       // The translation step might have left { "translated_text": "..." } artifacts
+       const cleanJsonArtifacts = (text: string): string => {
+         if (!text) return text;
+         let cleaned = String(text);
+         
+         // Remove JSON wrapper patterns
+         cleaned = cleaned.replace(/^\s*\{\s*["']translated_text["']\s*:\s*["'](.+)["']\s*\}\s*$/s, '$1');
+         cleaned = cleaned.replace(/^\s*\{\s*["']translation["']\s*:\s*["'](.+)["']\s*\}\s*$/s, '$1');
+         cleaned = cleaned.replace(/^\s*\{\s*["']text["']\s*:\s*["'](.+)["']\s*\}\s*$/s, '$1');
+         
+         // Unescape quotes
+         cleaned = cleaned.replace(/\\"/g, '"').replace(/\\'/g, "'");
+         
+         return cleaned.trim();
+       };
+       
+       // Clean summary
+       if (rewritten.summary) {
+         rewritten.summary = cleanJsonArtifacts(rewritten.summary);
+       }
+       
+       // Clean all experience descriptions
+       if (rewritten.experiences && typeof rewritten.experiences === 'object') {
+         for (const key of Object.keys(rewritten.experiences)) {
+           rewritten.experiences[key] = cleanJsonArtifacts(rewritten.experiences[key]);
+         }
+       }
+       
+       // Clean all education descriptions
+       if (rewritten.educations && typeof rewritten.educations === 'object') {
+         for (const key of Object.keys(rewritten.educations)) {
+           rewritten.educations[key] = cleanJsonArtifacts(rewritten.educations[key]);
+         }
+       }
      }
   } catch (e) {
      console.error('Failed to parse CV JSON content:', e);

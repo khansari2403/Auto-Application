@@ -2112,15 +2112,7 @@ function buildThinkerPrompt(args: {
   const cvStylePersona = (constraints.cvStylePersona || 'Classic').toString();
   const referenceCvId = constraints.referenceCvId;
 
-  const languageHardRule = `ABSOLUTE LANGUAGE RULE: Output MUST be 100% in ${targetLanguage}. 
-  - Every single job description, summary, and detail MUST be in ${targetLanguage}.
-  - If the input profile has English text, YOU MUST TRANSLATE IT TO ${targetLanguage}.
-  - Do NOT mix languages.
-  - Exception: You may keep original English job titles or technical terms (like "Project Manager", "Python", "AWS") but the *sentences describing them* must be in ${targetLanguage}.`;
-
   const baseContext = `
-${languageHardRule}
-
 CV STYLE PERSONA: ${cvStylePersona}
 ${referenceCvId ? `REFERENCE CV ID: ${referenceCvId} (use section order and headings from the selected reference CV when CV Style Persona is "Uploaded CV").` : ''}
 
@@ -2166,7 +2158,6 @@ IMPORTANT COMPANY ALIGNMENT TASK:
 - You MUST actively use the structured company deep dive above when tailoring the content for this specific company.
 - Reflect Mission & Vision and Culture & Values in how you present the candidate's motivations, profile summary and tone.
 - Reflect Products & Services and Target Customers / Markets in which experiences, achievements and skills you prioritize.
-- Even if the research/deep-dive text itself is in English or another language, EVERY sentence you write in the final document MUST be 100% in ${targetLanguage} (except for proper nouns, product names or tool names).
 
 ${feedback ? `PREVIOUS FEEDBACK FROM AUDITOR: ${feedback}
 Please fix these issues in the new version.` : ''}

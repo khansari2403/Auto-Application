@@ -2320,6 +2320,7 @@ CRITICAL RULES - VIOLATIONS WILL CAUSE REJECTION:
 3. DO NOT use long em-dashes (—), use regular dashes (-) only
 4. DO NOT fabricate or hallucinate information not provided in the profile
 5. Output ONLY the letter body content. DO NOT include a salutation (like "Dear...") or closing (like "Kind regards"). The system will provide these automatically.
+6. Write in English. Translation to the target language will be handled separately.
 
 HANDLING SKILL GAPS:
 - If there are gaps between the job requirements and the candidate's profile, highlight transferable skills
@@ -2333,8 +2334,7 @@ REQUIREMENTS:
 4. Show enthusiasm for the specific role AND for learning/growing
 5. Include a clear call to action
 6. No clichés or AI-sounding phrases
-7. LANGUAGE: You MUST write the entire document in the SAME LANGUAGE as the job description provided above. If the job is in German, write in German. If in English, write in English.
-8. Do NOT include any greeting/salutation or any closing/sign-off. The system template adds those.
+7. Do NOT include any greeting/salutation or any closing/sign-off. The system template adds those.
 
 STRUCTURE:
 - Opening paragraph: state the position and express interest (1-2 sentences)

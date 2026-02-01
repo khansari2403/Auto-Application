@@ -132,13 +132,13 @@ GENERATED CONTENT TO VERIFY:
 ${content.substring(0, 15000)}
 
 CHECK FOR:
-1. Are there any job titles, companies, or dates mentioned in the generated content that are NOT in the user's profile?
-2. Are there any specific achievements or metrics that seem fabricated (not in profile)?
-3. Are there any skills or certifications claimed that are not in the profile?
+1. **HALLUCINATED SKILLS (CRITICAL)**: Did the generated content add specific technologies (HTML, CSS, JavaScript, SQL, Python, etc.) or hard skills that are NOT in the source profile? If yes, REJECT immediately.
+2. **JOB TITLE MISMATCH**: Are there job titles or companies in the generated text that don't match the profile?
+3. **FABRICATED DATES**: Are dates significantly different from the profile?
 
 RESPONSE FORMAT:
-If the content appears accurate to the profile data: "VERIFIED"
-If fabrications are detected: "FABRICATION DETECTED: [list specific fabricated items]"
+If the content is factually accurate to the profile: "VERIFIED"
+If fabrications/hallucinations are detected: "FABRICATION DETECTED: [explain specifically which skills or tasks were invented]"
 Return ONLY the verification status string.`;
 }
 

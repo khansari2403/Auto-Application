@@ -356,13 +356,7 @@ async function validateAndFixCVLanguage(
         
         // If detected language conflicts with target (and target is known)
         if (detectedName !== 'UNKNOWN' && detectedName !== targetLanguage) {
-            // Special case: English detected when target is German -> FIX
-            if (targetLanguage === 'GERMAN' && detectedName === 'ENGLISH') {
-                needsFixing = true;
-                wrongLanguageDetected = detectedName;
-                break;
-            }
-            // General case: any mismatch
+            // General case: any mismatch (e.g. English in German CV, or German in French CV)
             if (detectedName !== targetLanguage) {
                  needsFixing = true;
                  wrongLanguageDetected = detectedName;

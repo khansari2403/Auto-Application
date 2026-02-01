@@ -3283,11 +3283,6 @@ async function validateAndFixCVLanguage(jsonString, targetLanguage, callAI2, thi
       const detected = await (0, import_franc_wrapper.franc)(text);
       const detectedName = langMap[detected] || "UNKNOWN";
       if (detectedName !== "UNKNOWN" && detectedName !== targetLanguage) {
-        if (targetLanguage === "GERMAN" && detectedName === "ENGLISH") {
-          needsFixing = true;
-          wrongLanguageDetected = detectedName;
-          break;
-        }
         if (detectedName !== targetLanguage) {
           needsFixing = true;
           wrongLanguageDetected = detectedName;

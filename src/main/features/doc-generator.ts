@@ -302,6 +302,51 @@ CV TEXT:
   const sanitizedText = String(cleanedSanitized || '').trim();
   return sanitizedText || workingText;
 }
+
+// Helper to fix language in JSON CV
+async function validateAndFixCVLanguage(
+  jsonString: string,
+  targetLanguage: string,
+  callAI: Function,
+  thinker: any
+): Promise<string> {
+  try {
+    const parsed = JSON.parse(jsonString);
+    // Quick heuristic: Check summary language
+    const sampleText = parsed.summary || Object.values(parsed.experiences || {})[0] || '';
+    if (!sampleText || sampleText.length < 10) return jsonString;
+
+    const detected = franc(sampleText);
+    const langMap: Record<string, string> = { deu: 'GERMAN', eng: 'ENGLISH', fra: 'FRENCH', spa: 'SPANISH' };
+    const detectedName = langMap[detected] || 'UNKNOWN';
+
+    // If clearly wrong (e.g. English when we want German)
+    if (detectedName !== 'UNKNOWN' && detectedName !== 'GERMAN' && targetLanguage === 'GERMAN') {
+       console.log(`[Language Fix] Detected ${detectedName} instead of ${targetLanguage}. Fixing...`);
+       
+       const fixPrompt = `You are a professional translator.
+       TARGET LANGUAGE: ${targetLanguage}
+       
+       The following JSON contains CV content that is in the WRONG language.
+       Translate EVERY string value in the JSON object to ${targetLanguage}.
+       Do NOT change the keys or structure.
+       
+       JSON TO TRANSLATE:
+       ${jsonString}
+       
+       Return ONLY the valid translated JSON.`;
+       
+       const fixedRaw = await callAI(thinker, fixPrompt);
+       if (fixedRaw && fixedRaw.trim().startsWith('{')) {
+          return fixedRaw.trim();
+       }
+    }
+    return jsonString;
+  } catch (e) {
+    return jsonString; // Failed to parse or fix, return original
+  }
+}
+
 function stripLetterGreetingAndClosing(text: string, isGerman: boolean): string {
   let out = (text || '').trim();
 

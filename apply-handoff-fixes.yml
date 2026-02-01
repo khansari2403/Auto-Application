@@ -1,0 +1,54 @@
+name: Apply Handoff Fixes
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "yes" to confirm you want to apply fixes'
+        required: true
+        default: 'no'
+
+jobs:
+  apply-fixes:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'yes'
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: refactored
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+    
+    - name: Apply Fixes
+      run: node scripts/apply-fixes.js
+    
+    - name: Check for changes
+      id: verify-changed-files
+      run: |
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "changed=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Commit and Push
+      if: steps.verify-changed-files.outputs.changed == 'true'
+      run: |
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git config --local user.name "github-actions[bot]"
+        git add -A
+        git commit -m "Apply handoff fixes: 3-step pipeline, anti-hallucination, JSON cleaning"
+        git push origin refactored
+    
+    - name: Summary
+      run: |
+        if [ "${{ steps.verify-changed-files.outputs.changed }}" == "true" ]; then
+          echo "✅ Fixes applied successfully!"
+          echo "Changes committed to refactored branch"
+        else
+          echo "ℹ️ No changes made (files may already be up to date)"
+        fi

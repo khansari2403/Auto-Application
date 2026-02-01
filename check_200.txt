@@ -1,0 +1,15 @@
+
+// Line 190: `        try {`
+// Line 196: `        } catch {`
+// Line 203: `        }` (Close catch, wait line 203 not shown).
+// Line 202: `            }).filter(x => x.language);`
+// Line 203: `        }` ?
+
+// Let's assume `try` at 190 is fine.
+// Balance before 190 was 2.
+// 190: { -> 3.
+// 196: } catch { -> 3.
+// 203: } -> 2.
+
+// Line 203 must be `}`.
+// Let's check view_file 200-210.

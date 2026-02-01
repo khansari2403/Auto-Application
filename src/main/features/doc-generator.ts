@@ -2234,41 +2234,48 @@ LANGUAGE ENFORCEMENT:
   })();
 
   const prompts: Record<string, string> = {
-    cv: `You are a strict CV Content Generator focused on ACCURACY and FACTUAL PRECISION.
+    cv: `You are a strict CV Content Generator. Your ONLY job is to format the candidate's EXISTING profile data into structured JSON.
 
-TASK:
-Generate CV content based EXCLUSIVELY on the candidate's profile data provided below.
-You are generating VALID JSON data that will be fed into a strict HTML layout engine.
+CRITICAL: You are a DATA FORMATTER, NOT a content creator. You MUST use ONLY the exact information from the USER PROFILE below.
 
-OUTPUT FORMAT:
-Return a VALID JSON object with this exact structure:
+OUTPUT FORMAT (EXACT JSON STRUCTURE REQUIRED):
 {
-  "summary": "Professional summary tailored to the job...",
+  "summary": "2-3 sentence professional summary using ONLY profile data",
   "experiences": {
-    "0": "<ul><li>Bullet point describing responsibilities and achievements...</li><li>Another bullet...</li></ul>",
-    "1": "..."
+    "0": "<ul><li>Bullet 1 from profile</li><li>Bullet 2 from profile</li></ul>",
+    "1": "<ul><li>Bullets for second experience</li></ul>"
   },
   "educations": {
-    "0": "<ul><li>Details about the degree, focus, or thesis...</li></ul>"
+    "0": "<ul><li>Details from profile</li></ul>",
+    "1": "<ul><li>Details for second education</li></ul>"
   }
 }
 
-KEYS:
-- "experiences": Keys are the indices (0, 1, 2...) matching the order of experiences provided in the prompt.
-- "educations": Keys are the indices matching the order of educations provided.
-- "summary": A concise professional summary (2-3 sentences) highlighting key strengths relevant to the job.
+IRON-CLAD RULES - VIOLATIONS = IMMEDIATE FAILURE:
 
-RULES - ANTI-HALLUCINATION & SOURCE OF TRUTH (CRITICAL):
-1. **ABSOLUTE SOURCE OF TRUTH**: The user's profile provided above is the ONLY source of information. Every fact must come from this profile.
-2. **DO NOT INVENT ANYTHING**: 
-   - NO fabricated job titles (if profile says "Project Manager", DO NOT write "Software Engineer")
-   - NO invented skills (if profile lacks "Java", DO NOT add it)
-   - NO hallucinated companies, dates, or achievements
-   - NO made-up certifications or education details
-3. **TAILOR, DON'T FABRICATE**: You may emphasize experiences most relevant to this job, but you cannot invent new ones.
-4. **FORMAT**: Return ONLY valid JSON. The values must be HTML snippets (e.g. <ul><li>...</li></ul>) or plain text.
-5. **LANGUAGE**: Write in English. Translation will be handled in a separate step.
-6. **FOCUS ON RELEVANCE**: Highlight the most relevant 2-3 achievements per experience that match the job requirements, but all must be from the provided profile.
+1. **USE ONLY PROFILE DATA**: Every word must come from the USER PROFILE section below. You cannot add anything new.
+
+2. **EXPERIENCES**: 
+   - For EACH experience in the profile (index 0, 1, 2...), create an entry
+   - Use the EXACT job title from profile (e.g., "${userProfile?.experiences?.[0]?.title || 'Project Manager'}")
+   - Use the EXACT company from profile (e.g., "${userProfile?.experiences?.[0]?.company || 'CompanyName'}")
+   - Describe only tasks/achievements mentioned in the profile description
+   - DO NOT invent tasks like "software development" if profile says "project management"
+
+3. **EDUCATIONS**:
+   - Use EXACT degree from profile (e.g., "${userProfile?.educations?.[0]?.degree || 'Bachelor'}")
+   - Use EXACT school from profile (e.g., "${userProfile?.educations?.[0]?.school || 'University'}")
+   - DO NOT invent degrees like "Computer Science" if profile says something else
+
+4. **SKILLS IN SUMMARY**: 
+   - Only mention skills from this list: ${JSON.stringify(userProfile?.skills || [])}
+   - DO NOT add skills like "Java", "Python", "React" if they're not in the list
+
+5. **LANGUAGE**: Write in English. Do not translate.
+
+6. **FORMAT**: Return ONLY the JSON object. No explanations, no markdown fences.
+
+NOW FORMAT THE PROFILE DATA BELOW:
 `,
 
     motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter.

@@ -3322,10 +3322,10 @@ function stripLetterGreetingAndClosing(text, isGerman) {
   out = out.replace(/\n\s*[A-Z][A-Za-z\-\s]{2,}\s*$/i, "").trim();
   return out;
 }
-function detectJobLanguage(job) {
+async function detectJobLanguage(job) {
   const raw = `${(job == null ? void 0 : job.job_title) || ""} ${(job == null ? void 0 : job.required_skills) || ""} ${(job == null ? void 0 : job.description) || ""}`.trim();
   const jobText = raw.toLowerCase();
-  let lang3 = (0, import_franc_wrapper.franc)(raw || "");
+  let lang3 = await (0, import_franc_wrapper.franc)(raw || "");
   const iso6393ToLanguageName = {
     deu: "GERMAN",
     eng: "ENGLISH",

@@ -407,13 +407,13 @@ function stripLetterGreetingAndClosing(text: string, isGerman: boolean): string 
   return out;
 }
 
-export function detectJobLanguage(job: any): { isGerman: boolean; targetLanguage: string; lang3: string } {
+export async function detectJobLanguage(job: any): Promise<{ isGerman: boolean; targetLanguage: string; lang3: string }> {
   const raw = `${job?.job_title || ''} ${job?.required_skills || ''} ${job?.description || ''}`.trim();
   const jobText = raw.toLowerCase();
 
   // 1) Baseline language detection via franc (supports many languages)
   // franc returns ISO-639-3 (e.g., deu, eng, fra). If it cannot detect, returns 'und'.
-  let lang3 = franc(raw || '');
+  let lang3 = await franc(raw || '');
   const iso6393ToLanguageName: Record<string, string> = {
     deu: 'GERMAN',
     eng: 'ENGLISH',

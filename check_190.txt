@@ -1,0 +1,18 @@
+
+// Wait, `robust_trace.py` says End: 0.
+// And `robust_check.py` said Balance 1.
+// The difference? `robust_check.py` did not line-by-line clean. `robust_trace.py` did line-by-line.
+// But `robust_trace.py` printed `190 try start: 4`?
+// There is no `try start` at 190 in `new_generate_cv_v3.ts`.
+// Line 190 is inside `isMimicPersona` block?
+// Let's check line 190.
+
+// Also `306 try start: 2`.
+// Also `379 try start: 1`.
+
+// Is my cleaner seeing `try` inside strings?
+// Line 190: `        try {` ?
+// `new_generate_cv_v3.ts` has `try` blocks inside?
+// I thought it didn't. `generateCVHTML` had ONE try block at start.
+
+// Let's inspect `new_generate_cv_v3.ts` around line 190.

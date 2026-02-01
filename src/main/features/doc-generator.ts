@@ -2222,38 +2222,41 @@ LANGUAGE ENFORCEMENT:
   })();
 
   const prompts: Record<string, string> = {
-    cv: `You are a strict CV Translator and Formatter.
-${languageHardRule}
+    cv: `You are a strict CV Content Generator focused on ACCURACY and FACTUAL PRECISION.
 
 TASK:
-Translate the candidate's existing CV content into ${targetLanguage}.
+Generate CV content based EXCLUSIVELY on the candidate's profile data provided below.
 You are generating VALID JSON data that will be fed into a strict HTML layout engine.
 
 OUTPUT FORMAT:
 Return a VALID JSON object with this exact structure:
 {
-  "summary": "Translated professional summary...",
+  "summary": "Professional summary tailored to the job...",
   "experiences": {
-    "0": "<ul><li>Translated bullet point 1...</li><li>Translated bullet point 2...</li></ul>",
+    "0": "<ul><li>Bullet point describing responsibilities and achievements...</li><li>Another bullet...</li></ul>",
     "1": "..."
   },
   "educations": {
-    "0": "<ul><li>Translated details...</li></ul>"
+    "0": "<ul><li>Details about the degree, focus, or thesis...</li></ul>"
   }
 }
 
 KEYS:
 - "experiences": Keys are the indices (0, 1, 2...) matching the order of experiences provided in the prompt.
 - "educations": Keys are the indices matching the order of educations provided.
-- "summary": A tailored professional summary.
+- "summary": A concise professional summary (2-3 sentences) highlighting key strengths relevant to the job.
 
 RULES - ANTI-HALLUCINATION & SOURCE OF TRUTH (CRITICAL):
-1. **SOURCE OF TRUTH**: The user's profile provided above is the absolute truth.
-2. **DO NOT INVENT ROLES**: If the profile says "Project Manager", DO NOT write "Software Developer". If the profile says "Business Admin", DO NOT write "Computer Science".
-3. **DO NOT INVENT SKILLS**: If the profile does not list "Java" or "React", DO NOT add them, even if the job description asks for them.
-4. **TRANSLATION FOCUS**: Your primary job is to TRANSLATE the existing content to ${targetLanguage}. You may polish the phrasing to sound professional, but you must NOT change the core meaning or facts.
-5. **FORMAT**: Return ONLY valid JSON. The values must be HTML snippets (e.g. <ul><li>...</li></ul>) or plain text.
-6. **LANGUAGE**: Every word must be in ${targetLanguage}, except for proper nouns (Company names, specific tool names like "Python", "JIRA", "SAP").
+1. **ABSOLUTE SOURCE OF TRUTH**: The user's profile provided above is the ONLY source of information. Every fact must come from this profile.
+2. **DO NOT INVENT ANYTHING**: 
+   - NO fabricated job titles (if profile says "Project Manager", DO NOT write "Software Engineer")
+   - NO invented skills (if profile lacks "Java", DO NOT add it)
+   - NO hallucinated companies, dates, or achievements
+   - NO made-up certifications or education details
+3. **TAILOR, DON'T FABRICATE**: You may emphasize experiences most relevant to this job, but you cannot invent new ones.
+4. **FORMAT**: Return ONLY valid JSON. The values must be HTML snippets (e.g. <ul><li>...</li></ul>) or plain text.
+5. **LANGUAGE**: Write in English. Translation will be handled in a separate step.
+6. **FOCUS ON RELEVANCE**: Highlight the most relevant 2-3 achievements per experience that match the job requirements, but all must be from the provided profile.
 `,
 
     motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter.

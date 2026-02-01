@@ -1,7 +1,4 @@
 
-// If line 179 Bal is 2, then `buildVerificationPrompt` (which is before it) didn't close properly.
-// `buildVerificationPrompt` is at 118.
-
 path = '/app/src/main/features/doc-generator.ts'
 with open(path, 'r', encoding='utf-8') as f:
     content = f.read()
@@ -58,6 +55,6 @@ for i, line in enumerate(lines):
     in_comment = False
     
     if i == 117:
-        print(f"Line 118 (start buildVer): {line.strip()} Bal: {balance}")
+        print(f"Line 118: {line.strip()} Bal: {balance}")
     if i == 142:
-        print(f"Line 143 (end buildVer): {line.strip()} Bal: {balance}")
+        print(f"Line 143: {line.strip()} Bal: {balance}")

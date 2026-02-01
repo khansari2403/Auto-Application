@@ -3499,11 +3499,17 @@ ${raw.substring(0, 8e3)}`;
       "ingenieur",
       "abschluss",
       "wir suchen",
-      "festanstellung"
+      "festanstellung",
+      "referenznummer",
+      "eintrittstermin",
+      "verg\xFCtung",
+      "arbeitszeit",
+      "befristet"
     ];
     let finalTargetLanguage = targetLanguage;
     let finalLang3 = lang3;
     if (germanSignals.some((k) => jobText.includes(k)) && targetLanguage !== "GERMAN") {
+      console.log("[Language Detect LLM] Overriding LLM to GERMAN due to strong keywords");
       finalTargetLanguage = "GERMAN";
       finalLang3 = "deu";
     }

@@ -574,12 +574,14 @@ export async function determineJobLanguageUsingLLM(
       'kenntnisse', 'erfahrung', 'aufgaben', 'profil', 'wir bieten', 'bewerbung', 'anschreiben', 'lebenslauf',
       'm/w/d', 'ihr profil', 'ihre aufgaben', 'anforderungen', 'qualifikation', 'teamfähigkeit', 'selbständig',
       'unbefristet', 'vollzeit', 'teilzeit', 'standort', 'deutsch',
-      'entwickler', 'ingenieur', 'abschluss', 'wir suchen', 'festanstellung'
+      'entwickler', 'ingenieur', 'abschluss', 'wir suchen', 'festanstellung',
+      'referenznummer', 'eintrittstermin', 'vergütung', 'arbeitszeit', 'befristet'
     ];
 
     let finalTargetLanguage = targetLanguage;
     let finalLang3 = lang3;
     if (germanSignals.some(k => jobText.includes(k)) && targetLanguage !== 'GERMAN') {
+      console.log('[Language Detect LLM] Overriding LLM to GERMAN due to strong keywords');
       finalTargetLanguage = 'GERMAN';
       finalLang3 = 'deu';
     }

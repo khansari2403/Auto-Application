@@ -3253,12 +3253,25 @@ CV TEXT:
 async function validateAndFixCVLanguage(jsonString, targetLanguage, callAI2, thinker) {
   try {
     const parsed = JSON.parse(jsonString);
-    const textsToCheck = [
-      parsed.summary,
-      ...Object.values(parsed.experiences || {}),
-      ...Object.values(parsed.educations || {})
-    ].filter((t) => typeof t === "string" && t.length > 20);
-    if (textsToCheck.length === 0) return jsonString;
+    const textsToCheck = {};
+    if (parsed.summary && typeof parsed.summary === "string" && parsed.summary.length > 20) {
+      textsToCheck["summary"] = parsed.summary;
+    }
+    if (parsed.experiences) {
+      Object.entries(parsed.experiences).forEach(([key, value]) => {
+        if (typeof value === "string" && value.length > 20) {
+          textsToCheck[`exp_${key}`] = value;
+        }
+      });
+    }
+    if (parsed.educations) {
+      Object.entries(parsed.educations).forEach(([key, value]) => {
+        if (typeof value === "string" && value.length > 20) {
+          textsToCheck[`edu_${key}`] = value;
+        }
+      });
+    }
+    if (Object.keys(textsToCheck).length === 0) return jsonString;
     const langMap = {
       deu: "GERMAN",
       eng: "ENGLISH",
@@ -3277,51 +3290,47 @@ async function validateAndFixCVLanguage(jsonString, targetLanguage, callAI2, thi
       jpn: "JAPANESE",
       kor: "KOREAN"
     };
-    let needsFixing = false;
-    let wrongLanguageDetected = "UNKNOWN";
-    for (const text of textsToCheck) {
+    for (const key of Object.keys(textsToCheck)) {
+      const text = textsToCheck[key];
       const detected = await (0, import_franc_wrapper.franc)(text);
       const detectedName = langMap[detected] || "UNKNOWN";
-      if (detectedName !== "UNKNOWN" && detectedName !== targetLanguage) {
-        if (detectedName !== targetLanguage) {
-          needsFixing = true;
-          wrongLanguageDetected = detectedName;
-          break;
-        }
+      let shouldTranslate = false;
+      if (targetLanguage === "GERMAN" && detectedName === "ENGLISH") {
+        shouldTranslate = true;
+      } else if (detectedName !== "UNKNOWN" && detectedName !== targetLanguage) {
+        shouldTranslate = true;
       }
-    }
-    if (needsFixing) {
-      console.log(`[Language Fix] Detected ${wrongLanguageDetected} content instead of ${targetLanguage}. Fixing entire CV...`);
-      const fixPrompt = `You are a professional translator and CV expert.
-       TARGET LANGUAGE: ${targetLanguage}
-       
-       CRITICAL ERROR DETECTED: The CV content below contains sections in the WRONG language (${wrongLanguageDetected}).
-       
-       YOUR TASK:
-       1. Translate EVERY string value in the JSON object to ${targetLanguage}.
-       2. Pay special attention to "experiences" and "summary". If a description is in English, TRANSLATE IT.
-       3. Do NOT translate proper nouns (Company names, specific tool names like "Python", "JIRA").
-       4. Translate job titles ONLY if there is a common equivalent in ${targetLanguage} (e.g. "Software Engineer" -> "Softwareentwickler"), otherwise keep English title in brackets.
-       5. IMPORTANT: Return the FULL JSON structure with all translated fields. Do not omit any items.
-       
-       JSON TO TRANSLATE:
-       ${jsonString}
-       
-       Return ONLY the valid translated JSON.`;
-      const fixedRaw = await callAI2(thinker, fixPrompt);
-      const fixedClean = (fixedRaw || "").replace(/```json/gi, "").replace(/```/g, "").trim();
-      if (fixedClean && fixedClean.startsWith("{")) {
-        try {
-          const fixedParsed = JSON.parse(fixedClean);
-          if (fixedParsed.experiences || fixedParsed.summary) {
-            return fixedClean;
+      if (shouldTranslate) {
+        console.log(`[Language Fix] Translating individual block (${key}) from ${detectedName} to ${targetLanguage}...`);
+        const translatePrompt = `You are a professional translator.
+             TARGET LANGUAGE: ${targetLanguage}
+             
+             Translate the following text to ${targetLanguage}.
+             - Keep the same formatting (bullet points, HTML tags).
+             - Do NOT change the meaning.
+             - Do NOT hallucinate new facts.
+             
+             TEXT TO TRANSLATE:
+             """${text}"""
+             
+             Return ONLY the translated text.`;
+        const translatedRaw = await callAI2(thinker, translatePrompt);
+        let translated = (translatedRaw || "").trim();
+        translated = translated.replace(/^```html/, "").replace(/^```/, "").replace(/```$/, "").trim();
+        if (translated && translated.length > 5) {
+          if (key === "summary") {
+            parsed.summary = translated;
+          } else if (key.startsWith("exp_")) {
+            const expId = key.replace("exp_", "");
+            if (parsed.experiences) parsed.experiences[expId] = translated;
+          } else if (key.startsWith("edu_")) {
+            const eduId = key.replace("edu_", "");
+            if (parsed.educations) parsed.educations[eduId] = translated;
           }
-        } catch (e) {
-          console.error("Language fix returned invalid JSON, falling back to original.");
         }
       }
     }
-    return jsonString;
+    return JSON.stringify(parsed);
   } catch (e) {
     return jsonString;
   }
@@ -3903,7 +3912,7 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
   const cleanDate = (d) => {
     if (!d) return "";
     let s = String(d).trim();
-    s = s.replace(/[\]\}\)|\[\{\(]/g, "-");
+    s = s.replace(/[^a-zA-Z0-9.,\s]/g, "-");
     s = s.replace(/[\.\/]/g, "-");
     s = s.replace(/-+/g, "-");
     return s;
@@ -4649,23 +4658,23 @@ LANGUAGE ENFORCEMENT:
     return `STYLE: Use a classic, professional CV layout similar to a traditional Word document. Clear sections, bullet points, and conservative formatting.`;
   })();
   const prompts = {
-    cv: `You are a professional CV content optimizer.
+    cv: `You are a strict CV Translator and Formatter.
 ${languageHardRule}
 
 TASK:
-Rewrite the candidate's professional summary and experience descriptions to match the target job tone, BUT YOU MUST REMAIN FACTUALLY STRICT.
+Translate the candidate's existing CV content into ${targetLanguage}.
 You are generating VALID JSON data that will be fed into a strict HTML layout engine.
 
 OUTPUT FORMAT:
 Return a VALID JSON object with this exact structure:
 {
-  "summary": "Rewritten professional summary...",
+  "summary": "Translated professional summary...",
   "experiences": {
-    "0": "<ul><li>Rewritten bullet point 1...</li><li>Rewritten bullet point 2...</li></ul>",
+    "0": "<ul><li>Translated bullet point 1...</li><li>Translated bullet point 2...</li></ul>",
     "1": "..."
   },
   "educations": {
-    "0": "<ul><li>Rewritten details...</li></ul>"
+    "0": "<ul><li>Translated details...</li></ul>"
   }
 }
 
@@ -4674,12 +4683,13 @@ KEYS:
 - "educations": Keys are the indices matching the order of educations provided.
 - "summary": A tailored professional summary.
 
-RULES - STRICT FIDELITY (CRITICAL):
-1. **DO NOT HALLUCINATE SKILLS**: If the candidate's profile does NOT mention a specific hard skill (e.g., HTML, CSS, SQL, Python, SAP), YOU MUST NOT ADD IT, even if the job title suggests it.
-2. **NO IMPLIED TECHNOLOGIES**: Do not assume "Agile Project Leader" means "Web Developer". Do not assume "Manager" means "Budget Control" unless stated. Stick to the activities described in the input.
-3. **TRANSLATE & POLISH**: Your main job is to translate the content to ${targetLanguage} and make it sound professional/active. Do not invent new tasks.
-4. **FORMAT**: Return ONLY valid JSON. The values must be HTML snippets (e.g. <ul><li>...</li></ul>) or plain text.
-5. **LANGUAGE**: Every word must be in ${targetLanguage}.
+RULES - ANTI-HALLUCINATION & SOURCE OF TRUTH (CRITICAL):
+1. **SOURCE OF TRUTH**: The user's profile provided above is the absolute truth.
+2. **DO NOT INVENT ROLES**: If the profile says "Project Manager", DO NOT write "Software Developer". If the profile says "Business Admin", DO NOT write "Computer Science".
+3. **DO NOT INVENT SKILLS**: If the profile does not list "Java" or "React", DO NOT add them, even if the job description asks for them.
+4. **TRANSLATION FOCUS**: Your primary job is to TRANSLATE the existing content to ${targetLanguage}. You may polish the phrasing to sound professional, but you must NOT change the core meaning or facts.
+5. **FORMAT**: Return ONLY valid JSON. The values must be HTML snippets (e.g. <ul><li>...</li></ul>) or plain text.
+6. **LANGUAGE**: Every word must be in ${targetLanguage}, except for proper nouns (Company names, specific tool names like "Python", "JIRA", "SAP").
 `,
     motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter.
 

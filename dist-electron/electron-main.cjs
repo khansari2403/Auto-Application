@@ -2833,19 +2833,17 @@ var init_Hunter_engine = __esm({
 // src/main/features/franc-wrapper.cjs
 var require_franc_wrapper = __commonJS({
   "src/main/features/franc-wrapper.cjs"(exports2, module2) {
-    var francLib = require("franc-min");
-    var francFn;
-    if (typeof francLib === "function") {
-      francFn = francLib;
-    } else if (francLib && typeof francLib.franc === "function") {
-      francFn = francLib.franc;
-    } else if (francLib && typeof francLib.default === "function") {
-      francFn = francLib.default;
-    } else {
-      francFn = () => "und";
-    }
     module2.exports = {
-      franc: francFn
+      franc: async (text) => {
+        try {
+          const module3 = await import("franc-min");
+          const fn = module3.default || module3.franc;
+          return fn(text);
+        } catch (e) {
+          console.error("Failed to load franc-min:", e);
+          return "und";
+        }
+      }
     };
   }
 });

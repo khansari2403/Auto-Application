@@ -483,7 +483,7 @@ export async function determineJobLanguageUsingLLM(
 
     const rawResp = await callAI(thinker, prompt);
     if (!rawResp || String(rawResp).startsWith('Error:')) {
-      return detectJobLanguage(job);
+      return await detectJobLanguage(job);
     }
 
     const text = String(rawResp || '').trim();

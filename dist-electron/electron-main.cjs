@@ -3406,7 +3406,7 @@ JOB TEXT:
 ${raw.substring(0, 8e3)}`;
     const rawResp = await callAI2(thinker, prompt);
     if (!rawResp || String(rawResp).startsWith("Error:")) {
-      return detectJobLanguage(job);
+      return await detectJobLanguage(job);
     }
     const text = String(rawResp || "").trim();
     const cleaned = text.replace(/```json/gi, "").replace(/```/g, "").trim();

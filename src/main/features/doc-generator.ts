@@ -345,7 +345,6 @@ async function validateAndFixCVLanguage(
 
     if (Object.keys(textsToCheck).length === 0) return jsonString;
 
-    // Sample up to 5 texts to check language
     const langMap: Record<string, string> = {
       deu: 'GERMAN',
       eng: 'ENGLISH',
@@ -364,9 +363,6 @@ async function validateAndFixCVLanguage(
       jpn: 'JAPANESE',
       kor: 'KOREAN'
     };
-
-    let needsFixing = false;
-    let wrongLanguageDetected = 'UNKNOWN';
 
     // Check each substantial text block
     for (const key of Object.keys(textsToCheck)) {

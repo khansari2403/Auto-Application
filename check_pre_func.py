@@ -1,11 +1,4 @@
 
-// If balance is 4 at 1572, then we are nested 4 levels deep.
-// This means generateCVHTML (or earlier) did NOT close.
-// generateCVHTML opens at 998.
-// Before that, balance should be 0 (top level).
-
-// Let's check balance before generateCVHTML.
-
 path = '/app/src/main/features/doc-generator.ts'
 with open(path, 'r', encoding='utf-8') as f:
     content = f.read()

@@ -1094,8 +1094,8 @@ export function generateCVHTML(
         const rawDesc = rewritten.educations?.[String(originalIdx)] || edu.details || edu.description || '';
         const desc = rawDesc;
         
-        const start = edu.startYear || edu.start_year || edu.from || edu.start || '';
-        const end = edu.endYear || edu.end_year || edu.to || edu.end || '';
+        const start = cleanDate(edu.startYear || edu.start_year || edu.from || edu.start || '');
+        const end = cleanDate(edu.endYear || edu.end_year || edu.to || edu.end || '');
         const dateRange = (start) + (end ? ` - ${end}` : '');
         const finalDate = dateRange.replace(/Present/i, l.present).replace(/Heute/i, l.present);
         

@@ -368,12 +368,16 @@ async function validateAndFixCVLanguage(
     if (needsFixing) {
        console.log(`[Language Fix] Detected ${wrongLanguageDetected} content instead of ${targetLanguage}. Fixing entire CV...`);
        
-       const fixPrompt = `You are a professional translator.
+       const fixPrompt = `You are a professional translator and CV expert.
        TARGET LANGUAGE: ${targetLanguage}
        
-       The following JSON contains CV content that has mixed languages (some parts are in ${wrongLanguageDetected}).
-       Translate EVERY string value in the JSON object to ${targetLanguage}.
-       Do NOT change the keys or structure.
+       CRITICAL ERROR DETECTED: The CV content below contains sections in the WRONG language (${wrongLanguageDetected}).
+       
+       YOUR TASK:
+       1. Translate EVERY string value in the JSON object to ${targetLanguage}.
+       2. Pay special attention to "experiences" and "summary".
+       3. Do NOT translate proper nouns (Company names, specific tool names like "Python", "JIRA").
+       4. Translate job titles ONLY if there is a common equivalent in ${targetLanguage} (e.g. "Software Engineer" -> "Softwareentwickler"), otherwise keep English title in brackets.
        
        JSON TO TRANSLATE:
        ${jsonString}

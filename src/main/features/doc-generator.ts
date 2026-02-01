@@ -1004,6 +1004,10 @@ export function generateCVHTML(
 
   // --- Sorting Helper ---
   const sortDesc = (a: any, b: any) => {
+    // 1. Priority: Currently Working Here (boolean)
+    if (a.current && !b.current) return -1;
+    if (!a.current && b.current) return 1;
+
     const getYear = (d: string | number) => {
       if (!d) return 0;
       // Match 4 digits (19xx or 20xx) to avoid matching days/months
@@ -1022,8 +1026,9 @@ export function generateCVHTML(
 
     if (presentA && !presentB) return -1; // A is present (newer), comes first
     if (!presentA && presentB) return 1;  // B is present (newer), comes first
-    if (presentA && presentB) {
-        // Both present: Compare start dates (Newest start first)
+    
+    // If both are present (either by boolean or string), sort by Start Date Descending
+    if ((a.current && b.current) || (presentA && presentB)) {
         const startA = a.startDate || a.start_date || a.from || a.start || a.startYear || a.start_year || '';
         const startB = b.startDate || b.start_date || b.from || b.start || b.startYear || b.start_year || '';
         return getYear(startB) - getYear(startA);
@@ -1124,11 +1129,38 @@ export function generateCVHTML(
   if (isMimicPersona) {
     const leftSkills = userProfile?.skills || [];
     const leftCerts = userProfile?.licenses || [];
-    const leftLangs = userProfile?.languages || [];
+    
+    // Parse languages (can be CSV string OR JSON array)
+    let leftLangs: any[] = [];
+    const rawLangs = userProfile?.languages;
+    if (Array.isArray(rawLangs)) {
+        leftLangs = rawLangs;
+    } else if (typeof rawLangs === 'string') {
+        try {
+            leftLangs = JSON.parse(rawLangs);
+            // If it's just an array of strings ["Eng", "Ger"], use map to normalize
+            if (Array.isArray(leftLangs) && typeof leftLangs[0] === 'string') {
+                leftLangs = leftLangs.map(l => ({ language: l, level: '' }));
+            }
+        } catch {
+            // CSV fallback
+            leftLangs = rawLangs.split(',').map(s => {
+                const match = s.trim().match(/^(.*?)\s*\((.*?)\)$/);
+                if (match) return { language: match[1], level: match[2] };
+                return { language: s.trim(), level: '' };
+            }).filter(x => x.language);
+        }
+    }
+
     const photo = userProfile?.photo || ''; // Base64 or URL
     
     // Helper to extract strings from objects if needed
     const getVal = (x: any) => typeof x === 'string' ? x : (x.name || x.title || JSON.stringify(x));
+    const getLangVal = (x: any) => {
+        if (typeof x === 'string') return x;
+        if (x.language) return x.level ? `${x.language} (${x.level})` : x.language;
+        return x.name || x.title || JSON.stringify(x);
+    };
 
     const skillsHTML = Array.isArray(leftSkills) && leftSkills.length
       ? `<div class="sidebar-section"><div class="sidebar-title">${sidebar.extras}</div><div class="tag-list">${leftSkills.map(s => `<span class="tag">${getVal(s)}</span>`).join('')}</div></div>`
@@ -1139,7 +1171,7 @@ export function generateCVHTML(
       : '';
       
     const langsHTML = Array.isArray(leftLangs) && leftLangs.length
-      ? `<div class="sidebar-section"><div class="sidebar-title">${l.languages.toUpperCase()}</div><ul class="list">${leftLangs.map(ln => `<li>${getVal(ln)}</li>`).join('')}</ul></div>`
+      ? `<div class="sidebar-section"><div class="sidebar-title">${l.languages.toUpperCase()}</div><ul class="list">${leftLangs.map(ln => `<li>${getLangVal(ln)}</li>`).join('')}</ul></div>`
       : '';
 
     // Build Main Sections

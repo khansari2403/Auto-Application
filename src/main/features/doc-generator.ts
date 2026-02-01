@@ -375,9 +375,10 @@ async function validateAndFixCVLanguage(
        
        YOUR TASK:
        1. Translate EVERY string value in the JSON object to ${targetLanguage}.
-       2. Pay special attention to "experiences" and "summary".
+       2. Pay special attention to "experiences" and "summary". If a description is in English, TRANSLATE IT.
        3. Do NOT translate proper nouns (Company names, specific tool names like "Python", "JIRA").
        4. Translate job titles ONLY if there is a common equivalent in ${targetLanguage} (e.g. "Software Engineer" -> "Softwareentwickler"), otherwise keep English title in brackets.
+       5. IMPORTANT: Return the FULL JSON structure with all translated fields. Do not omit any items.
        
        JSON TO TRANSLATE:
        ${jsonString}
@@ -388,7 +389,15 @@ async function validateAndFixCVLanguage(
        const fixedClean = (fixedRaw || '').replace(/```json/gi, '').replace(/```/g, '').trim();
        
        if (fixedClean && fixedClean.startsWith('{')) {
-          return fixedClean;
+          // Validate the fix: Check if it's actually valid JSON and has keys
+          try {
+             const fixedParsed = JSON.parse(fixedClean);
+             if (fixedParsed.experiences || fixedParsed.summary) {
+                 return fixedClean;
+             }
+          } catch (e) {
+             console.error('Language fix returned invalid JSON, falling back to original.');
+          }
        }
     }
     return jsonString;

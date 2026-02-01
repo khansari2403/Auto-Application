@@ -463,17 +463,17 @@ export async function detectJobLanguage(job: any): Promise<{ isGerman: boolean; 
 
   let targetLanguage = iso6393ToLanguageName[lang3] || 'ENGLISH';
 
-  // 2) Heuristic override for German job ads (kept as a safe fallback for tests and
-  // non-LLM environments). When we have an LLM (Thinker), we prefer the
-  // determineJobLanguageUsingLLM helper instead of this function.
+  // 2) Heuristic override for German job ads
   const germanSignals = [
     'kenntnisse', 'erfahrung', 'aufgaben', 'profil', 'wir bieten', 'bewerbung', 'anschreiben', 'lebenslauf',
     'm/w/d', 'ihr profil', 'ihre aufgaben', 'anforderungen', 'qualifikation', 'teamfähigkeit', 'selbständig',
     'unbefristet', 'vollzeit', 'teilzeit', 'standort', 'deutsch',
-    'entwickler', 'ingenieur', 'abschluss', 'wir suchen', 'festanstellung'
+    'entwickler', 'ingenieur', 'abschluss', 'wir suchen', 'festanstellung',
+    'referenznummer', 'eintrittstermin', 'vergütung', 'arbeitszeit', 'befristet'
   ];
 
   if (germanSignals.some(k => jobText.includes(k))) {
+    console.log('[Language Detect] Forced GERMAN due to keywords');
     lang3 = 'deu';
     targetLanguage = 'GERMAN';
   }

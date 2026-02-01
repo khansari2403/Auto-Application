@@ -3390,9 +3390,15 @@ async function detectJobLanguage(job) {
     "ingenieur",
     "abschluss",
     "wir suchen",
-    "festanstellung"
+    "festanstellung",
+    "referenznummer",
+    "eintrittstermin",
+    "verg\xFCtung",
+    "arbeitszeit",
+    "befristet"
   ];
   if (germanSignals.some((k) => jobText.includes(k))) {
+    console.log("[Language Detect] Forced GERMAN due to keywords");
     lang3 = "deu";
     targetLanguage = "GERMAN";
   }

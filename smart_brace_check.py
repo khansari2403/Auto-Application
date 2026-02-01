@@ -1,7 +1,4 @@
 
-// Check for unbalanced braces in doc-generator.ts, ignoring strings/comments (simple approach)
-// We will track quote state.
-
 path = '/app/src/main/features/doc-generator.ts'
 
 with open(path, 'r', encoding='utf-8') as f:
@@ -10,8 +7,8 @@ with open(path, 'r', encoding='utf-8') as f:
 balance = 0
 in_quote = False
 quote_char = ''
-in_comment = False # single line //
-in_multiline = False # /* */
+in_comment = False
+in_multiline = False
 
 lines = content.split('\n')
 
@@ -20,36 +17,45 @@ for i, line in enumerate(lines):
     while j < len(line):
         char = line[j]
         
-        # Comments
+        # Check start of comment
         if not in_quote and not in_comment and not in_multiline:
             if char == '/' and j+1 < len(line):
                 if line[j+1] == '/':
                     in_comment = True
-                    j += 1
+                    j += 2
+                    continue
                 elif line[j+1] == '*':
                     in_multiline = True
-                    j += 1
+                    j += 2
+                    continue
         
-        elif in_multiline:
+        # Check end of multiline
+        if in_multiline:
             if char == '*' and j+1 < len(line) and line[j+1] == '/':
                 in_multiline = False
-                j += 1
+                j += 2
+                continue
+            j += 1
+            continue
+            
+        if in_comment:
+            j += 1
+            continue
+
+        # Check quotes
+        if char == '"' or char == "'" or char == '`':
+            if not in_quote:
+                in_quote = True
+                quote_char = char
+            elif char == quote_char:
+                # Naive check for escape
+                if j > 0 and line[j-1] == '\\':
+                    pass
+                else:
+                    in_quote = False
         
-        # Quotes
-        if not in_comment and not in_multiline:
-            if char == '"' or char == "'" or char == '`':
-                if not in_quote:
-                    in_quote = True
-                    quote_char = char
-                elif char == quote_char:
-                    # Check for escaped quote? Naive check
-                    if j > 0 and line[j-1] == '\\':
-                        pass # escaped
-                    else:
-                        in_quote = False
-        
-        # Braces
-        if not in_quote and not in_comment and not in_multiline:
+        # Check braces
+        if not in_quote:
             if char == '{':
                 balance += 1
             elif char == '}':
@@ -57,11 +63,9 @@ for i, line in enumerate(lines):
         
         j += 1
     
-    # Reset single line comment
     in_comment = False
     
     if 'export async function generateCompanyDeepDive' in line:
         print(f"Line {i+1}: generateCompanyDeepDive. Balance: {balance}")
-        # if balance != 0: break 
 
 print(f"Final Balance: {balance}")

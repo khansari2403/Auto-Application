@@ -996,6 +996,12 @@ export function generateCVHTML(
 
   const formatContent = (text: string): string => text ? text.replace(/\n/g, '<br>') : '';
 
+  // Clean date strings: replace ] with - if present
+  const cleanDate = (d: string | number | undefined): string => {
+    if (!d) return '';
+    return String(d).replace(/\]/g, '-');
+  };
+
   // --- Sorting Helper ---
   const sortDesc = (a: any, b: any) => {
     const getYear = (d: string | number) => {

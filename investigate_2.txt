@@ -1,0 +1,148 @@
+
+// Line 98: `  };` closes `sortDesc`.
+// `sortDesc` opens at 57.
+// 57: `const sortDesc = (a: any, b: any) => {`
+// Inside:
+// 61: `const getYear ... => {`
+// 65: `    };`
+// 67: `const isPresent ... => ...` (regex, no braces).
+// 75: `const presentA = isPresent(endA);`
+// ...
+// 86: `if ((a.current && b.current) || (presentA && presentB)) {`
+// 89: `    }` (Close if).
+// ...
+// 98: `  };` (Close sortDesc).
+
+// This looks balanced.
+
+// Let's check `try...catch` at 15.
+// 15: `try {`
+// 17: `if ... {`
+// 19: `}`
+// 20: `} catch (e) {`
+// 22: `}` (Close catch).
+// Balanced.
+
+// Let's check `generateCVHTML` opening.
+// 1: `export function generateCVHTML(`...
+// 8: `): string {`
+// Opens at 8.
+
+// So if everything inside is balanced, it should end with `}` at 422.
+// But my script says Final Balance 1.
+// And `trace_early.py` said Line 55 Bal 2.
+// If Line 55 Bal is 2, and Line 8 opened it (Bal 1).
+// Where did it increase to 2?
+// Try/Catch (15-22) increased and decreased back to 1.
+// Labels object (25-32)?
+// 25: `const labels: ... = {` (Bal 2)
+// 32: `  };` (Bal 1).
+// Sidebar Labels (35-42).
+// 35: `const sidebarLabels ... = {` (Bal 2).
+// 42: `  };` (Bal 1).
+// HTML Map (45).
+// 45: `const htmlLangMap ... = { ... };` (Bal 1).
+// cleanDate (51-54).
+// 51: `const cleanDate ... => {` (Bal 2).
+// 52: `if (!d) return '';` (No braces).
+// 54: `  };` (Bal 1).
+
+// So at line 56, Bal should be 1.
+// `trace_early.py` output:
+// Line 55:  Bal: 2.
+// Wait! `trace_early.py` line 55 corresponds to line 56 in file?
+// `if i == 54: print ... line.strip()` (i is 0-indexed).
+// So i=54 is line 55.
+// File content:
+// 51: const cleanDate...
+// 54: };
+// 55: 
+// 56: // --- Sorting Helper ---
+
+// If `trace_early.py` says Bal 2 at line 55 (empty line), then `cleanDate` didn't close?
+// Line 54: `    return String(d).replace(/\]/g, '-');`
+// Line 55: `  };` (Wait, view_file showed line 54 is return, 55 empty?)
+// Let's check view_file again.
+
+// view_file output:
+// 51|  const cleanDate = (d: string | number | undefined): string => {
+// 52|    if (!d) return '';
+// 53|    return String(d).replace(/\]/g, '-');
+// 54|  };
+// 55|
+// 56|  // --- Sorting Helper ---
+
+// Line 54 has `};`.
+// `replace(/\]/g, '-')` has `]`.
+// Is `]` causing issues?
+// In python script: `for char in line`.
+// `]` is not `{` or `}`.
+// So python script should count correctly.
+// Unless my python script `trace_early.py` output was misleading or I misread it.
+
+// `trace_early.py` output:
+// Line 48: ... formatContent ... Bal: 2
+// Line 55:  Bal: 2
+
+// FormatContent is line 48.
+// 48: `const formatContent = (text: string): string => text ? text.replace(/\n/g, '<br>') : '';`
+// No braces! Arrow function expression.
+// So Bal should be 1 (from generateCVHTML).
+// Why did it say Bal 2?
+
+// Previous line:
+// 46: `const htmlLangMap: Record<string, string> = { GERMAN: 'de', ... };`
+// 46: { -> +1. } -> -1. Net 0.
+// So at 47 Bal should be 1.
+
+// Where did it go to 2?
+// Maybe `labels` or `sidebarLabels`?
+// 32: `  };`
+// 42: `  };`
+
+// Let's look at `trace_try_catch.py` (debug_try_catch.py) again.
+// Line 22: `}` Bal: 1.
+// Line 23: Bal: 1.
+// Line 24: `// Multi-language labels` Bal: 1.
+
+// So at line 24, Bal is 1.
+// Labels starts at 25.
+// 25: `const labels ... = {` -> Bal 2.
+// 32: `  };` -> Bal 1.
+
+// Sidebar labels at 35.
+// 35: `const sidebarLabels ... = {` -> Bal 2.
+// 42: `  };` -> Bal 1.
+
+// htmlLangMap at 45.
+// 45: `... = { ... };` -> Bal 1.
+
+// So at 48 (formatContent), Bal should be 1.
+// My script said 2.
+// Why?
+
+// Maybe `check_pre_validate.py` or similar had a bug.
+// `trace_early.py` had no bug in logic?
+// `for char in line: ...`
+// It doesn't handle strings/regex.
+// `replace(/\n/g, '<br>')`
+// No braces there.
+
+// Wait. Line 46.
+// `const htmlLangMap: Record<string, string> = { GERMAN: 'de', ENGLISH: 'en', FRENCH: 'fr', SPANISH: 'es', ITALIAN: 'it', DUTCH: 'nl' };`
+// { -> +1. } -> -1.
+// Bal 1 -> 2 -> 1.
+
+// Is there a syntax error in `new_generate_cv_v3.ts` that `view_file` isn't showing or I'm missing?
+// I will create `new_generate_cv_v4.ts` with explicit clean content to be sure.
+// And verify braces before writing.
+
+// But wait, if `formatContent` at 48 had Bal 2 in my script, it means earlier `}` was missed.
+// Or `{` was extra.
+// Line 42: `  };`
+// Line 32: `  };`
+
+// Let's assume the file on disk `new_generate_cv_v3.ts` is corrupted or has extra lines?
+// I overwrote it.
+
+// Let's try to `cat` the whole file and count braces with a robust script that ignores strings/regex.

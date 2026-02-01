@@ -9,6 +9,88 @@ import '../styles/SettingsPanel.css';
  * Settings Panel Component
  * Manages core application configurations.
  */
+// --- Language Input Component (Inline) ---
+// Replacing the separate file approach to ensure single-file edit consistency
+const LanguageInput = ({ value, onChange }: { value: string, onChange: (val: string) => void }) => {
+  const levels = ["Native", "Fluent", "C2", "C1", "B2", "B1", "A2", "A1", "Basic"];
+
+  const parseLanguages = (str: string) => {
+    if (!str) return [];
+    try {
+        // Try parsing JSON first
+        const parsed = JSON.parse(str);
+        if (Array.isArray(parsed)) return parsed;
+    } catch {}
+    
+    // Fallback: parse CSV string "English (Native), German"
+    return str.split(',').map(s => {
+      if (!s.trim()) return null;
+      const match = s.trim().match(/^(.*?)\s*\((.*?)\)$/);
+      if (match) return { language: match[1], level: match[2] };
+      return { language: s.trim(), level: 'Fluent' }; // Default
+    }).filter(x => x);
+  };
+
+  const [languages, setLanguages] = useState<any[]>(parseLanguages(value));
+
+  // Sync internal state if prop changes externally (e.g. initial load)
+  useEffect(() => {
+    setLanguages(parseLanguages(value));
+  }, [value]);
+
+  const updateParent = (newLangs: any[]) => {
+    onChange(JSON.stringify(newLangs));
+  };
+
+  const addLanguage = () => {
+    const n = [...languages, { language: '', level: 'Fluent' }];
+    setLanguages(n);
+    updateParent(n);
+  };
+
+  const removeLanguage = (idx: number) => {
+    const n = languages.filter((_, i) => i !== idx);
+    setLanguages(n);
+    updateParent(n);
+  };
+
+  const updateLanguage = (idx: number, field: string, val: string) => {
+    const n = [...languages];
+    n[idx][field] = val;
+    setLanguages(n);
+    updateParent(n);
+  };
+
+  return (
+    <div>
+      <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+         <label style={{display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: 600, color: '#333'}}>Languages</label>
+         <button onClick={addLanguage} style={{fontSize: '11px', padding: '2px 8px', cursor: 'pointer'}}>+ Add</button>
+      </div>
+      {languages.length === 0 && <div style={{fontSize: '12px', color: '#999', marginBottom: '5px'}}>No languages added.</div>}
+      {languages.map((l, i) => (
+        <div key={i} style={{display: 'flex', gap: '5px', marginBottom: '8px'}}>
+          <input 
+            style={{flex: 1, padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px'}} 
+            value={l.language} 
+            onChange={(e) => updateLanguage(i, 'language', e.target.value)}
+            placeholder="Language (e.g. English)"
+          />
+          <select 
+            style={{width: '100px', padding: '8px', border: '1px solid #ddd', borderRadius: '6px', fontSize: '13px'}}
+            value={l.level}
+            onChange={(e) => updateLanguage(i, 'level', e.target.value)}
+          >
+            {levels.map(lvl => <option key={lvl} value={lvl}>{lvl}</option>)}
+          </select>
+          <button onClick={() => removeLanguage(i)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#f44336'}}>✕</button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+
 function SettingsPanel({ userId }: { userId: number }) {
   const [activeSection, setActiveSection] = useState('linkedin');
 
@@ -495,7 +577,7 @@ function ManualProfileSection({ userId }: { userId: number }) {
           </div>
           <div>
             <label style={labelStyle}>Languages (comma separated)</label>
-            <textarea style={{...inputStyle, height: '80px'}} value={profile.languages} onChange={e => setProfile({...profile, languages: e.target.value})} placeholder="English (Native), German (Fluent), etc." />
+            <LanguageInput value={profile.languages} onChange={(val: string) => setProfile({...profile, languages: val})} />
           </div>
           <div>
             <label style={labelStyle}>Certifications (comma separated)</label>

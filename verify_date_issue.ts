@@ -27,8 +27,9 @@ const html = generateCVHTML(
 console.log(html);
 
 // Check if ] is replaced or kept
-if (html.includes("2024]03") || html.includes("2024]10")) {
-    console.log("DATE ISSUE DETECTED (brackets preserved)");
+if (html.includes("2024-03") && html.includes("2024-10")) {
+    console.log("DATE CLEANED: PASSED");
 } else {
-    console.log("DATE CLEANED (or not present)");
+    console.log("DATE ISSUE DETECTED (brackets preserved)");
+    process.exit(1);
 }

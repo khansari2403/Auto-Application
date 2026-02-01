@@ -1066,10 +1066,17 @@ export function generateCVHTML(
 
   const formatContent = (text: string): string => text ? text.replace(/\n/g, '<br>') : '';
 
-  // Clean date strings: replace ] with - if present
+  // Clean date strings: replace ] with - if present, and any other common mis-OCR chars
   const cleanDate = (d: string | number | undefined): string => {
     if (!d) return '';
-    return String(d).replace(/\]/g, '-');
+    let s = String(d).trim();
+    // Replace ] with -
+    s = s.replace(/\]/g, '-');
+    // Replace . with -
+    s = s.replace(/\./g, '-');
+    // Replace / with -
+    s = s.replace(/\//g, '-');
+    return s;
   };
 
   // --- Sorting Helper ---

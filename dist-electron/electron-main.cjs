@@ -3862,7 +3862,11 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
   const formatContent = (text) => text ? text.replace(/\n/g, "<br>") : "";
   const cleanDate = (d) => {
     if (!d) return "";
-    return String(d).replace(/\]/g, "-");
+    let s = String(d).trim();
+    s = s.replace(/\]/g, "-");
+    s = s.replace(/\./g, "-");
+    s = s.replace(/\//g, "-");
+    return s;
   };
   const sortDesc = (a, b) => {
     if (a.current && !b.current) return -1;

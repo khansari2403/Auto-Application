@@ -198,10 +198,10 @@ export async function ensureTargetLanguageOrRetry(args: {
   // detection (which can be flaky for shorter texts).
   const isThirdLanguage = lang3 !== 'deu' && lang3 !== 'eng';
 
-  const detectLang = (input: string): string => {
+  const detectLang = async (input: string): Promise<string> => {
     const t = String(input || '').trim();
     if (!t || t.length < 5) return 'und';
-    return franc(t);
+    return await franc(t);
   };
 
   let workingText = text;
@@ -239,7 +239,7 @@ DOCUMENT TO REWRITE:
   // Existing safety net for German/English (and a second pass for third
   // languages when needed).
   // First pass: detect language of the whole generated text
-  let detected = detectLang(workingText);
+  let detected = await detectLang(workingText);
   if (detected !== 'und' && detected !== lang3) {
     // Second attempt: explicitly rewrite/translate the EXISTING document into the
     // target language. We keep the original prompt for context so that the
@@ -270,12 +270,16 @@ DOCUMENT TO REWRITE:
 
   // Second pass: line-level sanitation to catch mixed-language sections
   const lines = workingText.split('\n');
-  const hasOffendingLines = lines.some(l => {
+  let hasOffendingLines = false;
+  for (const l of lines) {
     const trimmed = l.trim();
-    if (trimmed.length < 20) return false;
-    const lineLang = detectLang(trimmed);
-    return lineLang !== 'und' && lineLang !== lang3;
-  });
+    if (trimmed.length < 20) continue;
+    const lineLang = await detectLang(trimmed);
+    if (lineLang !== 'und' && lineLang !== lang3) {
+      hasOffendingLines = true;
+      break;
+    }
+  }
 
   if (!hasOffendingLines) {
     return workingText;

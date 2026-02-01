@@ -3171,10 +3171,10 @@ async function ensureTargetLanguageOrRetry(args) {
   if (text.length < 40) return content;
   if (lang3 === "und") return content;
   const isThirdLanguage = lang3 !== "deu" && lang3 !== "eng";
-  const detectLang = (input) => {
+  const detectLang = async (input) => {
     const t = String(input || "").trim();
     if (!t || t.length < 5) return "und";
-    return (0, import_franc_wrapper.franc)(t);
+    return await (0, import_franc_wrapper.franc)(t);
   };
   let workingText = text;
   if (isThirdLanguage) {
@@ -3197,7 +3197,7 @@ DOCUMENT TO REWRITE:
     if (!retryText) return content;
     workingText = retryText;
   }
-  let detected = detectLang(workingText);
+  let detected = await detectLang(workingText);
   if (detected !== "und" && detected !== lang3) {
     const fixPrompt = `${originalPrompt}
 
@@ -3218,12 +3218,16 @@ DOCUMENT TO REWRITE:
     workingText = retryText;
   }
   const lines = workingText.split("\n");
-  const hasOffendingLines = lines.some((l) => {
+  let hasOffendingLines = false;
+  for (const l of lines) {
     const trimmed = l.trim();
-    if (trimmed.length < 20) return false;
-    const lineLang = detectLang(trimmed);
-    return lineLang !== "und" && lineLang !== lang3;
-  });
+    if (trimmed.length < 20) continue;
+    const lineLang = await detectLang(trimmed);
+    if (lineLang !== "und" && lineLang !== lang3) {
+      hasOffendingLines = true;
+      break;
+    }
+  }
   if (!hasOffendingLines) {
     return workingText;
   }

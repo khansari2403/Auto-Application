@@ -1784,14 +1784,16 @@ CRITICAL RULES:
 4. DO NOT hallucinate or invent new content
 5. Keep proper nouns (company names, product names) in original language
 6. Keep technical terms (Python, JavaScript, AWS, etc.) in English
-7. Return ONLY the translated text, no explanations or meta-text
+7. Return ONLY the translated text - NO JSON, NO explanations, NO meta-text
+8. DO NOT wrap the output in JSON like {"translated_text": "..."}
+9. Return the raw translated text directly
 
 TEXT TO TRANSLATE:
 """
 ${text}
 """
 
-Return the translated text now:`;
+IMPORTANT: Output format must be the raw translated text only, starting directly with the content.`;
 
   try {
     const translatedRaw = await callAI(thinker, translatePrompt);
@@ -1802,11 +1804,30 @@ Return the translated text now:`;
     
     let translated = String(translatedRaw).trim();
     
+    // Remove JSON wrappers if LLM ignored instructions
+    translated = translated.replace(/^\{\s*"translated_text"\s*:\s*"/i, '').replace(/"\s*\}\s*$/i, '');
+    translated = translated.replace(/^\{\s*"translation"\s*:\s*"/i, '').replace(/"\s*\}\s*$/i, '');
+    
+    // Try parsing as JSON if it looks like JSON
+    if (translated.startsWith('{') && translated.includes('"translated_text"')) {
+      try {
+        const parsed = JSON.parse(translated);
+        if (parsed.translated_text) translated = parsed.translated_text;
+        else if (parsed.translation) translated = parsed.translation;
+      } catch {
+        // Not valid JSON, continue with string cleaning
+      }
+    }
+    
     // Remove markdown fences if present
     translated = translated.replace(/^```html\n?/i, '').replace(/^```\n?/, '').replace(/\n?```$/g, '').trim();
     
     // Remove meta-text
     translated = translated.replace(/^Here is the translated (text|content)[:\s]*/i, '');
+    translated = translated.replace(/^Translation:[:\s]*/i, '');
+    
+    // Clean up escaped quotes
+    translated = translated.replace(/\\"/g, '"');
     
     return translated && translated.length > 0 ? translated : text;
   } catch (e) {

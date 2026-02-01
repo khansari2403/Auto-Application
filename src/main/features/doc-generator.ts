@@ -318,13 +318,32 @@ async function validateAndFixCVLanguage(
     const parsed = JSON.parse(jsonString);
     
     // Check summary AND ALL experiences
-    const textsToCheck = [
-      parsed.summary,
-      ...Object.values(parsed.experiences || {}),
-      ...Object.values(parsed.educations || {})
-    ].filter(t => typeof t === 'string' && t.length > 20);
+    const textsToCheck: Record<string, string> = {};
+    
+    // Add summary
+    if (parsed.summary && typeof parsed.summary === 'string' && parsed.summary.length > 20) {
+        textsToCheck['summary'] = parsed.summary;
+    }
+    
+    // Add experiences with keys
+    if (parsed.experiences) {
+        Object.entries(parsed.experiences).forEach(([key, value]) => {
+            if (typeof value === 'string' && value.length > 20) {
+                textsToCheck[`exp_${key}`] = value;
+            }
+        });
+    }
+    
+    // Add educations with keys
+    if (parsed.educations) {
+        Object.entries(parsed.educations).forEach(([key, value]) => {
+            if (typeof value === 'string' && value.length > 20) {
+                textsToCheck[`edu_${key}`] = value;
+            }
+        });
+    }
 
-    if (textsToCheck.length === 0) return jsonString;
+    if (Object.keys(textsToCheck).length === 0) return jsonString;
 
     // Sample up to 5 texts to check language
     const langMap: Record<string, string> = {

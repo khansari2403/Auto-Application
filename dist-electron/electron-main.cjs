@@ -3485,7 +3485,7 @@ ${raw.substring(0, 8e3)}`;
     return { isGerman, targetLanguage: finalTargetLanguage, lang3: finalLang3, confidence };
   } catch (e) {
     console.error("determineJobLanguageUsingLLM failed, falling back to franc:", e);
-    return detectJobLanguage(job);
+    return await detectJobLanguage(job);
   }
 }
 function getJobDateFolder(job, isGerman) {

@@ -13,25 +13,16 @@ for i, line in enumerate(lines):
             balance += 1
         elif char == '}':
             balance -= 1
-    
-    if balance != 0:
-       # Print lines where balance is non-zero (careful with multi-line blocks)
-       pass
-
-print(f"Final Balance: {balance}")
-
-# Find line where it goes to 1 and never returns
-balance = 0
-for i, line in enumerate(lines):
-    prev_balance = balance
-    for char in line:
-        if char == '{':
-            balance += 1
-        elif char == '}':
-            balance -= 1
             
-    if balance > prev_balance:
-        # potentially opening a block
-        pass
-    if balance > 0 and i > 300: # check towards end
-        print(f"Line {i+1}: {line.strip()} (Bal: {balance})")
+    if 'const sortDesc =' in line:
+        print(f"Start sortDesc at {i+1}. Balance: {balance}")
+    if 'const renderExperiences =' in line:
+        print(f"Start renderExperiences at {i+1}. Balance: {balance}")
+    if 'const renderEducations =' in line:
+        print(f"Start renderEducations at {i+1}. Balance: {balance}")
+    if 'const summaryText =' in line:
+        print(f"Start summaryText at {i+1}. Balance: {balance}")
+    if 'if (isMimicPersona)' in line:
+        print(f"Start isMimicPersona at {i+1}. Balance: {balance}")
+    if 'const skills = userProfile?.skills' in line:
+        print(f"Start Layout 2 at {i+1}. Balance: {balance}")

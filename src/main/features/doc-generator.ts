@@ -369,57 +369,60 @@ async function validateAndFixCVLanguage(
     let wrongLanguageDetected = 'UNKNOWN';
 
     // Check each substantial text block
-    for (const text of textsToCheck) {
+    for (const key of Object.keys(textsToCheck)) {
+        const text = textsToCheck[key];
         const detected = await franc(text);
         const detectedName = langMap[detected] || 'UNKNOWN';
         
-        // If detected language conflicts with target (and target is known)
-        if (detectedName !== 'UNKNOWN' && detectedName !== targetLanguage) {
-            // General case: any mismatch (e.g. English in German CV, or German in French CV)
-            if (detectedName !== targetLanguage) {
-                 needsFixing = true;
-                 wrongLanguageDetected = detectedName;
-                 break;
-            }
+        let shouldTranslate = false;
+        
+        // English in German CV -> Translate
+        if (targetLanguage === 'GERMAN' && detectedName === 'ENGLISH') {
+            shouldTranslate = true;
+        }
+        // General mismatch
+        else if (detectedName !== 'UNKNOWN' && detectedName !== targetLanguage) {
+            shouldTranslate = true;
+        }
+
+        if (shouldTranslate) {
+             console.log(`[Language Fix] Translating individual block (${key}) from ${detectedName} to ${targetLanguage}...`);
+             
+             const translatePrompt = `You are a professional translator.
+             TARGET LANGUAGE: ${targetLanguage}
+             
+             Translate the following text to ${targetLanguage}.
+             - Keep the same formatting (bullet points, HTML tags).
+             - Do NOT change the meaning.
+             - Do NOT hallucinate new facts.
+             
+             TEXT TO TRANSLATE:
+             """${text}"""
+             
+             Return ONLY the translated text.`;
+             
+             const translatedRaw = await callAI(thinker, translatePrompt);
+             let translated = (translatedRaw || '').trim();
+             
+             // Remove markdown fences if present
+             translated = translated.replace(/^```html/, '').replace(/^```/, '').replace(/```$/, '').trim();
+             
+             if (translated && translated.length > 5) {
+                 // Update the parsed object directly
+                 if (key === 'summary') {
+                     parsed.summary = translated;
+                 } else if (key.startsWith('exp_')) {
+                     const expId = key.replace('exp_', '');
+                     if (parsed.experiences) parsed.experiences[expId] = translated;
+                 } else if (key.startsWith('edu_')) {
+                     const eduId = key.replace('edu_', '');
+                     if (parsed.educations) parsed.educations[eduId] = translated;
+                 }
+             }
         }
     }
 
-    if (needsFixing) {
-       console.log(`[Language Fix] Detected ${wrongLanguageDetected} content instead of ${targetLanguage}. Fixing entire CV...`);
-       
-       const fixPrompt = `You are a professional translator and CV expert.
-       TARGET LANGUAGE: ${targetLanguage}
-       
-       CRITICAL ERROR DETECTED: The CV content below contains sections in the WRONG language (${wrongLanguageDetected}).
-       
-       YOUR TASK:
-       1. Translate EVERY string value in the JSON object to ${targetLanguage}.
-       2. Pay special attention to "experiences" and "summary". If a description is in English, TRANSLATE IT.
-       3. Do NOT translate proper nouns (Company names, specific tool names like "Python", "JIRA").
-       4. Translate job titles ONLY if there is a common equivalent in ${targetLanguage} (e.g. "Software Engineer" -> "Softwareentwickler"), otherwise keep English title in brackets.
-       5. IMPORTANT: Return the FULL JSON structure with all translated fields. Do not omit any items.
-       
-       JSON TO TRANSLATE:
-       ${jsonString}
-       
-       Return ONLY the valid translated JSON.`;
-       
-       const fixedRaw = await callAI(thinker, fixPrompt);
-       const fixedClean = (fixedRaw || '').replace(/```json/gi, '').replace(/```/g, '').trim();
-       
-       if (fixedClean && fixedClean.startsWith('{')) {
-          // Validate the fix: Check if it's actually valid JSON and has keys
-          try {
-             const fixedParsed = JSON.parse(fixedClean);
-             if (fixedParsed.experiences || fixedParsed.summary) {
-                 return fixedClean;
-             }
-          } catch (e) {
-             console.error('Language fix returned invalid JSON, falling back to original.');
-          }
-       }
-    }
-    return jsonString;
+    return JSON.stringify(parsed);
   } catch (e) {
     return jsonString; // Failed to parse or fix, return original
   }

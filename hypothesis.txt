@@ -1,0 +1,70 @@
+
+// Ah, my previous logic in trace_early.py started with balance=0 at line 1.
+// But generateCVHTML starts at line 1.
+// Line 1: export function generateCVHTML( ... { -> +1.
+// So line 1 Bal is 1.
+// Line 15 (try) starts at Bal 1.
+// Line 15 output said Bal 1? No, it prints AFTER line processing.
+// Line 15: try { -> +1 = 2.
+// My debug output says "Line 15 ... Bal: 1".
+// This means my script started with 0 and added 1 from try {.
+// But if line 1 has {, then starting balance for line 15 should be 1.
+// So line 15 end balance should be 2.
+
+// Wait, the regex replace in line 16 has braces?
+// replace(/\s*```$/, '')
+// No braces.
+
+// Line 17: if (jsonClean.startsWith('{')) {
+// '{' -> +1 inside string.
+// { -> +1 at end.
+// Total +2 on this line?
+// Does python `for char in line` count chars in string literals? Yes.
+// So `{` in string is counted! That's the bug in my counting script, AND possibly the confusion.
+// But is it a bug in the typescript code?
+// Typescript parser ignores braces in strings.
+// ESBuild failed with "Unexpected export", implying actual brace mismatch.
+
+// If my naive script counts +1 for `'{'`, it thinks balance is higher.
+// But if the Typescript compiler thinks balance is correct, then why error?
+// The error was "Unexpected export". This usually means a missing close brace.
+// If my script says Final Balance 1 (positive), it means it thinks there's an EXTRA open brace.
+// If that extra open brace is real (not in string), then we are missing a close brace.
+// If that extra open brace is phantom (in string), then maybe balance is actually 0?
+
+// Let's assume my script is dumb and counts string braces.
+// Line 16: replace(/^```json\s*/i, '') -> no braces.
+// Line 17: startsWith('{') -> 1 brace in string.
+// This explains why my script got skewed.
+
+// However, let's look for a REAL missing brace.
+// If the error is "Unexpected export" at 1619, it means the previous function `generateCVHTML` didn't close.
+// `generateCVHTML` is supposed to close at line 422.
+// If it didn't close, then `saveDocumentFile` is nested.
+// And `buildCompanyDeepDive` is nested.
+// And then `export async function generateCompanyDeepDive` is nested -> ERROR.
+
+// So `generateCVHTML` IS missing a closing brace.
+// Where?
+// I pasted the content of `new_generate_cv_v3.ts`.
+// It ends with:
+// Line 421: </html>`;
+// Line 422: }
+// This looks closed.
+
+// Wait!
+// `replace_cv_v3.py` logic:
+// `final_content = source[:start_idx] + new_content + "\n\n" + source[end_idx:]`
+// `source[end_idx:]` starts with `function saveDocumentFile(`.
+// `new_content` ENDS with `}`.
+// So it should be `} \n\n function saveDocumentFile`.
+// This looks correct.
+
+// Why did the build fail?
+// `Unexpected "export"`.
+// Maybe I deleted too much or too little?
+// `end_marker = 'function saveDocumentFile('`
+// `end_idx = source.find(end_marker)`
+// `source[end_idx:]` includes `function saveDocumentFile...`.
+
+// Let's check the file content around the splice point.

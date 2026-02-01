@@ -1787,7 +1787,9 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
            await logAction(userId, 'ai_auditor', `🔄 Auditor requested changes. Retrying (${attempts}/${maxAttempts})...`, 'in_progress');
         }
 
-        const thinkerPrompt = buildThinkerPrompt({
+        // STEP 1: GENERATE CONTENT IN BASE LANGUAGE (English)
+        // This focuses the LLM on accuracy without language translation complexity
+        const basePrompt = buildThinkerPrompt({
           docKey: type.key,
           docLabel: type.label,
           userProfile: filteredProfile,
@@ -1799,44 +1801,50 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
             motivationLetterWordLimit,
             coverLetterWordLimit,
             cvPageLimit,
-            targetLanguage,
-            isGerman,
+            targetLanguage: 'ENGLISH', // Always generate in English first
+            isGerman: false,
             cvStylePersona: thinker?.cv_style_persona || thinker?.cvStylePersona || 'Classic',
             referenceCvId: thinker?.reference_cv_id || thinker?.referenceCvId || ''
           }
         });
 
-        const rawContent = await callAI(thinker, thinkerPrompt);
+        await logAction(userId, 'ai_thinker', `📝 Step 1/3: Generating base content...`, 'in_progress');
+        const rawContent = await callAI(thinker, basePrompt);
         if (!rawContent || String(rawContent).startsWith('Error:')) {
           throw new Error(rawContent || 'AI returned empty content');
         }
 
-        let content = rawContent;
+        let baseContent = rawContent;
         if (type.key === 'cv') {
           // For CVs, we expect JSON. Only strip markdown fences.
-          content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
-          // Enforce language for CVs (JSON)
-          content = await validateAndFixCVLanguage(content, targetLanguage, callAI, thinker);
+          baseContent = baseContent.replace(/```json/gi, '').replace(/```/g, '').trim();
         } else {
-          content = cleanAIOutput(rawContent);
-          // Safety net: verify the AI body language matches the JD language.
-          // If mismatch, automatically retry ONCE with extra-strict language instructions.
-          content = await ensureTargetLanguageOrRetry({
-            content,
-            lang3,
-            targetLanguage,
-            callAI,
-            thinker,
-            originalPrompt: thinkerPrompt
-          });
+          baseContent = cleanAIOutput(rawContent);
         }
 
         // For letters, ensure we never double greeting/closing
         if (type.key === 'motivation_letter' || type.key === 'cover_letter') {
-          content = stripLetterGreetingAndClosing(content, isGerman);
+          baseContent = stripLetterGreetingAndClosing(baseContent, false);
         }
 
-        // AUDITOR CHECK
+        // STEP 2: TRANSLATE TO TARGET LANGUAGE (if needed)
+        let content = baseContent;
+        if (targetLanguage !== 'ENGLISH') {
+          await logAction(userId, 'ai_thinker', `🌍 Step 2/3: Translating to ${targetLanguage}...`, 'in_progress');
+          
+          if (type.key === 'cv') {
+            // Translate JSON CV content
+            content = await translateCVContent(baseContent, targetLanguage, callAI, thinker);
+          } else {
+            // Translate letter/document content
+            content = await translateDocumentContent(baseContent, targetLanguage, callAI, thinker);
+          }
+        } else {
+          await logAction(userId, 'ai_thinker', `✓ Step 2/3: Target language is English, skipping translation`, 'info');
+        }
+
+        // STEP 3: AUDITOR CHECK (after translation to catch any fabrications)
+        await logAction(userId, 'ai_auditor', `🔍 Step 3/3: Running accuracy verification...`, 'in_progress');
         if (auditor) {
             const auditorPrompt = buildVerificationPrompt(type.key, type.label, content, filteredProfile);
             const auditorResponse = await callAI(auditor, auditorPrompt);
@@ -1844,7 +1852,7 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
             if (auditorResponse && auditorResponse.includes("VERIFIED")) {
                 isVerified = true;
                 finalContent = content;
-                await logAction(userId, 'ai_auditor', `✅ Auditor approved ${type.label}`, 'info');
+                await logAction(userId, 'ai_auditor', `✅ Auditor approved ${type.label} - no fabrications detected`, 'info');
             } else {
                 const reason = auditorResponse ? auditorResponse.replace("FABRICATION DETECTED:", "").trim() : "Unknown verification error";
                 currentFeedback = reason;

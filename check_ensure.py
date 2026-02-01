@@ -1,11 +1,4 @@
 
-// If validateAndFixCVLanguage starts with Bal 2 (should be 0 or 1 if inside namespace/module? usually 0 for top level).
-// It ends with Bal 3.
-// So `validateAndFixCVLanguage` has +1 balance net change.
-// That explains the shift from 2 to 3.
-// But why does it start at 2?
-// This means ensureTargetLanguageOrRetry (which ends around 300) didn't close properly either?
-
 path = '/app/src/main/features/doc-generator.ts'
 with open(path, 'r', encoding='utf-8') as f:
     content = f.read()
@@ -19,7 +12,6 @@ in_multiline = False
 lines = content.split('\n')
 
 for i, line in enumerate(lines):
-    # (Same parsing logic)
     j = 0
     while j < len(line):
         char = line[j]
@@ -62,4 +54,4 @@ for i, line in enumerate(lines):
     in_comment = False
     
     if i == 303:
-        print(f"Line 304 (end ensureTarget): {line.strip()} Bal: {balance}")
+        print(f"Line 304: {line.strip()} Bal: {balance}")

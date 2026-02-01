@@ -1521,7 +1521,7 @@ export function generateCVHTML(
 <html lang="${htmlLang}">
 <head>
   <meta charset="UTF-8">
-  <title>CV - ${userProfile?.name || 'Applicant'}</title>
+  <title>CV - ${userProfile?.name || (lang === 'GERMAN' ? 'Bewerber' : lang === 'FRENCH' ? 'Candidat' : lang === 'SPANISH' ? 'Candidato' : 'Applicant')}</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     * { margin: 0; padding: 0; box-sizing: border-box; }

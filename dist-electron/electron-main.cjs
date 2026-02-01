@@ -3416,7 +3416,7 @@ ${raw.substring(0, 8e3)}`;
     try {
       parsed = JSON.parse(jsonText);
     } catch {
-      return detectJobLanguage(job);
+      return await detectJobLanguage(job);
     }
     const lang3 = (parsed.lang3 || parsed.code || "").toLowerCase() || "und";
     let language = String(parsed.language || "").toUpperCase();

@@ -1,4 +1,5 @@
 import { runQuery, getDatabase, logAction, getAllQuery } from '../database';
+console.log("DEBUG BUILD FORCE UPDATE");
 import { getCompanyInfo } from '../scraper-service';
 import { franc } from './franc-wrapper.cjs';
 

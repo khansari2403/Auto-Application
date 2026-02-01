@@ -4776,6 +4776,7 @@ var init_doc_generator = __esm({
     import_franc_wrapper = __toESM(require_franc_wrapper(), 1);
     fs4 = __toESM(require("fs"), 1);
     path5 = __toESM(require("path"), 1);
+    console.log("DEBUG BUILD FORCE UPDATE");
     try {
       app5 = require("electron").app;
     } catch (e) {

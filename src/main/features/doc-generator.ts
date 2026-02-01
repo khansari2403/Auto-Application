@@ -1773,66 +1773,63 @@ async function translateText(
 ): Promise<string> {
   if (!text || text.trim().length === 0) return text;
   
-  const translatePrompt = `You are a professional translator.
+  const translatePrompt = `Translate the following text to ${targetLanguage}.
 
-TARGET LANGUAGE: ${targetLanguage}
+RULES:
+- Translate accurately
+- Preserve HTML tags and formatting
+- Keep company names and technical terms unchanged
+- Return ONLY the plain translated text
+- NO JSON format, NO explanations
 
-CRITICAL RULES:
-1. Translate the text below to ${targetLanguage} accurately
-2. Preserve ALL formatting (HTML tags, bullet points, line breaks)
-3. DO NOT add, remove, or change any facts or information
-4. DO NOT hallucinate or invent new content
-5. Keep proper nouns (company names, product names) in original language
-6. Keep technical terms (Python, JavaScript, AWS, etc.) in English
-7. Return ONLY the translated text - NO JSON, NO explanations, NO meta-text
-8. DO NOT wrap the output in JSON like {"translated_text": "..."}
-9. Return the raw translated text directly
-
-TEXT TO TRANSLATE:
-"""
+TEXT:
 ${text}
-"""
 
-IMPORTANT: Output format must be the raw translated text only, starting directly with the content.`;
+Translated text in ${targetLanguage}:`;
 
   try {
     const translatedRaw = await callAI(thinker, translatePrompt);
     if (!translatedRaw || String(translatedRaw).startsWith('Error:')) {
       console.error('[Translation] AI returned error:', translatedRaw);
-      return text; // Return original on error
+      return text;
     }
     
     let translated = String(translatedRaw).trim();
     
-    // Remove JSON wrappers if LLM ignored instructions
-    translated = translated.replace(/^\{\s*"translated_text"\s*:\s*"/i, '').replace(/"\s*\}\s*$/i, '');
-    translated = translated.replace(/^\{\s*"translation"\s*:\s*"/i, '').replace(/"\s*\}\s*$/i, '');
+    // AGGRESSIVE JSON CLEANING
+    // Remove any JSON-like structures the LLM might return
+    const jsonPatterns = [
+      /^\s*\{\s*["']translated_text["']\s*:\s*["'](.+)["']\s*\}\s*$/s,
+      /^\s*\{\s*["']translation["']\s*:\s*["'](.+)["']\s*\}\s*$/s,
+      /^\s*\{\s*["']text["']\s*:\s*["'](.+)["']\s*\}\s*$/s,
+      /^\s*\{\s*["']content["']\s*:\s*["'](.+)["']\s*\}\s*$/s
+    ];
     
-    // Try parsing as JSON if it looks like JSON
-    if (translated.startsWith('{') && translated.includes('"translated_text"')) {
-      try {
-        const parsed = JSON.parse(translated);
-        if (parsed.translated_text) translated = parsed.translated_text;
-        else if (parsed.translation) translated = parsed.translation;
-      } catch {
-        // Not valid JSON, continue with string cleaning
+    for (const pattern of jsonPatterns) {
+      const match = translated.match(pattern);
+      if (match && match[1]) {
+        translated = match[1];
+        break;
       }
     }
     
-    // Remove markdown fences if present
-    translated = translated.replace(/^```html\n?/i, '').replace(/^```\n?/, '').replace(/\n?```$/g, '').trim();
+    // Remove JSON structure markers that might be embedded
+    translated = translated.replace(/\{\s*["']translated_text["']\s*:\s*["']/g, '');
+    translated = translated.replace(/["']\s*\}\s*$/g, '');
     
-    // Remove meta-text
-    translated = translated.replace(/^Here is the translated (text|content)[:\s]*/i, '');
-    translated = translated.replace(/^Translation:[:\s]*/i, '');
+    // Remove markdown code blocks
+    translated = translated.replace(/^```[a-z]*\n?/gi, '').replace(/```$/g, '').trim();
     
-    // Clean up escaped quotes
-    translated = translated.replace(/\\"/g, '"');
+    // Remove common meta-text patterns
+    translated = translated.replace(/^(Here is the translation|Translated text|Translation):\s*/i, '');
     
-    return translated && translated.length > 0 ? translated : text;
+    // Unescape quotes
+    translated = translated.replace(/\\"/g, '"').replace(/\\'/g, "'");
+    
+    return translated && translated.length > 5 ? translated : text;
   } catch (e) {
-    console.error('[Translation] Error during translation:', e);
-    return text; // Return original on error
+    console.error('[Translation] Error:', e);
+    return text;
   }
 }
 

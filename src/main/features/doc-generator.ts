@@ -316,11 +316,17 @@ async function validateAndFixCVLanguage(
 ): Promise<string> {
   try {
     const parsed = JSON.parse(jsonString);
-    // Quick heuristic: Check summary language
-    const sampleText = parsed.summary || Object.values(parsed.experiences || {})[0] || '';
-    if (!sampleText || sampleText.length < 10) return jsonString;
+    
+    // Check summary AND ALL experiences
+    const textsToCheck = [
+      parsed.summary,
+      ...Object.values(parsed.experiences || {}),
+      ...Object.values(parsed.educations || {})
+    ].filter(t => typeof t === 'string' && t.length > 20);
 
-    const detected = await franc(sampleText);
+    if (textsToCheck.length === 0) return jsonString;
+
+    // Sample up to 5 texts to check language
     const langMap: Record<string, string> = {
       deu: 'GERMAN',
       eng: 'ENGLISH',
@@ -339,17 +345,39 @@ async function validateAndFixCVLanguage(
       jpn: 'JAPANESE',
       kor: 'KOREAN'
     };
-    const detectedName = langMap[detected] || 'UNKNOWN';
 
-    // If detected language conflicts with target (and target is known)
-    // We ignore if detected is UNKNOWN to avoid false positives on short text.
-    if (detectedName !== 'UNKNOWN' && detectedName !== targetLanguage) {
-       console.log(`[Language Fix] Detected ${detectedName} instead of ${targetLanguage}. Fixing...`);
+    let needsFixing = false;
+    let wrongLanguageDetected = 'UNKNOWN';
+
+    // Check each substantial text block
+    for (const text of textsToCheck) {
+        const detected = await franc(text);
+        const detectedName = langMap[detected] || 'UNKNOWN';
+        
+        // If detected language conflicts with target (and target is known)
+        if (detectedName !== 'UNKNOWN' && detectedName !== targetLanguage) {
+            // Special case: English detected when target is German -> FIX
+            if (targetLanguage === 'GERMAN' && detectedName === 'ENGLISH') {
+                needsFixing = true;
+                wrongLanguageDetected = detectedName;
+                break;
+            }
+            // General case: any mismatch
+            if (detectedName !== targetLanguage) {
+                 needsFixing = true;
+                 wrongLanguageDetected = detectedName;
+                 break;
+            }
+        }
+    }
+
+    if (needsFixing) {
+       console.log(`[Language Fix] Detected ${wrongLanguageDetected} content instead of ${targetLanguage}. Fixing entire CV...`);
        
        const fixPrompt = `You are a professional translator.
        TARGET LANGUAGE: ${targetLanguage}
        
-       The following JSON contains CV content that is in the WRONG language (${detectedName}).
+       The following JSON contains CV content that has mixed languages (some parts are in ${wrongLanguageDetected}).
        Translate EVERY string value in the JSON object to ${targetLanguage}.
        Do NOT change the keys or structure.
        
@@ -359,8 +387,10 @@ async function validateAndFixCVLanguage(
        Return ONLY the valid translated JSON.`;
        
        const fixedRaw = await callAI(thinker, fixPrompt);
-       if (fixedRaw && fixedRaw.trim().startsWith('{')) {
-          return fixedRaw.trim();
+       const fixedClean = (fixedRaw || '').replace(/```json/gi, '').replace(/```/g, '').trim();
+       
+       if (fixedClean && fixedClean.startsWith('{')) {
+          return fixedClean;
        }
     }
     return jsonString;

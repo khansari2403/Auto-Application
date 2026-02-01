@@ -420,3 +420,4 @@ export function generateCVHTML(
 </body>
 </html>`;
 }
+}

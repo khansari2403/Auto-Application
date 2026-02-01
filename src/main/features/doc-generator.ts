@@ -1698,6 +1698,8 @@ export async function generateTailoredDocs(job: any, userId: number, thinker: an
         if (type.key === 'cv') {
           // For CVs, we expect JSON. Only strip markdown fences.
           content = content.replace(/```json/gi, '').replace(/```/g, '').trim();
+          // Enforce language for CVs (JSON)
+          content = await validateAndFixCVLanguage(content, targetLanguage, callAI, thinker);
         } else {
           content = cleanAIOutput(rawContent);
           // Safety net: verify the AI body language matches the JD language.

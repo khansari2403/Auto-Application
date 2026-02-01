@@ -1,0 +1,84 @@
+
+// If robust balance is 1, then we are indeed missing a closing brace.
+// This confirms `doc-generator.ts` error (nested export).
+
+// It's likely `generateCVHTML` itself is missing the final `}`.
+// I see `}` at line 422 in `new_generate_cv_v3.ts`.
+// But is it matching?
+
+// `generateCVHTML` opens at line 1 (actually line 8 brace).
+// `try` at 15. Closes at 22.
+// `labels` at 25. Closes at 32.
+// `sidebarLabels` at 35. Closes at 42.
+// `htmlLangMap` at 45. Closes at 45.
+// `cleanDate` at 51. Closes at 54.
+// `sortDesc` at 57. Closes at 98.
+// `renderExperiences` at 101. Closes at 139.
+// `renderEducations` at 141. Closes at 173.
+// `isMimicPersona` at 180. Closes at 344?
+// `return ...` at 361. Closes at 421?
+// 421: `</html>`;`
+// 422: `}`
+
+// Wait!
+// `return ...` at 361 starts a template literal.
+// 361: `return \`<!DOCTYPE html>`
+// 421: `</html>\`;`
+// It does NOT have braces.
+// It ends with `;`.
+
+// So if `isMimicPersona` (180) block is closed at 344.
+// And `generateCVHTML` function block is closed at 422.
+// It should be balanced.
+
+// Let's check `isMimicPersona` block again.
+// 180: `if (isMimicPersona) {`
+// 218: `const langsHTML ...`
+// 223: `let mainSectionsHtml ...`
+// 225: `if (summaryText) {`
+// 228: `}`
+// 231: `if (expHtml) {`
+// 234: `}`
+// 237: `if (eduHtml) {`
+// 240: `}`
+// 243: `const photoStyle ...`
+// 251: `return ...` (Template literal).
+// 343: `</html>\`;`
+// 344: `  }`
+
+// Ah!
+// `renderExperiences` uses `map(...)`.
+// `const expsWithIdx = exps.map(...)` (109)
+// `expsWithIdx.sort(sortDesc);` (110)
+// `return expsWithIdx.map((exp: any, idx: number) => {` (112)
+// 137: `        </div>\`;`
+// 138: `    }).join('');`
+// 139: `  };`
+
+// This looks fine.
+
+// Is it possible `renderExperiences` or `renderEducations` has an extra brace?
+// 138: `    }).join('');` -> `}` matches `map(() => {`. `)` matches `map(`.
+// 139: `  };` -> matches `const renderExperiences = () => {`.
+
+// Wait! `renderEducations`.
+// 172: `    }).join('');`
+// 173: `  };`
+
+// Everything seems fine visually.
+// Why does `robust_check.py` say Balance 1?
+// Maybe `try { ... } catch (e) { ... }`?
+// 15: `try {`
+// 20: `} catch (e) {`
+// 22: `}`
+// 3 braces open, 3 close.
+
+// Maybe `labels`?
+// 25: `{`
+// 32: `}`
+
+// Maybe `cleanDate`?
+// 51: `{`
+// 54: `}`
+
+// Let's use `robust_check.py` to find where balance goes wrong by printing line numbers.

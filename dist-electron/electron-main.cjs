@@ -4752,7 +4752,7 @@ async function generateSingleDocument(jobId, userId, docType, thinker, auditor, 
   const userProfile = ((_b = db.user_profile) == null ? void 0 : _b.find((p) => p.id === userId)) || ((_c = db.user_profile) == null ? void 0 : _c[0]);
   if (!job) return { success: false, error: "Job not found" };
   if (!userProfile) return { success: false, error: "User profile not found" };
-  const { isGerman, targetLanguage, lang3 } = detectJobLanguage(job);
+  const { isGerman, targetLanguage, lang3 } = await detectJobLanguage(job);
   void targetLanguage;
   void isGerman;
   const options = {};

@@ -2293,7 +2293,7 @@ export async function generateSingleDocument(
   if (!userProfile) return { success: false, error: 'User profile not found' };
 
   // Define language variables ONCE at top-level scope
-  const { isGerman, targetLanguage, lang3 } = detectJobLanguage(job);
+  const { isGerman, targetLanguage, lang3 } = await detectJobLanguage(job);
   // (kept for parity with generateTailoredDocs and future type-specific behavior)
   void targetLanguage;
   void isGerman;

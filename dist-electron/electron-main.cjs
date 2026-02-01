@@ -3382,7 +3382,7 @@ async function detectJobLanguage(job) {
 async function determineJobLanguageUsingLLM(job, thinker, callAI2) {
   try {
     if (!thinker || !callAI2) {
-      return detectJobLanguage(job);
+      return await detectJobLanguage(job);
     }
     const raw = `${(job == null ? void 0 : job.job_title) || ""} ${(job == null ? void 0 : job.required_skills) || ""} ${(job == null ? void 0 : job.description) || ""}`.trim();
     const prompt = `You are the same AI model that will generate CVs and letters for this job seeker.

@@ -465,7 +465,7 @@ export async function determineJobLanguageUsingLLM(
   try {
     if (!thinker || !callAI) {
       // Fallback to baseline franc-based detection
-      return detectJobLanguage(job);
+      return await detectJobLanguage(job);
     }
 
     const raw = `${job?.job_title || ''} ${job?.required_skills || ''} ${job?.description || ''}`.trim();

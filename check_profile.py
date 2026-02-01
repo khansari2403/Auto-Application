@@ -1,7 +1,4 @@
 
-// If buildVerificationPrompt starts at Bal 2, then `getProfileByThinkerSource` didn't close.
-// It ends at 113.
-
 path = '/app/src/main/features/doc-generator.ts'
 with open(path, 'r', encoding='utf-8') as f:
     content = f.read()

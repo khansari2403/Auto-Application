@@ -1546,7 +1546,7 @@ export function generateCVHTML(
 </head>
 <body>
   <div class="header">
-    <div class="name">${userProfile?.name || 'Your Name'}</div>
+    <div class="name">${userProfile?.name || (lang === 'GERMAN' ? 'Ihr Name' : lang === 'FRENCH' ? 'Votre Nom' : lang === 'SPANISH' ? 'Su Nombre' : 'Your Name')}</div>
     <div class="contact">
       ${userProfile?.email ? `📧 ${userProfile.email}` : ''} 
       ${userProfile?.phone ? `| 📱 ${userProfile.phone}` : ''} 

@@ -4147,7 +4147,7 @@ function generateCVHTML(content, userProfile, job, isGerman, targetLanguage, cvS
 </head>
 <body>
   <div class="header">
-    <div class="name">${(userProfile == null ? void 0 : userProfile.name) || "Your Name"}</div>
+    <div class="name">${(userProfile == null ? void 0 : userProfile.name) || (lang === "GERMAN" ? "Ihr Name" : lang === "FRENCH" ? "Votre Nom" : lang === "SPANISH" ? "Su Nombre" : "Your Name")}</div>
     <div class="contact">
       ${(userProfile == null ? void 0 : userProfile.email) ? `\u{1F4E7} ${userProfile.email}` : ""} 
       ${(userProfile == null ? void 0 : userProfile.phone) ? `| \u{1F4F1} ${userProfile.phone}` : ""} 

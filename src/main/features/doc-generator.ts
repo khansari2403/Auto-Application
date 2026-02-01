@@ -317,17 +317,35 @@ async function validateAndFixCVLanguage(
     if (!sampleText || sampleText.length < 10) return jsonString;
 
     const detected = franc(sampleText);
-    const langMap: Record<string, string> = { deu: 'GERMAN', eng: 'ENGLISH', fra: 'FRENCH', spa: 'SPANISH' };
+    const langMap: Record<string, string> = {
+      deu: 'GERMAN',
+      eng: 'ENGLISH',
+      fra: 'FRENCH',
+      spa: 'SPANISH',
+      ita: 'ITALIAN',
+      nld: 'DUTCH',
+      por: 'PORTUGUESE',
+      rus: 'RUSSIAN',
+      ukr: 'UKRAINIAN',
+      pol: 'POLISH',
+      tur: 'TURKISH',
+      ara: 'ARABIC',
+      hin: 'HINDI',
+      zho: 'CHINESE',
+      jpn: 'JAPANESE',
+      kor: 'KOREAN'
+    };
     const detectedName = langMap[detected] || 'UNKNOWN';
 
-    // If clearly wrong (e.g. English when we want German)
-    if (detectedName !== 'UNKNOWN' && detectedName !== 'GERMAN' && targetLanguage === 'GERMAN') {
+    // If detected language conflicts with target (and target is known)
+    // We ignore if detected is UNKNOWN to avoid false positives on short text.
+    if (detectedName !== 'UNKNOWN' && detectedName !== targetLanguage) {
        console.log(`[Language Fix] Detected ${detectedName} instead of ${targetLanguage}. Fixing...`);
        
        const fixPrompt = `You are a professional translator.
        TARGET LANGUAGE: ${targetLanguage}
        
-       The following JSON contains CV content that is in the WRONG language.
+       The following JSON contains CV content that is in the WRONG language (${detectedName}).
        Translate EVERY string value in the JSON object to ${targetLanguage}.
        Do NOT change the keys or structure.
        

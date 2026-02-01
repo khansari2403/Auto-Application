@@ -1701,6 +1701,120 @@ export async function generateCompanyDeepDive(job: any, userId: number, callAI: 
   return deepDive;
 }
 
+/**
+ * Translate CV JSON content to target language
+ * This ensures all text values in the JSON are translated while preserving structure
+ */
+async function translateCVContent(
+  jsonContent: string,
+  targetLanguage: string,
+  callAI: Function,
+  thinker: any
+): Promise<string> {
+  try {
+    const parsed = JSON.parse(jsonContent);
+    
+    // Translate summary
+    if (parsed.summary && typeof parsed.summary === 'string' && parsed.summary.length > 0) {
+      const translatedSummary = await translateText(parsed.summary, targetLanguage, callAI, thinker);
+      if (translatedSummary) parsed.summary = translatedSummary;
+    }
+    
+    // Translate experiences
+    if (parsed.experiences && typeof parsed.experiences === 'object') {
+      for (const key of Object.keys(parsed.experiences)) {
+        const expText = parsed.experiences[key];
+        if (typeof expText === 'string' && expText.length > 0) {
+          const translated = await translateText(expText, targetLanguage, callAI, thinker);
+          if (translated) parsed.experiences[key] = translated;
+        }
+      }
+    }
+    
+    // Translate educations
+    if (parsed.educations && typeof parsed.educations === 'object') {
+      for (const key of Object.keys(parsed.educations)) {
+        const eduText = parsed.educations[key];
+        if (typeof eduText === 'string' && eduText.length > 0) {
+          const translated = await translateText(eduText, targetLanguage, callAI, thinker);
+          if (translated) parsed.educations[key] = translated;
+        }
+      }
+    }
+    
+    return JSON.stringify(parsed);
+  } catch (e) {
+    console.error('[Translation] Failed to parse/translate CV JSON:', e);
+    return jsonContent; // Return original if translation fails
+  }
+}
+
+/**
+ * Translate document content (letters, proposals, etc.) to target language
+ */
+async function translateDocumentContent(
+  content: string,
+  targetLanguage: string,
+  callAI: Function,
+  thinker: any
+): Promise<string> {
+  return await translateText(content, targetLanguage, callAI, thinker);
+}
+
+/**
+ * Core translation function - translates text to target language
+ * Preserves formatting and prevents hallucinations
+ */
+async function translateText(
+  text: string,
+  targetLanguage: string,
+  callAI: Function,
+  thinker: any
+): Promise<string> {
+  if (!text || text.trim().length === 0) return text;
+  
+  const translatePrompt = `You are a professional translator.
+
+TARGET LANGUAGE: ${targetLanguage}
+
+CRITICAL RULES:
+1. Translate the text below to ${targetLanguage} accurately
+2. Preserve ALL formatting (HTML tags, bullet points, line breaks)
+3. DO NOT add, remove, or change any facts or information
+4. DO NOT hallucinate or invent new content
+5. Keep proper nouns (company names, product names) in original language
+6. Keep technical terms (Python, JavaScript, AWS, etc.) in English
+7. Return ONLY the translated text, no explanations or meta-text
+
+TEXT TO TRANSLATE:
+"""
+${text}
+"""
+
+Return the translated text now:`;
+
+  try {
+    const translatedRaw = await callAI(thinker, translatePrompt);
+    if (!translatedRaw || String(translatedRaw).startsWith('Error:')) {
+      console.error('[Translation] AI returned error:', translatedRaw);
+      return text; // Return original on error
+    }
+    
+    let translated = String(translatedRaw).trim();
+    
+    // Remove markdown fences if present
+    translated = translated.replace(/^```html\n?/i, '').replace(/^```\n?/, '').replace(/\n?```$/g, '').trim();
+    
+    // Remove meta-text
+    translated = translated.replace(/^Here is the translated (text|content)[:\s]*/i, '');
+    
+    return translated && translated.length > 0 ? translated : text;
+  } catch (e) {
+    console.error('[Translation] Error during translation:', e);
+    return text; // Return original on error
+  }
+}
+
 // Main document generation function
 export async function generateTailoredDocs(job: any, userId: number, thinker: any, auditor: any, options: any, callAI: Function) {
   const db = getDatabase();

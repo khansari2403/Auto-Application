@@ -1,8 +1,4 @@
 
-// If line 65 Bal is 2, then we have 2 open braces before that.
-// Line 1-64.
-// Let's check from start.
-
 path = '/app/src/main/features/doc-generator.ts'
 with open(path, 'r', encoding='utf-8') as f:
     content = f.read()

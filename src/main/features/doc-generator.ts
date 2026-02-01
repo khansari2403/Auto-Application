@@ -1445,7 +1445,7 @@ export function generateCVHTML(
     <aside class="sidebar">
       ${photo ? `<img src="${photo}" alt="Profile Photo" style="${photoStyle}">` : ''}
       <div class="sidebar-header">
-        <div class="sidebar-name">${userProfile?.name || 'Ihr Name'}</div>
+        <div class="sidebar-name">${userProfile?.name || (lang === 'GERMAN' ? 'Ihr Name' : lang === 'FRENCH' ? 'Votre Nom' : lang === 'SPANISH' ? 'Su Nombre' : 'Your Name')}</div>
         <div class="sidebar-title-main">${userProfile?.title || ''}</div>
       </div>
       <div class="sidebar-section">

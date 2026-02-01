@@ -2082,23 +2082,23 @@ LANGUAGE ENFORCEMENT:
   })();
 
   const prompts: Record<string, string> = {
-    cv: `You are a professional CV content optimizer.
+    cv: `You are a strict CV Translator and Formatter.
 ${languageHardRule}
 
 TASK:
-Rewrite the candidate's professional summary and experience descriptions to match the target job tone, BUT YOU MUST REMAIN FACTUALLY STRICT.
+Translate the candidate's existing CV content into ${targetLanguage}.
 You are generating VALID JSON data that will be fed into a strict HTML layout engine.
 
 OUTPUT FORMAT:
 Return a VALID JSON object with this exact structure:
 {
-  "summary": "Rewritten professional summary...",
+  "summary": "Translated professional summary...",
   "experiences": {
-    "0": "<ul><li>Rewritten bullet point 1...</li><li>Rewritten bullet point 2...</li></ul>",
+    "0": "<ul><li>Translated bullet point 1...</li><li>Translated bullet point 2...</li></ul>",
     "1": "..."
   },
   "educations": {
-    "0": "<ul><li>Rewritten details...</li></ul>"
+    "0": "<ul><li>Translated details...</li></ul>"
   }
 }
 
@@ -2107,12 +2107,13 @@ KEYS:
 - "educations": Keys are the indices matching the order of educations provided.
 - "summary": A tailored professional summary.
 
-RULES - STRICT FIDELITY (CRITICAL):
-1. **DO NOT HALLUCINATE SKILLS**: If the candidate's profile does NOT mention a specific hard skill (e.g., HTML, CSS, SQL, Python, SAP), YOU MUST NOT ADD IT, even if the job title suggests it.
-2. **NO IMPLIED TECHNOLOGIES**: Do not assume "Agile Project Leader" means "Web Developer". Do not assume "Manager" means "Budget Control" unless stated. Stick to the activities described in the input.
-3. **TRANSLATE & POLISH**: Your main job is to translate the content to ${targetLanguage} and make it sound professional/active. Do not invent new tasks.
-4. **FORMAT**: Return ONLY valid JSON. The values must be HTML snippets (e.g. <ul><li>...</li></ul>) or plain text.
-5. **LANGUAGE**: Every word must be in ${targetLanguage}.
+RULES - ANTI-HALLUCINATION & SOURCE OF TRUTH (CRITICAL):
+1. **SOURCE OF TRUTH**: The user's profile provided above is the absolute truth.
+2. **DO NOT INVENT ROLES**: If the profile says "Project Manager", DO NOT write "Software Developer". If the profile says "Business Admin", DO NOT write "Computer Science".
+3. **DO NOT INVENT SKILLS**: If the profile does not list "Java" or "React", DO NOT add them, even if the job description asks for them.
+4. **TRANSLATION FOCUS**: Your primary job is to TRANSLATE the existing content to ${targetLanguage}. You may polish the phrasing to sound professional, but you must NOT change the core meaning or facts.
+5. **FORMAT**: Return ONLY valid JSON. The values must be HTML snippets (e.g. <ul><li>...</li></ul>) or plain text.
+6. **LANGUAGE**: Every word must be in ${targetLanguage}, except for proper nouns (Company names, specific tool names like "Python", "JIRA", "SAP").
 `,
 
     motivation_letter: `You are an expert Motivation Letter writer. Create a compelling, HUMAN-SOUNDING motivation letter.

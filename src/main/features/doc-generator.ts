@@ -1110,8 +1110,9 @@ export function generateCVHTML(
     if (!d) return '';
     let s = String(d).trim();
     // Replace typical OCR garbage (], }, |, etc) with hyphen
-    s = s.replace(/[\]\}\)|\[\{\(]/g, '-');
-    // Replace standard separators with hyphen for consistency
+    // We use a whitelist approach now: if it's not alphanumeric, dot, comma, or space, it becomes a hyphen.
+    s = s.replace(/[^a-zA-Z0-9.,\s]/g, '-');
+    // Normalize dots/slashes to hyphens
     s = s.replace(/[\.\/]/g, '-');
     // Remove double hyphens
     s = s.replace(/-+/g, '-');

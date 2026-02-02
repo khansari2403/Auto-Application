@@ -3,42 +3,36 @@ const path = require('path');
 
 const FILE_PATH = path.join(__dirname, '..', 'app', 'src', 'main', 'features', 'doc-generator.ts');
 
-// Read file
-let content = fs.readFileSync(FILE_PATH, 'utf8');
+if (!fs.existsSync(FILE_PATH)) {
+  console.error('❌ File not found:', FILE_PATH);
+  process.exit(1);
+}
 
+let content = fs.readFileSync(FILE_PATH, 'utf8');
 console.log('🔧 Applying handoff fixes...');
 
-// Fix 1: Add translation functions (if they don't exist)
+// Fix 1: Add translation functions
 if (!content.includes('async function translateCVContent')) {
   console.log('➕ Adding translation functions...');
   
   const translationFunctions = `
 // Translation functions added by handoff fixes
-async function translateCVContent(
-  jsonContent: string,
-  targetLanguage: string,
-  callAI: Function,
-  thinker: any
-): Promise<string> {
+async function translateCVContent(jsonContent, targetLanguage, callAI, thinker) {
   try {
     const parsed = JSON.parse(jsonContent);
-    
     if (parsed.summary) {
       parsed.summary = await translateText(parsed.summary, targetLanguage, callAI, thinker);
     }
-    
     if (parsed.experiences) {
       for (const key of Object.keys(parsed.experiences)) {
         parsed.experiences[key] = await translateText(parsed.experiences[key], targetLanguage, callAI, thinker);
       }
     }
-    
     if (parsed.educations) {
       for (const key of Object.keys(parsed.educations)) {
         parsed.educations[key] = await translateText(parsed.educations[key], targetLanguage, callAI, thinker);
       }
     }
-    
     return JSON.stringify(parsed);
   } catch (error) {
     console.error('Translation error:', error);
@@ -46,43 +40,29 @@ async function translateCVContent(
   }
 }
 
-async function translateDocumentContent(
-  content: string,
-  targetLanguage: string,
-  callAI: Function,
-  thinker: any
-): Promise<string> {
+async function translateDocumentContent(content, targetLanguage, callAI, thinker) {
   return translateText(content, targetLanguage, callAI, thinker);
 }
 
-async function translateText(
-  text: string,
-  targetLanguage: string,
-  callAI: Function,
-  thinker: any
-): Promise<string> {
+async function translateText(text, targetLanguage, callAI, thinker) {
   if (!text || text.trim().length === 0) return text;
   
-  const translatePrompt = \`Translate to \${targetLanguage}.
-RULES:
-- Preserve HTML tags
-- Return ONLY plain text
-- NO JSON wrappers
-- NO markdown code blocks
-- NO explanations
-
-TEXT: \${text}\`;
-
+  const translatePrompt = "Translate to " + targetLanguage + ".\nRULES:\n- Preserve HTML tags\n- Return ONLY plain text\n- NO JSON wrappers\n- NO markdown code blocks\n- NO explanations\n\nTEXT: " + text;
+  
   try {
     let translated = await callAI(thinker, translatePrompt);
     
-    // Aggressive cleaning
-    translated = translated.replace(/^\\s*\\{\\s*["']translated_text["']\\s*:\\s*["'](.+)["']\\s*\\}\\s*$/s, '$1');
-    translated = translated.replace(/^\\s*\\{\\s*["']translation["']\\s*:\\s*["'](.+)["']\\s*\\}\\s*$/s, '$1');
-    translated = translated.replace(/^\\s*\\{\\s*["']text["']\\s*:\\s*["'](.+)["']\\s*\\}\\s*$/s, '$1');
-    translated = translated.replace(/^\\s*\\{\\s*["']content["']\\s*:\\s*["'](.+)["']\\s*\\}\\s*$/s, '$1');
-    translated = translated.replace(/^\\s*\`\`\`[a-z]*\\n?/gi, '');
-    translated = translated.replace(/\\`\\`\\`\\s*$/g, '');
+    // Aggressive cleaning - using split/join instead of regex for backticks
+    translated = translated.replace(/\\{\\s*["']translated_text["']\\s*:\\s*["'](.+)["']\\s*\\}/s, '$1');
+    translated = translated.replace(/\\{\\s*["']translation["']\\s*:\\s*["'](.+)["']\\s*\\}/s, '$1');
+    translated = translated.replace(/\\{\\s*["']text["']\\s*:\\s*["'](.+)["']\\s*\\}/s, '$1');
+    translated = translated.replace(/\\{\\s*["']content["']\\s*:\\s*["'](.+)["']\\s*\\}/s, '$1');
+    
+    // Remove markdown code blocks by splitting
+    if (translated.includes('---')) {
+      translated = translated.split('---')[0];
+    }
+    
     translated = translated.replace(/^(Here is the translation|Translated text|Translation):\\s*/i, '');
     translated = translated.replace(/\\\\"/g, '"');
     translated = translated.replace(/\\\\'/g, "'");
@@ -95,15 +75,15 @@ TEXT: \${text}\`;
 }
 `;
   
-  // Insert before the last closing brace or at the end
   content = content + '\\n' + translationFunctions;
 }
 
-// Fix 4: Update getLangVal for language proficiency
-console.log('📝 Updating language proficiency display...');
-content = content.replace(
-  /const getLangVal = \\(x: any\\) => \\{[\\s\\S]*?if \\(x\\.language\\) return x\\.level \\? \`\\$\\{x\\.language\\} \\(\\$\\{x\\.level\\}\\)\` : x\\.language;[\\s\\S]*?\\}/g,
-  \`const getLangVal = (x: any) => {
+// Fix 2: Update getLangVal for language proficiency
+if (!content.includes('x.proficiency_level')) {
+  console.log('📝 Updating language proficiency display...');
+  content = content.replace(
+    /const getLangVal = \\(x\\) => \\{[\\s\\S]*?return x\\.level \\? `[\\$\\{]*x\\.language[\\}\\$]* \\([\\$\\{]*x\\.level[\\}\\$]*\\)` : x\\.language;?[\\s\\S]*?\\}/g,
+    \`const getLangVal = (x) => {
   if (x.language || x.name) {
     const langName = x.language || x.name;
     const level = x.level || x.proficiency || x.proficiency_level || x.fluency || '';
@@ -111,9 +91,10 @@ content = content.replace(
   }
   return x.language || x.name || '';
 }\`
-);
+  );
+}
 
-// Fix 5: Update fallback text for internationalization
+// Fix 3: Update fallback text for internationalization
 console.log('🌍 Updating fallback text...');
 content = content.replace(
   /\\$\\{userProfile\\?\\.name \\|\\| 'Your Name'\\}/g,
@@ -128,4 +109,3 @@ content = content.replace(
 // Write file back
 fs.writeFileSync(FILE_PATH, content, 'utf8');
 console.log('✅ All fixes applied successfully!');
-console.log('📄 Modified:', FILE_PATH);

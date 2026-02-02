@@ -1,22 +1,21 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const path = require('path');
 
 const FILE_PATH = path.join(__dirname, '..', 'app', 'src', 'main', 'features', 'doc-generator.ts');
 
 if (!fs.existsSync(FILE_PATH)) {
-  console.error('❌ File not found:', FILE_PATH);
+  console.error('File not found:', FILE_PATH);
   process.exit(1);
 }
 
 let content = fs.readFileSync(FILE_PATH, 'utf8');
-console.log('🔧 Applying handoff fixes...');
+console.log('Applying handoff fixes...');
 
 // Fix 1: Add translation functions
 if (!content.includes('async function translateCVContent')) {
-  console.log('➕ Adding translation functions...');
+  console.log('Adding translation functions...');
   
   const translationFunctions = `
-// Translation functions added by handoff fixes
 async function translateCVContent(jsonContent, targetLanguage, callAI, thinker) {
   try {
     const parsed = JSON.parse(jsonContent);
@@ -46,66 +45,45 @@ async function translateDocumentContent(content, targetLanguage, callAI, thinker
 
 async function translateText(text, targetLanguage, callAI, thinker) {
   if (!text || text.trim().length === 0) return text;
-  
-  const translatePrompt = "Translate to " + targetLanguage + ".\nRULES:\n- Preserve HTML tags\n- Return ONLY plain text\n- NO JSON wrappers\n- NO markdown code blocks\n- NO explanations\n\nTEXT: " + text;
-  
+  const prompt = "Translate to " + targetLanguage + ". Return ONLY plain text, no JSON, no markdown. Text: " + text;
   try {
-    let translated = await callAI(thinker, translatePrompt);
-    
-    // Aggressive cleaning - using split/join instead of regex for backticks
-    translated = translated.replace(/\\{\\s*["']translated_text["']\\s*:\\s*["'](.+)["']\\s*\\}/s, '$1');
-    translated = translated.replace(/\\{\\s*["']translation["']\\s*:\\s*["'](.+)["']\\s*\\}/s, '$1');
-    translated = translated.replace(/\\{\\s*["']text["']\\s*:\\s*["'](.+)["']\\s*\\}/s, '$1');
-    translated = translated.replace(/\\{\\s*["']content["']\\s*:\\s*["'](.+)["']\\s*\\}/s, '$1');
-    
-    // Remove markdown code blocks by splitting
-    if (translated.includes('---')) {
-      translated = translated.split('---')[0];
-    }
-    
-    translated = translated.replace(/^(Here is the translation|Translated text|Translation):\\s*/i, '');
-    translated = translated.replace(/\\\\"/g, '"');
-    translated = translated.replace(/\\\\'/g, "'");
-    
+    let translated = await callAI(thinker, prompt);
+    translated = translated.replace(/translated_text["']?\\s*:\\s*["']?/g, '');
+    translated = translated.replace(/\\\\}/g, '');
+    translated = translated.replace(/\\\\^\\\\s*\\\\{\\\\s*["']/g, '');
     return translated.trim();
   } catch (error) {
-    console.error('Translation text error:', error);
     return text;
   }
 }
 `;
-  
-  content = content + '\\n' + translationFunctions;
+  content = content + translationFunctions;
 }
 
-// Fix 2: Update getLangVal for language proficiency
-if (!content.includes('x.proficiency_level')) {
-  console.log('📝 Updating language proficiency display...');
-  content = content.replace(
-    /const getLangVal = \\(x\\) => \\{[\\s\\S]*?return x\\.level \\? `[\\$\\{]*x\\.language[\\}\\$]* \\([\\$\\{]*x\\.level[\\}\\$]*\\)` : x\\.language;?[\\s\\S]*?\\}/g,
-    \`const getLangVal = (x) => {
+// Fix 2: Update getLangVal - append new version instead of replacing
+if (!content.includes('proficiency_level')) {
+  console.log('Adding fixed getLangVal function...');
+  
+  const fixedFunction = `
+function getLangValFixed(x) {
   if (x.language || x.name) {
     const langName = x.language || x.name;
     const level = x.level || x.proficiency || x.proficiency_level || x.fluency || '';
-    return level ? \`\${langName} (\${level})\` : langName;
+    return level ? langName + ' (' + level + ')' : langName;
   }
   return x.language || x.name || '';
-}\`
-  );
+}
+`;
+  content = content + fixedFunction;
+  
+  // Replace calls to getLangVal with getLangValFixed
+  content = content.replace(/getLangVal\\(/g, 'getLangValFixed(');
 }
 
-// Fix 3: Update fallback text for internationalization
-console.log('🌍 Updating fallback text...');
-content = content.replace(
-  /\\$\\{userProfile\\?\\.name \\|\\| 'Your Name'\\}/g,
-  "${userProfile?.name || (lang === 'GERMAN' ? 'Ihr Name' : lang === 'FRENCH' ? 'Votre Nom' : 'Your Name')}"
-);
+// Fix 3: Update fallback text
+console.log('Updating fallback text...');
+content = content.replace(/\\{userProfile\\?\\.name \\|\\| 'Your Name'\\}/g, "{userProfile?.name || (lang === 'GERMAN' ? 'Ihr Name' : lang === 'FRENCH' ? 'Votre Nom' : 'Your Name')}");
+content = content.replace(/\\{userProfile\\?\\.name \\|\\| 'Applicant'\\}/g, "{userProfile?.name || (lang === 'GERMAN' ? 'Bewerber' : lang === 'FRENCH' ? 'Candidat' : 'Applicant')}");
 
-content = content.replace(
-  /\\$\\{userProfile\\?\\.name \\|\\| 'Applicant'\\}/g,
-  "${userProfile?.name || (lang === 'GERMAN' ? 'Bewerber' : lang === 'FRENCH' ? 'Candidat' : 'Applicant')}"
-);
-
-// Write file back
-fs.writeFileSync(FILE_PATH, content, 'utf8');
-console.log('✅ All fixes applied successfully!');
+fs.writeFileSync(FILE_PATH, content);
+console.log('Done!');

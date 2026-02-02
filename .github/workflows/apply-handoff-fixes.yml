@@ -25,7 +25,7 @@ jobs:
         node-version: '18'
     
     - name: Apply Fixes
-      run: node scripts/apply-fixes.js
+      run: node scripts/apply-fixes.cjs
     
     - name: Check for changes
       id: verify-changed-files

@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const FILE_PATH = path.join(__dirname, '..', 'app', 'src', 'main', 'features', 'doc-generator.ts');
+const FILE_PATH = path.join(__dirname, '..', 'src', 'main', 'features', 'doc-generator.ts');
 
 if (!fs.existsSync(FILE_PATH)) {
   console.error('❌ File not found:', FILE_PATH);
